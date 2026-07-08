@@ -88,6 +88,7 @@ metadata:
   name: eks-oidc
   namespace: kro-system
 spec:
+  configRef: general-policy
   type: oidc
   oidc:
     url: "https://oidc.eks.us-east-1.amazonaws.com/id/1234567890ABCDEF"

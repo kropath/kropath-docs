@@ -182,6 +182,7 @@ metadata:
   name: admins
   namespace: default
 spec:
+  configRef: general-policy
   policies:
     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
 ---
@@ -191,6 +192,7 @@ metadata:
   name: read-only
   namespace: default
 spec:
+  configRef: general-policy
   policies:
     - arn: "arn:aws:iam::aws:policy/ReadOnlyAccess"
 ---
@@ -200,6 +202,7 @@ metadata:
   name: developers
   namespace: default
 spec:
+  configRef: general-policy
   policies:
     - ref: developer-permissions
 ```
