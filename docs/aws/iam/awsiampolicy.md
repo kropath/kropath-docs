@@ -82,6 +82,70 @@ spec:
     - ref: s3-logs-access
 ```
 
+## Policy Document Storage
+
+You can store policies in two ways:
+
+### Option 1: Inline JSON (documentJSON)
+
+For smaller policies or when policy is used by only one resource:
+
+```yaml
+spec:
+  documentJSON: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [{
+        "Effect": "Allow",
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::bucket-name/*"
+      }]
+    }
+```
+
+### Option 2: External Policy Document (documentRef) — Recommended
+
+For reusable policies or when policy document is managed separately, reference an `AWSPolicyDocument` CR:
+
+```yaml
+---
+apiVersion: kropath.run/v1alpha1
+kind: AWSPolicyDocument
+metadata:
+  name: s3-access-policy
+  namespace: default
+spec:
+  policyJSON: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [{
+        "Effect": "Allow",
+        "Action": ["s3:GetObject", "s3:PutObject"],
+        "Resource": "arn:aws:s3:::bucket-name/*"
+      }]
+    }
+---
+apiVersion: kropath.run/v1alpha1
+kind: AWSIAMPolicy
+metadata:
+  name: reusable-s3-access
+  namespace: default
+spec:
+  configRef: general-policy
+  description: "Reusable S3 access policy"
+  documentRef: s3-access-policy  # References the AWSPolicyDocument above
+```
+
+**Advantages of documentRef:**
+- Separates policy content from IAM resource definitions
+- Multiple IAM resources can reference the same policy document
+- Policy document is versioned independently
+- Teams can manage policy documents in a shared library
+
+**When to use each:**
+- **documentJSON** — Single-use policies specific to one role/group/user
+- **documentRef** — Policies shared across multiple resources or managed centrally
+
 ## Policy Structure
 
 Policies follow AWS IAM policy syntax:

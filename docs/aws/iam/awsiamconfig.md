@@ -41,7 +41,8 @@ Default values apply only when **not specified** at the resource level:
 | `syncedLabels` | map | Default labels |
 | `syncedAnnotations` | map | Default annotations |
 
-**Key rule:** A field cannot be set in both mandatory and defaults tiers.
+**Key rule:** A field cannot be set in both mandatory and defaults tiers simultaneously.
+(Empty values like `{}`, `0`, or `false` can appear in both tiers — they indicate "not set" and don't trigger the mutual-exclusion check.)
 
 ## Example Profiles
 
@@ -121,7 +122,10 @@ spec:
       maxSessionDurationSeconds: 3600
 ```
 
-These values act as the ultimate fallback when namespace profiles do not set them.
+
+**Org mandatory** (e.g., `mandatory.iam.permissionsBoundaryArn`) applies with **highest priority** — namespace profiles and resources cannot override it.
+
+**Org defaults** (e.g., `defaults.iam.maxSessionDurationSeconds`) act as fallback values — used only when a namespace profile or resource does not specify a value.
 
 ## Monitoring
 
