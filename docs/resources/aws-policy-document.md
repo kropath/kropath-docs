@@ -422,8 +422,8 @@ spec:
     - sid: AllowAWSELBAccess
       effect: Allow
       principals:
-        - type: AWS
-          arn: "arn:aws:iam::783225319266:root"  # ELB service account (us-east-1)
+        - type: Service
+          arn: "logdelivery.elasticloadbalancing.amazonaws.com"
       actions:
         - "s3:PutObject"
       resources:
