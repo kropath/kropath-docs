@@ -373,11 +373,8 @@ spec:
     - sid: AllowALBAccessLogging
       effect: Allow
       principals:
-        - type: AWS
-          # This is the AWS-owned ELB service account ARN for ap-southeast-2
-          # For other regions, see:
-          # https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html
-          arn: "arn:aws:iam::783225319266:root"
+        - type: Service
+          arn: "logdelivery.elasticloadbalancing.amazonaws.com"
       actions:
         - "s3:PutObject"
       resources:
@@ -470,6 +467,16 @@ spec:
         - ref:
             kind: AWSS3Bucket
             name: central-logs
+    - sid: AllowAppTeamWriteToLogs
+      effect: Allow
+      principals:
+        - type: AWS
+          ref:
+            kind: AWSIAMRole
+            name: app-team-writer
+      actions:
+        - "s3:PutObject"
+      resources:
         - arn: "arn:aws:s3:::central-logs/*"
 ```
 
@@ -631,5 +638,3 @@ Full API documentation:
 - **Version**: `v1alpha1`
 - **Kind**: `AWSPolicyDocument`
 - **Scope**: Namespaced
-
-See the [ADR-015](https://github.com/kropath/kropath-core/blob/main/docs/adrs/015-consolidated-platform-decisions.md) for implementation details and design rationale.
