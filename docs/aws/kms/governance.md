@@ -134,9 +134,9 @@ If the named profile does not exist, kropath automatically falls back to `genera
 
 ## Governance Cascade
 
-Kropath employs a ten-tier governance cascade to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while allowing per-profile and per-instance flexibility.
+Kropath employs a nine-tier governance cascade to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while allowing per-profile and per-instance flexibility.
 
-### The Ten-Tier Cascade
+### The Nine-Tier Cascade
 
 | Tier | Layer | Scope |
 |---|---|---|
@@ -210,11 +210,11 @@ spec:
 
 ## Boolean Governance Semantics
 
-For boolean fields like `enableKeyRotation`, `false` in a `mandatory` or `defaults` tier means "follow the next tier in the cascade" rather than explicitly disabling the control. This is the zero-value sentinel.
+For boolean fields like `enableKeyRotation`, `false` is the zero-value sentinel meaning "not enforced" or "follow the next tier in the cascade." It does not explicitly disable the control.
 
-**Example:** If `AWSKMSConfig.mandatory.enableKeyRotation = false` and `AWSKMSConfig.defaults.enableKeyRotation = true`, the default tier wins and keys get rotation enabled.
+**How `false` works in the cascade:** If `AWSKMSConfig.mandatory.enableKeyRotation = false` (the default), the controller skips that tier and evaluates the next tier. If `AWSKMSConfig.defaults.enableKeyRotation = true`, then keys inherit rotation enabled from the defaults tier.
 
-To explicitly disable a control (e.g., no rotation), create a dedicated profile with `mandatory.enableKeyRotation: false`.
+**Key point:** Since `false` is the default for boolean fields and acts as a sentinel, there is no way to explicitly mandate that rotation is **disabled** at the `mandatory` tier. If you need to enforce "no rotation," use the `defaults` tier with `enableKeyRotation = false`, which applies only when the instance does not specify the field. The instance-level `spec.enableKeyRotation` can always override defaults.
 
 ## Naming Templates
 

@@ -55,7 +55,7 @@ The `AWSKMSKey` resource represents a single encryption key in AWS KMS. This gui
 | `ECC_NIST_P384` | Asymmetric | SIGN_VERIFY, KEY_AGREEMENT | High-security signing |
 | `ECC_NIST_P521` | Asymmetric | SIGN_VERIFY, KEY_AGREEMENT | Maximum security |
 | `ECC_SECG_P256K1` | Asymmetric | SIGN_VERIFY | Blockchain/crypto signing |
-| `HMAC_224` | MAC | GENERATE_VERIFY_MAC | Message authentication (32 bytes) |
+| `HMAC_224` | MAC | GENERATE_VERIFY_MAC | Message authentication (28 bytes) |
 | `HMAC_256` | MAC | GENERATE_VERIFY_MAC | Message authentication (32 bytes) |
 | `HMAC_384` | MAC | GENERATE_VERIFY_MAC | Message authentication (48 bytes) |
 | `HMAC_512` | MAC | GENERATE_VERIFY_MAC | Message authentication (64 bytes) |
