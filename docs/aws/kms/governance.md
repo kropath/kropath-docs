@@ -180,7 +180,7 @@ Result: Alice's key gets `SYMMETRIC_DEFAULT`, enforcing the security posture of 
 
 `enableKeyRotation` only applies to symmetric encryption keys (`keySpec: SYMMETRIC_DEFAULT`). For asymmetric and HMAC keys, the AWS API silently ignores this field. Kropath passes the value through without filtering — AWS KMS handles the constraint.
 
-**To disable rotation on a profile that defaults to enabled:** Create a dedicated `AWSKMSConfig` profile with `mandatory.enableKeyRotation: false` and select it via `spec.configRef`.
+**To disable rotation on a profile that defaults to enabled:** Create a dedicated `AWSKMSConfig` profile with `defaults.enableKeyRotation: false` and select it via `spec.configRef`.
 
 ### Key Spec and Allowed Key Specs
 

@@ -61,7 +61,7 @@ An `AWSKMSKey` resource represents a single encryption key in AWS KMS. It define
 
 ### Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while providing flexibility for specific use cases.
+Kropath employs a nine-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while providing flexibility for specific use cases.
 
 The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `AWSKMSConfig` CR. `AWSKMSKey` RGDs read this configuration to determine the final, resolved settings.
 
