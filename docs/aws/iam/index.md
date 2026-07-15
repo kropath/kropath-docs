@@ -26,7 +26,7 @@ This three-layer hierarchy ensures safe, auditable control without removing deve
 
 ### Profile-Based Configuration
 
-Each resource instance selects an `AWSIAMConfig` profile (e.g., `"general-policy"` or `"pci"`) via `spec.configRef`. Platform teams create profiles that encode org policies:
+Each resource instance selects an `IAMConfig` profile (e.g., `"general-policy"` or `"pci"`) via `spec.configRef`. Platform teams create profiles that encode org policies:
 
 - **general-policy** — Conservative baseline suitable for most workloads
 - **pci** — Hardened configuration for payment card industry compliance
@@ -36,12 +36,12 @@ If a named profile does not exist, resources fall back to `general-policy`.
 
 ## Resources
 
-- **[AWSIAMConfig](./awsiamconfig.md)** — Governance configuration for the IAM family
-- **[AWSIAMRole](./awsiamrole.md)** — Workload identity principals for EC2, Lambda, ECS, EKS, and services
-- **[AWSIAMPolicy](./awsiampolicy.md)** — Reusable managed policies
-- **[AWSIAMIdentityProvider](./awsiamidentityprovider.md)** — OIDC and SAML providers for external federation
-- **[AWSIAMGroup](./awsiamgroup.md)** — Groups for human operator access
-- **[AWSIAMUser](./awsiamuser.md)** — Users for human operator access
+- **[IAMConfig](./awsiamconfig.md)** — Governance configuration for the IAM family
+- **[IAMRole](./awsiamrole.md)** — Workload identity principals for EC2, Lambda, ECS, EKS, and services
+- **[IAMPolicy](./awsiampolicy.md)** — Reusable managed policies
+- **[IAMIdentityProvider](./awsiamidentityprovider.md)** — OIDC and SAML providers for external federation
+- **[IAMGroup](./awsiamgroup.md)** — Groups for human operator access
+- **[IAMUser](./awsiamuser.md)** — Users for human operator access
 
 ## Common Patterns
 
@@ -50,7 +50,7 @@ If a named profile does not exist, resources fall back to `general-policy`.
 You can attach policies in three ways:
 
 1. **AWS managed policy** — Pre-built policies provided by AWS
-2. **Reusable managed policy** — Your own `AWSIAMPolicy` resource, referenced by CR name
+2. **Reusable managed policy** — Your own `IAMPolicy` resource, referenced by CR name
 3. **Inline policy** — Policy defined directly on the resource (not recommended for reuse)
 
 Prefer reusable managed policies when the policy is used by multiple principals.
@@ -59,17 +59,17 @@ Prefer reusable managed policies when the policy is used by multiple principals.
 
 To use OIDC federation for EKS workloads:
 
-1. Create an `AWSIAMIdentityProvider` with `type: oidc`, providing your OIDC issuer URL
-2. Create an `AWSIAMRole` with `type: eks-irsa`, referencing the provider's `providerArn` and your Kubernetes service account
+1. Create an `IAMIdentityProvider` with `type: oidc`, providing your OIDC issuer URL
+2. Create an `IAMRole` with `type: eks-irsa`, referencing the provider's `providerArn` and your Kubernetes service account
 3. The role's trust policy automatically permits your service account to assume the role
 
 ### Cross-Workload Resource Sharing
 
-When multiple `AWSIAMRole` instances need the same permissions, create a single `AWSIAMPolicy` and reference it from each role:
+When multiple `IAMRole` instances need the same permissions, create a single `IAMPolicy` and reference it from each role:
 
 ```yaml
 policies:
-  - ref: my-shared-policy  # References AWSIAMPolicy/my-shared-policy
+  - ref: my-shared-policy  # References IAMPolicy/my-shared-policy
 ```
 
 ## Deletion and Retention

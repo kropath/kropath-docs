@@ -1,6 +1,6 @@
-# AWSIAMIdentityProvider — OIDC and SAML Federation
+# IAMIdentityProvider — OIDC and SAML Federation
 
-The `AWSIAMIdentityProvider` resource registers OIDC and SAML identity providers in your AWS account, enabling external workload authentication and federation.
+The `IAMIdentityProvider` resource registers OIDC and SAML identity providers in your AWS account, enabling external workload authentication and federation.
 
 ## Overview
 
@@ -18,8 +18,8 @@ OIDC (OpenID Connect) providers issue tokens that Kubernetes service accounts ca
 ### Creating an OIDC Provider
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMIdentityProvider
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMIdentityProvider
 metadata:
   name: eks-oidc
   namespace: kro-system
@@ -44,8 +44,8 @@ Fields:
 After creating the provider, create an IAM role that trusts it:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: app-role
   namespace: default
@@ -87,8 +87,8 @@ The pod automatically receives AWS credentials via the IAM role.
 ### GitHub Actions Example
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMIdentityProvider
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMIdentityProvider
 metadata:
   name: github-oidc
   namespace: kro-system
@@ -100,8 +100,8 @@ spec:
     thumbprints:
       - "6938fd4d98bab03faadb97b34396831e3780aea1"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: github-ci-role
   namespace: kro-system
@@ -136,8 +136,8 @@ SAML (Security Assertion Markup Language) enables federation with corporate iden
 ### Creating a SAML Provider
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMIdentityProvider
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMIdentityProvider
 metadata:
   name: corporate-idp
   namespace: kro-system

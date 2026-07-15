@@ -1,6 +1,6 @@
-# AWSIAMUser — Operator Access
+# IAMUser — Operator Access
 
-The `AWSIAMUser` resource creates IAM users for human operators who need to access your AWS environment using the console or programmatic credentials.
+The `IAMUser` resource creates IAM users for human operators who need to access your AWS environment using the console or programmatic credentials.
 
 ## Overview
 
@@ -11,15 +11,15 @@ An IAM user is a permanent identity representing a human operator. Users can:
 - Assume roles for temporary elevated permissions
 - Be members of groups to inherit group permissions
 
-**Important:** IAM users are for human operator access only. For application and service identities, use `AWSIAMRole`.
+**Important:** IAM users are for human operator access only. For application and service identities, use `IAMRole`.
 
 ## Creating a User
 
 ### Basic User
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: alice
   namespace: default
@@ -32,8 +32,8 @@ This creates a user with no group memberships or attached policies.
 ### User with Group Membership
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: developers
   namespace: default
@@ -42,8 +42,8 @@ spec:
   policies:
     - arn: "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: bob
   namespace: default
@@ -60,8 +60,8 @@ Users inherit all policies from their groups.
 For user-specific permissions:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: devops-admin
   namespace: default
@@ -82,8 +82,8 @@ Long-lived access keys allow programmatic access to AWS APIs. **Use with caution
 ### Creating Access Keys
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: ci-automation
   namespace: default
@@ -101,8 +101,8 @@ The user's access keys appear in `status.accessKey` (retrieve via kubectl).
 Platform teams can block access key creation organization-wide:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: general-policy
   namespace: kro-system
@@ -120,8 +120,8 @@ When blocked, setting `createAccessKey: true` on a user is silently ignored (sta
 Instead of access keys, users can assume a role for temporary credentials:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: elevated-permissions
   namespace: default
@@ -203,8 +203,8 @@ Tags help track user metadata in your organization.
 ### CI/CD Service User
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: github-actions-ci
   namespace: default
@@ -220,8 +220,8 @@ Create a dedicated user for CI/CD systems, with limited permissions and access k
 ### Developer User with Group Membership
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: alice
   namespace: default
@@ -237,8 +237,8 @@ Alice gets all permissions from both groups.
 ### Admin User with Elevated Access
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: admin-alice
   namespace: default

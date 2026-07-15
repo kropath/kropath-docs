@@ -1,10 +1,10 @@
-# AWSKMSConfig — Governance Configuration
+# KMSConfig — Governance Configuration
 
-The `AWSKMSConfig` resource defines governance profiles that control KMS key behavior across your organization and namespaces. Platform teams create named profiles; developers and operators select the profile they need via `spec.configRef` on each KMS key.
+The `KMSConfig` resource defines governance profiles that control KMS key behavior across your organization and namespaces. Platform teams create named profiles; developers and operators select the profile they need via `spec.configRef` on each KMS key.
 
 ## Overview
 
-`AWSKMSConfig` establishes two tiers of governance:
+`KMSConfig` establishes two tiers of governance:
 
 - **Mandatory tier** — Controls that cannot be overridden by developers (e.g., all keys must be rotated, only allow symmetric encryption)
 - **Defaults tier** — Baseline values developers can override (e.g., default key type if not specified)
@@ -50,8 +50,8 @@ Default values apply only when **not specified** at the resource level:
 ### Conservative Baseline (general-policy)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSConfig
 metadata:
   name: general-policy
   namespace: kro-system
@@ -73,8 +73,8 @@ This profile uses sensible defaults: symmetric keys with rotation enabled, but a
 ### Hardened (pci)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSConfig
 metadata:
   name: pci
   namespace: kro-system
@@ -98,8 +98,8 @@ This hardened profile enforces strict controls for PCI compliance: rotation is m
 ### Development (dev)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSConfig
 metadata:
   name: dev
   namespace: kro-system
@@ -120,8 +120,8 @@ This development profile is permissive: no mandatory controls, rotation is optio
 Select a profile on any KMS key:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: database-encryption-key
   namespace: data-team
@@ -141,9 +141,9 @@ Kropath employs a nine-tier governance cascade to resolve effective configuratio
 | Tier | Layer | Scope |
 |---|---|---|
 | 1–2 | `AWSKropathConfig.mandatory.kms.*` | Organization-wide, all profiles |
-| 3–4 | `AWSKMSConfig.mandatory.*` | Per-profile, all namespaces |
-| 5 | `AWSKMSKey.spec.*` | Instance-level (developer choice) |
-| 6–7 | `AWSKMSConfig.defaults.*` | Per-profile defaults |
+| 3–4 | `KMSConfig.mandatory.*` | Per-profile, all namespaces |
+| 5 | `KMSKey.spec.*` | Instance-level (developer choice) |
+| 6–7 | `KMSConfig.defaults.*` | Per-profile defaults |
 | 8–9 | `AWSKropathConfig.defaults.kms.*` | Organization-wide defaults |
 
 **How it works:** For each field, the cascade evaluates from tier 1 down to tier 9. The first tier with a value wins. This means:
@@ -157,8 +157,8 @@ Kropath employs a nine-tier governance cascade to resolve effective configuratio
 Scenario: Alice creates a KMS key with no `keySpec` specified:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: my-key
   namespace: payments
@@ -180,17 +180,17 @@ Result: Alice's key gets `SYMMETRIC_DEFAULT`, enforcing the security posture of 
 
 `enableKeyRotation` only applies to symmetric encryption keys (`keySpec: SYMMETRIC_DEFAULT`). For asymmetric and HMAC keys, the AWS API silently ignores this field. Kropath passes the value through without filtering — AWS KMS handles the constraint.
 
-**To disable rotation on a profile that defaults to enabled:** Create a dedicated `AWSKMSConfig` profile with `defaults.enableKeyRotation: false` and select it via `spec.configRef`.
+**To disable rotation on a profile that defaults to enabled:** Create a dedicated `KMSConfig` profile with `defaults.enableKeyRotation: false` and select it via `spec.configRef`.
 
 ### Key Spec and Allowed Key Specs
 
-If your `AWSKMSConfig` sets both `mandatory.keySpec` (e.g., `SYMMETRIC_DEFAULT`) and `mandatory.allowedKeySpecs` (e.g., `[RSA_4096]`), the configuration is invalid — the controller will flag this as an error and no keys will be created until it's fixed.
+If your `KMSConfig` sets both `mandatory.keySpec` (e.g., `SYMMETRIC_DEFAULT`) and `mandatory.allowedKeySpecs` (e.g., `[RSA_4096]`), the configuration is invalid — the controller will flag this as an error and no keys will be created until it's fixed.
 
 **Best practice:** Use `allowedKeySpecs` to restrict options, not `keySpec`. Reserve `keySpec` only when you want to force a single key type.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSConfig
 metadata:
   name: hybrid
   namespace: kro-system
@@ -212,13 +212,13 @@ spec:
 
 For boolean fields like `enableKeyRotation`, `false` is the zero-value sentinel meaning "not enforced" or "follow the next tier in the cascade." It does not explicitly disable the control.
 
-**How `false` works in the cascade:** If `AWSKMSConfig.mandatory.enableKeyRotation = false` (the default), the controller skips that tier and evaluates the next tier. If `AWSKMSConfig.defaults.enableKeyRotation = true`, then keys inherit rotation enabled from the defaults tier.
+**How `false` works in the cascade:** If `KMSConfig.mandatory.enableKeyRotation = false` (the default), the controller skips that tier and evaluates the next tier. If `KMSConfig.defaults.enableKeyRotation = true`, then keys inherit rotation enabled from the defaults tier.
 
 **Key point:** Since `false` is the default for boolean fields and acts as a sentinel, there is no way to explicitly mandate that rotation is **disabled** at the `mandatory` tier. If you need to enforce "no rotation," use the `defaults` tier with `enableKeyRotation = false`, which applies only when the instance does not specify the field. The instance-level `spec.enableKeyRotation` can always override defaults.
 
 ## Naming Templates
 
-Each `AWSKMSConfig` profile can define a naming template for automatic alias generation. The template supports these tokens:
+Each `KMSConfig` profile can define a naming template for automatic alias generation. The template supports these tokens:
 
 - `{namespace}` — Kubernetes namespace
 - `{name}` — KMS key resource name
@@ -237,7 +237,7 @@ If a template references a missing tag (e.g., `{tag.environment}` but the key ha
 
 ## Tags and Labels
 
-Tags and labels are inherited from the `AWSKMSConfig` governance profile, merged with instance-level tags/labels, and then synced to AWS and Kubernetes:
+Tags and labels are inherited from the `KMSConfig` governance profile, merged with instance-level tags/labels, and then synced to AWS and Kubernetes:
 
 - **`tags`:** Applied to the AWS KMS key; mandatory tags cannot be removed
 - **`syncedLabels`:** Mirrored as both Kubernetes labels (prefixed `kropath.run/`) and AWS tags
@@ -245,7 +245,7 @@ Tags and labels are inherited from the `AWSKMSConfig` governance profile, merged
 
 **Example:**
 
-`AWSKMSConfig` with mandatory tags:
+`KMSConfig` with mandatory tags:
 ```yaml
 spec:
   mandatory:
@@ -268,7 +268,7 @@ Result: The KMS key gets all three tags (`cost-center`, `compliance`, `app`), an
 For blanket governance across all KMS keys and profiles, use the `kms` section of `AWSKropathConfig`:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
+apiVersion: aws.kropath.run/v1alpha1
 kind: AWSKropathConfig
 metadata:
   name: default
@@ -293,5 +293,5 @@ This ensures that:
 
 ## Next Steps
 
-- [AWSKMSKey Usage Guide](./awskmskey.md) — Complete field reference and examples
+- [KMSKey Usage Guide](./awskmskey.md) — Complete field reference and examples
 - [Cross-Family Integration](./cross-family-integration.md) — How to use KMS keys in S3, EBS, RDS, Lambda, and EKS

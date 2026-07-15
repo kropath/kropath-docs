@@ -1,10 +1,10 @@
-# AWSIAMPolicy — Reusable Managed Policies
+# IAMPolicy — Reusable Managed Policies
 
-The `AWSIAMPolicy` resource creates AWS IAM managed policies — reusable permission sets that can be attached to multiple roles, groups, or users.
+The `IAMPolicy` resource creates AWS IAM managed policies — reusable permission sets that can be attached to multiple roles, groups, or users.
 
 ## Overview
 
-Use `AWSIAMPolicy` to define permissions once and share them across multiple principals. This is the preferred pattern for any permission set used by more than one role, group, or user.
+Use `IAMPolicy` to define permissions once and share them across multiple principals. This is the preferred pattern for any permission set used by more than one role, group, or user.
 
 Key benefits:
 - **Reusability** — Define once, attach to many principals
@@ -17,8 +17,8 @@ Key benefits:
 ### Basic Managed Policy
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMPolicy
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMPolicy
 metadata:
   name: s3-logs-access
   namespace: default
@@ -38,11 +38,11 @@ spec:
 
 ## Attaching to Roles
 
-Reference the policy by name from `AWSIAMRole`:
+Reference the policy by name from `IAMRole`:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: lambda-logger
   namespace: default
@@ -50,7 +50,7 @@ spec:
   configRef: general-policy
   type: lambda
   policies:
-    - ref: s3-logs-access  # References the AWSIAMPolicy above
+    - ref: s3-logs-access  # References the IAMPolicy above
 ```
 
 The role automatically gets all permissions defined in the policy.
@@ -58,8 +58,8 @@ The role automatically gets all permissions defined in the policy.
 ## Attaching to Groups and Users
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: developers
   namespace: default
@@ -69,8 +69,8 @@ spec:
     - ref: s3-logs-access
     - arn: "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: alice
   namespace: default
@@ -105,12 +105,12 @@ spec:
 
 ### Option 2: External Policy Document (documentRef) — Recommended
 
-For reusable policies or when policy document is managed separately, reference an `AWSPolicyDocument` CR:
+For reusable policies or when policy document is managed separately, reference an `PolicyDocument` CR:
 
 ```yaml
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: s3-access-policy
   namespace: default
@@ -125,15 +125,15 @@ spec:
       }]
     }
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMPolicy
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMPolicy
 metadata:
   name: reusable-s3-access
   namespace: default
 spec:
   configRef: general-policy
   description: "Reusable S3 access policy"
-  documentRef: s3-access-policy  # References the AWSPolicyDocument above
+  documentRef: s3-access-policy  # References the PolicyDocument above
 ```
 
 **Advantages of documentRef:**

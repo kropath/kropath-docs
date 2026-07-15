@@ -1,6 +1,6 @@
-# AWSPolicyDocument
+# PolicyDocument
 
-`AWSPolicyDocument` is a Kubernetes resource that lets you compose, validate, and reuse AWS IAM policy documents. Instead of embedding raw JSON in your resource specifications, you can structure your policies as YAML and let the kropath controller resolve cross-resource references and merge multiple policies into a single, validated document.
+`PolicyDocument` is a Kubernetes resource that lets you compose, validate, and reuse AWS IAM policy documents. Instead of embedding raw JSON in your resource specifications, you can structure your policies as YAML and let the kropath controller resolve cross-resource references and merge multiple policies into a single, validated document.
 
 ## Scope
 
@@ -15,7 +15,7 @@ AWS resources like S3 buckets, SQS queues, and IAM roles require policy document
 - **No merge** — when multiple teams or applications need to contribute statements to a shared policy (e.g., ALB access logging + application grants on the same S3 bucket), you must manually merge them outside the platform
 - **Poor ergonomics** — long inline JSON strings are hard to review, diff, and maintain in YAML
 
-`AWSPolicyDocument` fixes all of these by providing:
+`PolicyDocument` fixes all of these by providing:
 
 - **Structured YAML** — define policy statements as typed YAML fields, validated at `kubectl apply` time
 - **Automatic ARN resolution** — reference other kropath resources by kind and name; the controller resolves their ARNs automatically
@@ -26,12 +26,12 @@ AWS resources like S3 buckets, SQS queues, and IAM roles require policy document
 
 ### Structured statements vs. raw JSON
 
-`AWSPolicyDocument` supports two mutually exclusive approaches:
+`PolicyDocument` supports two mutually exclusive approaches:
 
 **Structured statements** (preferred):
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: my-policy
 spec:
@@ -50,8 +50,8 @@ spec:
 
 **Raw JSON** (escape hatch):
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: complex-policy
 spec:
@@ -76,8 +76,8 @@ Use structured statements whenever possible — they provide validation, readabi
 Instead of hardcoding ARN values, reference other kropath resources by kind and name:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: lambda-policy
 spec:
@@ -103,11 +103,11 @@ The controller resolves the reference by reading `status.predictedArn` from the 
 
 | `ref.kind` | Default `status` field | Example ARN |
 |---|---|---|
-| `AWSIAMRole` | `predictedArn` | `arn:aws:iam::123456789012:role/my-role` |
-| `AWSS3Bucket` | `predictedArn` | `arn:aws:s3:::my-bucket` |
+| `IAMRole` | `predictedArn` | `arn:aws:iam::123456789012:role/my-role` |
+| `S3Bucket` | `predictedArn` | `arn:aws:s3:::my-bucket` |
 | `AWSLambdaFunction` | `predictedArn` | `arn:aws:lambda:us-east-1:123456789012:function:my-func` |
 | `AWSSQSQueue` | `predictedArn` | `arn:aws:sqs:us-east-1:123456789012:my-queue` |
-| `AWSKMSKey` | `predictedArn` | `arn:aws:kms:us-east-1:123456789012:alias/my-key` |
+| `KMSKey` | `predictedArn` | `arn:aws:kms:us-east-1:123456789012:alias/my-key` |
 | `AWSSecretsManagerSecret` | `predictedArn` | `arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret` |
 
 References are **same-namespace only** — a policy document in one namespace cannot reference resources in another namespace.
@@ -117,8 +117,8 @@ References are **same-namespace only** — a policy document in one namespace ca
 Compose a single policy from multiple source documents using `spec.sources`:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: my-bucket-policy
   namespace: default
@@ -135,7 +135,7 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: my-app-role
       actions:
         - s3:GetObject
@@ -161,13 +161,13 @@ This pattern eliminates manual JSON merging when multiple teams need to contribu
 
 ### Phase 1 (CRD only, no controller)
 
-In Phase 1, the `AWSPolicyDocument` CRD is deployed but the controller is not running. RGDs read the `spec.documentJSON` field directly, so if you author the policy in structured YAML you must also provide the equivalent JSON in `spec.documentJSON` until Phase 2 is deployed:
+In Phase 1, the `PolicyDocument` CRD is deployed but the controller is not running. RGDs read the `spec.documentJSON` field directly, so if you author the policy in structured YAML you must also provide the equivalent JSON in `spec.documentJSON` until Phase 2 is deployed:
 
 ```yaml
 # In your S3 bucket RGD
 variables:
   policyDoc: >-
-    ${resources.get(metadata.namespace, "AWSPolicyDocument", spec.bucketPolicyRef)}
+    ${resources.get(metadata.namespace, "PolicyDocument", spec.bucketPolicyRef)}
 
 resources:
   - id: s3Bucket
@@ -185,7 +185,7 @@ Once the controller is deployed, it populates `status.resolvedDocumentJSON` with
 ```yaml
 variables:
   policyDoc: >-
-    ${resources.get(metadata.namespace, "AWSPolicyDocument", spec.bucketPolicyRef)}
+    ${resources.get(metadata.namespace, "PolicyDocument", spec.bucketPolicyRef)}
 
 resources:
   - id: s3Bucket
@@ -199,15 +199,15 @@ resources:
 
 ## Cross-family use cases
 
-`AWSPolicyDocument` works with any AWS resource that requires a policy document:
+`PolicyDocument` works with any AWS resource that requires a policy document:
 
 ### S3 bucket policy
 
 One S3 bucket policy per bucket. Supports merge.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: central-logging-bucket-policy
 spec:
@@ -219,7 +219,7 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: dev-team-role
       actions:
         - s3:GetObject
@@ -232,8 +232,8 @@ spec:
 One SQS queue policy per queue. Supports merge.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: payment-queue-policy
 spec:
@@ -261,8 +261,8 @@ One KMS key policy per key. Supports merge.
 ⚠️ **Important**: KMS key policies require a root account statement that grants the account's principal full access. Include this statement in your policy — the controller will not auto-inject it. This is intentional to keep the security audit trail clear.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: kms-key-policy
 spec:
@@ -283,7 +283,7 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: developer-role
       actions:
         - "kms:Decrypt"
@@ -297,8 +297,8 @@ spec:
 One resource policy per secret. Supports merge.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: api-secret-policy
 spec:
@@ -320,7 +320,7 @@ spec:
 
 ### IAM role inline policies
 
-Each inline policy can reference an `AWSPolicyDocument`:
+Each inline policy can reference an `PolicyDocument`:
 
 ```yaml
 # In your IAM role RGD
@@ -335,8 +335,8 @@ spec:
 The trust policy is a special resource-based policy that controls who can assume the role:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: lambda-execution-trust
 spec:
@@ -363,8 +363,8 @@ A common use case: grant the AWS ELB service account permission to write access 
 This pattern has **no circular dependency** because the ELB service account ARN is fixed per region, not tied to a specific ALB instance.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: alb-log-delivery-grant
   namespace: platform
@@ -384,8 +384,8 @@ spec:
 Then reference this document as a source in your application bucket policy:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: app-bucket-policy
 spec:
@@ -397,7 +397,7 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: app-team-role
       actions:
         - s3:GetObject
@@ -412,8 +412,8 @@ Here's a complete example that demonstrates structured statements, refs, and mer
 ```yaml
 ---
 # Step 1: Define a base policy that grants ALB logging access
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: s3-logging-grant
   namespace: platform
@@ -431,8 +431,8 @@ spec:
 
 ---
 # Step 2: Define the application team's S3 bucket
-apiVersion: kropath.run/v1alpha1
-kind: AWSS3Bucket
+apiVersion: aws.kropath.run/v1alpha1
+kind: S3Bucket
 metadata:
   name: central-logs
 spec:
@@ -441,8 +441,8 @@ spec:
 
 ---
 # Step 3: Define the bucket policy, sourcing from the logging grant
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: central-logs-policy
   namespace: platform
@@ -458,21 +458,21 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: app-team-reader
       actions:
         - "s3:GetObject"
         - "s3:ListBucket"
       resources:
         - ref:
-            kind: AWSS3Bucket
+            kind: S3Bucket
             name: central-logs
     - sid: AllowAppTeamWriteToLogs
       effect: Allow
       principals:
         - type: AWS
           ref:
-            kind: AWSIAMRole
+            kind: IAMRole
             name: app-team-writer
       actions:
         - "s3:PutObject"
@@ -507,7 +507,7 @@ Each statement in `spec.statements[]` maps directly to an AWS IAM policy stateme
 
 ## Status and readiness
 
-The `AWSPolicyDocument` publishes its readiness via status conditions:
+The `PolicyDocument` publishes its readiness via status conditions:
 
 ```yaml
 status:
@@ -636,5 +636,5 @@ Full API documentation:
 
 - **Group**: `kropath.run`
 - **Version**: `v1alpha1`
-- **Kind**: `AWSPolicyDocument`
+- **Kind**: `PolicyDocument`
 - **Scope**: Namespaced

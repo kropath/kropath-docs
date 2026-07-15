@@ -11,7 +11,7 @@ IAM governance operates in three layers, each taking precedence over the next:
 The `AWSKropathConfig` resource sets org-wide baseline controls that apply to all namespaces and teams:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
+apiVersion: aws.kropath.run/v1alpha1
 kind: AWSKropathConfig
 metadata:
   name: default
@@ -31,11 +31,11 @@ spec:
 
 ### Layer 2: Namespace-Scoped Profiles
 
-The `AWSIAMConfig` resource defines governance profiles per namespace. Teams select the profile they need:
+The `IAMConfig` resource defines governance profiles per namespace. Teams select the profile they need:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: general-policy
   namespace: kro-system
@@ -57,8 +57,8 @@ spec:
 Individual resources can override defaults (but not mandatory controls):
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: my-role
   namespace: my-namespace
@@ -88,11 +88,11 @@ Organization (AWSKropathConfig):
   mandatory.iam.maxSessionDurationSeconds: 0    (not enforced)
   defaults.iam.maxSessionDurationSeconds: 3600  (1 hour)
 
-Profile (AWSIAMConfig):
+Profile (IAMConfig):
   mandatory.maxSessionDurationSeconds: 900    (15 minutes - ENFORCED)
   defaults.maxSessionDurationSeconds: 7200    (2 hours)
 
-Resource (AWSIAMRole):
+Resource (IAMRole):
   maxSessionDuration: 1800    (30 minutes - request)
 ```
 
@@ -173,8 +173,8 @@ defaults:
 For regulated workloads (PCI, HIPAA, SOC2):
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: pci-compliance
 spec:
@@ -195,8 +195,8 @@ Developers selecting `configRef: pci-compliance` get strict compliance controls 
 For development and testing:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: dev
 spec:

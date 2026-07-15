@@ -1,10 +1,10 @@
-# AWSIAMRole — Workload Identity Principals
+# IAMRole — Workload Identity Principals
 
-The `AWSIAMRole` resource creates IAM roles for your workloads. A role is a principal identity that your applications, services, and infrastructure assume to make AWS API calls.
+The `IAMRole` resource creates IAM roles for your workloads. A role is a principal identity that your applications, services, and infrastructure assume to make AWS API calls.
 
 ## Overview
 
-Use `AWSIAMRole` to create roles for:
+Use `IAMRole` to create roles for:
 
 - **EC2 instances** — Attach to instances via instance profile
 - **Lambda functions** — Specify as the execution role
@@ -36,8 +36,8 @@ Choose the role type that matches your workload:
 ### Simple EC2 Role
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: web-server
   namespace: default
@@ -55,8 +55,8 @@ This role:
 ### Lambda Role with Permissions
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: data-processor
   namespace: default
@@ -82,8 +82,8 @@ spec:
 ### EKS IRSA Role (OIDC Federation)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMIdentityProvider
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMIdentityProvider
 metadata:
   name: eks-oidc
   namespace: kro-system
@@ -95,8 +95,8 @@ spec:
     thumbprints:
       - "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: app-role
   namespace: default
@@ -113,8 +113,8 @@ spec:
 ### Service Role
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: rds-monitoring
   namespace: default
@@ -139,11 +139,11 @@ policies:
 
 ### Reusable Managed Policies
 
-Create an `AWSIAMPolicy` and reference it:
+Create an `IAMPolicy` and reference it:
 
 ```yaml
 policies:
-  - ref: database-access  # References AWSIAMPolicy/database-access
+  - ref: database-access  # References IAMPolicy/database-access
 ```
 
 ### Inline Policies
@@ -168,7 +168,7 @@ inlinePolicies:
 
 ### Permissions Boundary
 
-Configure via `AWSIAMConfig`:
+Configure via `IAMConfig`:
 
 ```yaml
 spec:

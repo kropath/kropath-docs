@@ -34,8 +34,8 @@ Three layers per provider. **kropath-controller** pre-merges all sources and wri
 resources:
 - id: rsrcCfg
   externalRef:
-    apiVersion: kropath.run/v1alpha1
-    kind: AWSS3BucketConfig
+    apiVersion: aws.kropath.run/v1alpha1
+    kind: S3BucketConfig
     metadata:
       name: ${schema.spec.configRef}
       namespace: ${schema.metadata.namespace}
@@ -106,6 +106,6 @@ All agents use these standard keys in the Multica issue metadata bag. Keys outsi
 ## Other Standards
 
 - **Security First:** Default to secure; mandatory config overrides user input.
-- **API group:** `kropath.run` (e.g. `apiVersion: kropath.run/v1alpha1`).
+- **API group:** `kropath.run` (e.g. `apiVersion: aws.kropath.run/v1alpha1`).
 - **Licensing:** Apache 2.0 headers in every RGD and script.
 - **CEL:** Use `${}` for all dynamic values.
