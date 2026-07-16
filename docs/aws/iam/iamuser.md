@@ -257,19 +257,19 @@ Admin gets group permissions plus additional policies.
 List all users:
 
 ```bash
-kubectl get awsiamuser -A
+kubectl get iamuser -A
 ```
 
 Check user group membership:
 
 ```bash
-kubectl describe awsiamuser alice -n default | grep -A5 "Groups:"
+kubectl describe iamuser alice -n default | grep -A5 "Groups:"
 ```
 
 Verify access key status:
 
 ```bash
-kubectl describe awsiamuser ci-automation -n default | grep "AccessKey"
+kubectl describe iamuser ci-automation -n default | grep "AccessKey"
 ```
 
 ## Deletion

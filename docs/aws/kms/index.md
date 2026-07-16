@@ -65,8 +65,8 @@ Kropath employs a nine-tier governance cascade (ADR-010, ADR-015 §5.3) to resol
 
 The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `KMSConfig` CR. `KMSKey` RGDs read this configuration to determine the final, resolved settings.
 
-**When to use `AWSKropathConfig.kms` vs. `KMSConfig`:**
-- **`AWSKropathConfig.kms`:** Org-wide governance (e.g., force all keys to have rotation enabled)
+**When to use `KropathConfig.kms` vs. `KMSConfig`:**
+- **`KropathConfig.kms`:** Org-wide governance (e.g., force all keys to have rotation enabled)
 - **`KMSConfig`:** Per-profile governance (e.g., restrict a `pci` profile to specific key types)
 
 ## Key Concepts: Symmetric vs. Asymmetric
@@ -213,7 +213,7 @@ Use the `status` fields on your `KMSKey` resource to reference the key in other 
 
 For detailed guidance, see:
 - [KMSConfig Governance Model](./governance.md) — Understanding mandatory vs. defaults tiers and profile management
-- [KMSKey Usage Guide](./awskmskey.md) — Field reference and configuration options
+- [KMSKey Usage Guide](./kmskey.md) — Field reference and configuration options
 - [Cross-Family Integration](./cross-family-integration.md) — How to reference KMS keys in S3, EBS, RDS, Lambda, and EKS
 
 ## Out-of-Scope (Phase 2+)

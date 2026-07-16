@@ -88,7 +88,7 @@ spec:
         - lambda:InvokeFunction
       resources:
         - ref:
-            kind: AWSLambdaFunction
+            kind: LambdaFunction
             name: my-function
             # field: predictedArn (default)
 ```
@@ -105,10 +105,10 @@ The controller resolves the reference by reading `status.predictedArn` from the 
 |---|---|---|
 | `IAMRole` | `predictedArn` | `arn:aws:iam::123456789012:role/my-role` |
 | `S3Bucket` | `predictedArn` | `arn:aws:s3:::my-bucket` |
-| `AWSLambdaFunction` | `predictedArn` | `arn:aws:lambda:us-east-1:123456789012:function:my-func` |
+| `LambdaFunction` | `predictedArn` | `arn:aws:lambda:us-east-1:123456789012:function:my-func` |
 | `AWSSQSQueue` | `predictedArn` | `arn:aws:sqs:us-east-1:123456789012:my-queue` |
 | `KMSKey` | `predictedArn` | `arn:aws:kms:us-east-1:123456789012:alias/my-key` |
-| `AWSSecretsManagerSecret` | `predictedArn` | `arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret` |
+| `SecretsManagerSecret` | `predictedArn` | `arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret` |
 
 References are **same-namespace only** — a policy document in one namespace cannot reference resources in another namespace.
 
@@ -243,14 +243,14 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSLambdaFunction
+            kind: LambdaFunction
             name: payment-processor
       actions:
         - sqs:ReceiveMessage
         - sqs:DeleteMessage
       resources:
         - ref:
-            kind: AWSSQSQueue
+            kind: SQSQueue
             name: payment-events
 ```
 
@@ -308,13 +308,13 @@ spec:
       principals:
         - type: AWS
           ref:
-            kind: AWSLambdaFunction
+            kind: LambdaFunction
             name: api-handler
       actions:
         - secretsmanager:GetSecretValue
       resources:
         - ref:
-            kind: AWSSecretsManagerSecret
+            kind: SecretsManagerSecret
             name: api-credentials
 ```
 
@@ -419,7 +419,7 @@ metadata:
   namespace: platform
 spec:
   statements:
-    - sid: AllowAWSELBAccess
+    - sid: AllowELBAccess
       effect: Allow
       principals:
         - type: Service
@@ -550,7 +550,7 @@ statements:
     principals:
       - type: AWS
         ref:
-          kind: AWSLambdaFunction
+          kind: LambdaFunction
           name: internal-function
     actions:
       - s3:GetObject
@@ -595,7 +595,7 @@ spec:
 Check the status conditions:
 
 ```bash
-kubectl describe awspolicydocument my-policy
+kubectl describe policydocument my-policy
 ```
 
 Look for `SourceNotReady` or `SidConflict` conditions. Common causes:
@@ -609,7 +609,7 @@ Look for `SourceNotReady` or `SidConflict` conditions. Common causes:
 Check whether the document uses raw JSON:
 
 ```bash
-kubectl get awspolicydocument my-policy -o yaml | grep -A5 spec:
+kubectl get policydocument my-policy -o yaml | grep -A5 spec:
 ```
 
 If `spec.documentJSON` is set, make sure it's valid JSON. If using structured form, verify all required fields (effect, actions) are present.
@@ -634,7 +634,7 @@ If `spec.documentJSON` is set, make sure it's valid JSON. If using structured fo
 
 Full API documentation:
 
-- **Group**: `kropath.run`
+- **Group**: `aws.kropath.run`
 - **Version**: `v1alpha1`
 - **Kind**: `PolicyDocument`
 - **Scope**: Namespaced

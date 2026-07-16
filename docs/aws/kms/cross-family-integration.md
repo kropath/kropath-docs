@@ -134,7 +134,7 @@ spec:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSRDSInstance  # Note: RDS family is Phase 2+
+kind: RDSInstance  # Note: RDS family is Phase 2+
 metadata:
   name: production-db
   namespace: databases
@@ -152,7 +152,7 @@ Encrypt EBS volumes.
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSEBSVolume  # Note: EBS family is Phase 2+
+kind: EBSVolume  # Note: EBS family is Phase 2+
 metadata:
   name: encrypted-data-volume
   namespace: compute
@@ -170,7 +170,7 @@ Encrypt Lambda environment variables.
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSLambdaFunction  # Note: Lambda family is Phase 2+
+kind: LambdaFunction  # Note: Lambda family is Phase 2+
 metadata:
   name: secure-handler
   namespace: functions
@@ -190,7 +190,7 @@ Encrypt Kubernetes secrets in EKS.
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSEKSCluster  # Note: EKS family is Phase 2+
+kind: EKSCluster  # Note: EKS family is Phase 2+
 metadata:
   name: production-cluster
   namespace: platform
@@ -342,6 +342,6 @@ spec:
 
 ## Next Steps
 
-- [KMSKey Usage Guide](./awskmskey.md) — Configure individual keys
+- [KMSKey Usage Guide](./kmskey.md) — Configure individual keys
 - [Governance Guide](./governance.md) — Enforce KMS policies
 - [AWS KMS Documentation](https://docs.aws.amazon.com/kms/) — AWS native documentation

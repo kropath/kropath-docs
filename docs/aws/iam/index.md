@@ -36,12 +36,12 @@ If a named profile does not exist, resources fall back to `general-policy`.
 
 ## Resources
 
-- **[IAMConfig](./awsiamconfig.md)** — Governance configuration for the IAM family
-- **[IAMRole](./awsiamrole.md)** — Workload identity principals for EC2, Lambda, ECS, EKS, and services
-- **[IAMPolicy](./awsiampolicy.md)** — Reusable managed policies
-- **[IAMIdentityProvider](./awsiamidentityprovider.md)** — OIDC and SAML providers for external federation
-- **[IAMGroup](./awsiamgroup.md)** — Groups for human operator access
-- **[IAMUser](./awsiamuser.md)** — Users for human operator access
+- **[IAMConfig](./iamconfig.md)** — Governance configuration for the IAM family
+- **[IAMRole](./iamrole.md)** — Workload identity principals for EC2, Lambda, ECS, EKS, and services
+- **[IAMPolicy](./iampolicy.md)** — Reusable managed policies
+- **[IAMIdentityProvider](./iamidentityprovider.md)** — OIDC and SAML providers for external federation
+- **[IAMGroup](./iamgroup.md)** — Groups for human operator access
+- **[IAMUser](./iamuser.md)** — Users for human operator access
 
 ## Common Patterns
 
@@ -83,7 +83,7 @@ To delete the underlying AWS resource when the Kubernetes resource is deleted, s
 Check the resource's `status` field to verify creation:
 
 ```bash
-kubectl describe awsiamrole my-role -n my-namespace
+kubectl describe iamrole my-role -n my-namespace
 ```
 
 Look for:

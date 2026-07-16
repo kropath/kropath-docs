@@ -192,7 +192,7 @@ Value must not exceed mandatory limit from the config profile.
 Check role status:
 
 ```bash
-kubectl describe awsiamrole my-role -n default
+kubectl describe iamrole my-role -n default
 ```
 
 Look for `status.resourceName`, `status.predictedArn`, and `status.conditions`.

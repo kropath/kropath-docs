@@ -33,8 +33,8 @@ The `KMSKey` resource represents a single encryption key in AWS KMS. This guide 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `tags` | map | `{}` | AWS tags; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels and AWS tags (prefixed `kropath.run/`) |
-| `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `kropath.run/`) |
+| `syncedLabels` | map | `{}` | Kubernetes labels and AWS tags (prefixed `aws.kropath.run/`) |
+| `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
 ### Key Policy
 
@@ -153,7 +153,7 @@ After creation, these fields cannot be changed:
 
 Attempting updates will fail:
 ```bash
-$ kubectl patch awskmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
+$ kubectl patch kmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
 # Error: keySpec is immutable after creation
 ```
 

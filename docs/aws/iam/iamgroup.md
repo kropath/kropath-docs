@@ -214,13 +214,13 @@ Create groups by access level and assign users accordingly.
 List all group members:
 
 ```bash
-kubectl get awsiamuser -A -o yaml | grep -A5 "groups:"
+kubectl get iamuser -A -o yaml | grep -A5 "groups:"
 ```
 
 Check group permissions:
 
 ```bash
-kubectl describe awsiamgroup devops-team -n default
+kubectl describe iamgroup devops-team -n default
 ```
 
 ## Deletion

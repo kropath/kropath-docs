@@ -140,11 +140,11 @@ Kropath employs a nine-tier governance cascade to resolve effective configuratio
 
 | Tier | Layer | Scope |
 |---|---|---|
-| 1–2 | `AWSKropathConfig.mandatory.kms.*` | Organization-wide, all profiles |
+| 1–2 | `KropathConfig.mandatory.kms.*` | Organization-wide, all profiles |
 | 3–4 | `KMSConfig.mandatory.*` | Per-profile, all namespaces |
 | 5 | `KMSKey.spec.*` | Instance-level (developer choice) |
 | 6–7 | `KMSConfig.defaults.*` | Per-profile defaults |
-| 8–9 | `AWSKropathConfig.defaults.kms.*` | Organization-wide defaults |
+| 8–9 | `KropathConfig.defaults.kms.*` | Organization-wide defaults |
 
 **How it works:** For each field, the cascade evaluates from tier 1 down to tier 9. The first tier with a value wins. This means:
 - Org-wide mandatory controls (tier 1–2) override everything
@@ -240,8 +240,8 @@ If a template references a missing tag (e.g., `{tag.environment}` but the key ha
 Tags and labels are inherited from the `KMSConfig` governance profile, merged with instance-level tags/labels, and then synced to AWS and Kubernetes:
 
 - **`tags`:** Applied to the AWS KMS key; mandatory tags cannot be removed
-- **`syncedLabels`:** Mirrored as both Kubernetes labels (prefixed `kropath.run/`) and AWS tags
-- **`syncedAnnotations`:** Mirrored as Kubernetes annotations (prefixed `kropath.run/`)
+- **`syncedLabels`:** Mirrored as both Kubernetes labels (prefixed `aws.kropath.run/`) and AWS tags
+- **`syncedAnnotations`:** Mirrored as Kubernetes annotations (prefixed `aws.kropath.run/`)
 
 **Example:**
 
@@ -263,13 +263,13 @@ spec:
 
 Result: The KMS key gets all three tags (`cost-center`, `compliance`, `app`), and mandatory tags cannot be removed.
 
-## Organization-Wide Governance (AWSKropathConfig)
+## Organization-Wide Governance (KropathConfig)
 
-For blanket governance across all KMS keys and profiles, use the `kms` section of `AWSKropathConfig`:
+For blanket governance across all KMS keys and profiles, use the `kms` section of `KropathConfig`:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSKropathConfig
+kind: KropathConfig
 metadata:
   name: default
   namespace: kro-system
@@ -293,5 +293,5 @@ This ensures that:
 
 ## Next Steps
 
-- [KMSKey Usage Guide](./awskmskey.md) — Complete field reference and examples
+- [KMSKey Usage Guide](./kmskey.md) — Complete field reference and examples
 - [Cross-Family Integration](./cross-family-integration.md) — How to use KMS keys in S3, EBS, RDS, Lambda, and EKS

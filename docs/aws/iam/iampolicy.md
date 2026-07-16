@@ -199,15 +199,15 @@ The size limit is enforced by AWS. If you exceed it, the update fails. Break lar
 Check what principals are using a policy:
 
 ```bash
-kubectl get awsiamrole -A -o yaml | grep "ref: policy-name"
-kubectl get awsiamgroup -A -o yaml | grep "ref: policy-name"
-kubectl get awsiamuser -A -o yaml | grep "ref: policy-name"
+kubectl get iamrole -A -o yaml | grep "ref: policy-name"
+kubectl get iamgroup -A -o yaml | grep "ref: policy-name"
+kubectl get iamuser -A -o yaml | grep "ref: policy-name"
 ```
 
 Verify policy ARN and version:
 
 ```bash
-kubectl describe awsiampolicy s3-logs-access -n default
+kubectl describe iampolicy s3-logs-access -n default
 ```
 
 ## Deletion

@@ -131,6 +131,8 @@ spec:
 
 ## SAML Providers
 
+**SAML providers are not supported by ACK controller yet. This results in a ConfigMap generated with error message.**
+
 SAML (Security Assertion Markup Language) enables federation with corporate identity providers.
 
 ### Creating a SAML Provider
@@ -168,7 +170,7 @@ Plan accordingly:
 Check provider status:
 
 ```bash
-kubectl describe awsiamidentityprovider eks-oidc -n kro-system
+kubectl describe iamidentityprovider eks-oidc -n kro-system
 ```
 
 Look for `status.providerArn` — this is the ARN other resources reference.

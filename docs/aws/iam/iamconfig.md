@@ -108,7 +108,7 @@ Set org-wide controls using the cloud provider's root configuration:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: AWSKropathConfig
+kind: KropathConfig
 metadata:
   name: default
   namespace: kro-system
@@ -132,12 +132,12 @@ spec:
 Verify a profile and its settings:
 
 ```bash
-kubectl get awsiamconfig general-policy -n kro-system -o yaml
-kubectl describe awsiamconfig pci -n kro-system
+kubectl get iamconfig general-policy -n kro-system -o yaml
+kubectl describe iamconfig pci -n kro-system
 ```
 
 Check what profile a resource is using:
 
 ```bash
-kubectl describe awsiamrole my-role -n my-namespace | grep configRef
+kubectl describe iamrole my-role -n my-namespace | grep configRef
 ```
