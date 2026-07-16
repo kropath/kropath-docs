@@ -1,6 +1,6 @@
-# AWSIAMGroup — Operator Access Groups
+# IAMGroup — Operator Access Groups
 
-The `AWSIAMGroup` resource creates IAM groups for organizing human operators who need AWS console or programmatic access. Groups simplify permission management by allowing you to attach policies once and assign multiple users.
+The `IAMGroup` resource creates IAM groups for organizing human operators who need AWS console or programmatic access. Groups simplify permission management by allowing you to attach policies once and assign multiple users.
 
 ## Overview
 
@@ -10,15 +10,15 @@ An IAM group is a collection of users who share the same permissions. Use groups
 - Grant the same permissions to multiple users without duplicating policy attachments
 - Simplify permission updates — change the group's policies once, all members get the new permissions
 
-**Key difference from roles:** Groups are for human access; roles are for workload identities. Use `AWSIAMRole` for applications and services.
+**Key difference from roles:** Groups are for human access; roles are for workload identities. Use `IAMRole` for applications and services.
 
 ## Creating a Group
 
 ### Basic Group
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: developers
   namespace: default
@@ -31,8 +31,8 @@ This creates an empty group with no permissions.
 ### Group with AWS Managed Policies
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: data-engineers
   namespace: default
@@ -48,8 +48,8 @@ Members automatically receive these permissions.
 ### Group with Custom Policies
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMPolicy
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMPolicy
 metadata:
   name: dev-resources
   namespace: default
@@ -65,8 +65,8 @@ spec:
       }]
     }
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: devops-team
   namespace: default
@@ -82,8 +82,8 @@ spec:
 Users inherit all permissions from their groups:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMUser
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMUser
 metadata:
   name: alice
   namespace: default
@@ -149,8 +149,8 @@ Tags are synced to the cloud resource; labels apply to the Kubernetes resource.
 
 ```yaml
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: frontend-team
   namespace: default
@@ -159,8 +159,8 @@ spec:
   policies:
     - ref: frontend-resources
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: backend-team
   namespace: default
@@ -176,8 +176,8 @@ Create a group per team with team-specific permissions.
 
 ```yaml
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: admins
   namespace: default
@@ -186,8 +186,8 @@ spec:
   policies:
     - arn: "arn:aws:iam::aws:policy/AdministratorAccess"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: read-only
   namespace: default
@@ -196,8 +196,8 @@ spec:
   policies:
     - arn: "arn:aws:iam::aws:policy/ReadOnlyAccess"
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMGroup
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMGroup
 metadata:
   name: developers
   namespace: default
@@ -214,13 +214,13 @@ Create groups by access level and assign users accordingly.
 List all group members:
 
 ```bash
-kubectl get awsiamuser -A -o yaml | grep -A5 "groups:"
+kubectl get iamuser -A -o yaml | grep -A5 "groups:"
 ```
 
 Check group permissions:
 
 ```bash
-kubectl describe awsiamgroup devops-team -n default
+kubectl describe iamgroup devops-team -n default
 ```
 
 ## Deletion

@@ -1,6 +1,6 @@
-# AWSKMSKey — Creating and Managing Encryption Keys
+# KMSKey — Creating and Managing Encryption Keys
 
-The `AWSKMSKey` resource represents a single encryption key in AWS KMS. This guide covers all configuration fields, governance, and real-world usage patterns.
+The `KMSKey` resource represents a single encryption key in AWS KMS. This guide covers all configuration fields, governance, and real-world usage patterns.
 
 ## Core Fields
 
@@ -8,7 +8,7 @@ The `AWSKMSKey` resource represents a single encryption key in AWS KMS. This gui
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `configRef` | string | `"general-policy"` | Selects which `AWSKMSConfig` governance profile to apply |
+| `configRef` | string | `"general-policy"` | Selects which `KMSConfig` governance profile to apply |
 | `nameOverride` | string | `""` | Bypasses the naming template; sets the key alias directly |
 | `deletionPolicy` | string | `"retain"` | Behavior when the KMS key resource is deleted: `"retain"` (safe) or `"delete"` |
 
@@ -33,15 +33,15 @@ The `AWSKMSKey` resource represents a single encryption key in AWS KMS. This gui
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `tags` | map | `{}` | AWS tags; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels and AWS tags (prefixed `kropath.run/`) |
-| `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `kropath.run/`) |
+| `syncedLabels` | map | `{}` | Kubernetes labels and AWS tags (prefixed `aws.kropath.run/`) |
+| `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
 ### Key Policy
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `policy` | string | `""` | Raw KMS key policy (JSON); mutually exclusive with `keyPolicyRef` |
-| `keyPolicyRef` | string | `""` | Reference to `AWSPolicyDocument` CR; mutually exclusive with `policy` |
+| `keyPolicyRef` | string | `""` | Reference to `PolicyDocument` CR; mutually exclusive with `policy` |
 
 ## Key Specs (Types)
 
@@ -63,8 +63,8 @@ The `AWSKMSKey` resource represents a single encryption key in AWS KMS. This gui
 ## Complete Example: S3 Encryption Key
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: s3-encryption-key
   namespace: data-prod
@@ -94,8 +94,8 @@ Result:
 ## Example: API Signing Key
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: api-signer
   namespace: services
@@ -117,8 +117,8 @@ Result:
 ## Example: Referenced Policy Document
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: bucket-key
   namespace: data
@@ -127,7 +127,7 @@ spec:
   keySpec: SYMMETRIC_DEFAULT
   keyUsage: ENCRYPT_DECRYPT
   keyPolicyRef: s3-encryption-policy
-  # Note: s3-encryption-policy must be an existing AWSPolicyDocument CR
+  # Note: s3-encryption-policy must be an existing PolicyDocument CR
 ```
 
 ## Status Fields
@@ -153,7 +153,7 @@ After creation, these fields cannot be changed:
 
 Attempting updates will fail:
 ```bash
-$ kubectl patch awskmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
+$ kubectl patch kmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
 # Error: keySpec is immutable after creation
 ```
 
@@ -162,8 +162,8 @@ $ kubectl patch awskmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
 When you don't specify a field, kropath resolves it using the governance cascade:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: minimal-key
   namespace: test
@@ -173,9 +173,9 @@ spec:
 ```
 
 The cascade for this key:
-1. Check `pci` AWSKMSConfig mandatory tier
+1. Check `pci` KMSConfig mandatory tier
 2. Check instance spec (empty in this case)
-3. Check `pci` AWSKMSConfig defaults tier → uses defaults
+3. Check `pci` KMSConfig defaults tier → uses defaults
 4. Result: key gets `keySpec=SYMMETRIC_DEFAULT`, `enableKeyRotation=true` from `pci` profile
 
 See [Governance Guide](./governance.md) for full cascade details.
@@ -184,8 +184,8 @@ See [Governance Guide](./governance.md) for full cascade details.
 
 ```yaml
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: backup-encryption
   namespace: backup
@@ -194,8 +194,8 @@ spec:
   description: "Key for encrypting backups"
   keySpec: SYMMETRIC_DEFAULT
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: database-encryption
   namespace: backup
@@ -209,7 +209,7 @@ spec:
 
 1. **Use `retain` deletion policy** — Default; prevents accidental key deletion
 2. **One key per use case** — Don't reuse keys across services
-3. **Use governance profiles** — Let `AWSKMSConfig` enforce compliance
+3. **Use governance profiles** — Let `KMSConfig` enforce compliance
 4. **Reference policy documents** — Use `keyPolicyRef` for standardized policies
 5. **Tag appropriately** — Include team, cost-center, sensitivity metadata
 6. **Enable rotation for symmetric keys** — Required for data-at-rest encryption
@@ -218,7 +218,7 @@ spec:
 ## Troubleshooting
 
 **Key creation fails with "Invalid keySpec"**
-- Check `AWSKMSConfig.mandatory.allowedKeySpecs` for the profile you selected
+- Check `KMSConfig.mandatory.allowedKeySpecs` for the profile you selected
 - Verify your requested `keySpec` is in the allowed list
 
 **Alias creation fails**

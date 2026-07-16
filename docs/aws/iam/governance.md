@@ -8,11 +8,11 @@ IAM governance operates in three layers, each taking precedence over the next:
 
 ### Layer 1: Organization-Wide Defaults
 
-The `AWSKropathConfig` resource sets org-wide baseline controls that apply to all namespaces and teams:
+The `KropathConfig` resource sets org-wide baseline controls that apply to all namespaces and teams:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKropathConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KropathConfig
 metadata:
   name: default
   namespace: kro-system
@@ -31,11 +31,11 @@ spec:
 
 ### Layer 2: Namespace-Scoped Profiles
 
-The `AWSIAMConfig` resource defines governance profiles per namespace. Teams select the profile they need:
+The `IAMConfig` resource defines governance profiles per namespace. Teams select the profile they need:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: general-policy
   namespace: kro-system
@@ -57,8 +57,8 @@ spec:
 Individual resources can override defaults (but not mandatory controls):
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: my-role
   namespace: my-namespace
@@ -84,15 +84,15 @@ When a resource is created, governance controls cascade down in this order:
 Suppose your org, profile, and resource have different values:
 
 ```
-Organization (AWSKropathConfig):
+Organization (KropathConfig):
   mandatory.iam.maxSessionDurationSeconds: 0    (not enforced)
   defaults.iam.maxSessionDurationSeconds: 3600  (1 hour)
 
-Profile (AWSIAMConfig):
+Profile (IAMConfig):
   mandatory.maxSessionDurationSeconds: 900    (15 minutes - ENFORCED)
   defaults.maxSessionDurationSeconds: 7200    (2 hours)
 
-Resource (AWSIAMRole):
+Resource (IAMRole):
   maxSessionDuration: 1800    (30 minutes - request)
 ```
 
@@ -173,8 +173,8 @@ defaults:
 For regulated workloads (PCI, HIPAA, SOC2):
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: pci-compliance
 spec:
@@ -195,8 +195,8 @@ Developers selecting `configRef: pci-compliance` get strict compliance controls 
 For development and testing:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: dev
 spec:
@@ -219,7 +219,7 @@ Developers get a generous default session duration but stay within the dev bound
 See what governance controls are actually applied:
 
 ```bash
-kubectl describe awsiamrole my-role -n my-namespace
+kubectl describe iamrole my-role -n my-namespace
 ```
 
 Look for `status.conditions` to see if governance rules were applied.
@@ -227,19 +227,19 @@ Look for `status.conditions` to see if governance rules were applied.
 ### Find Which Profile a Resource Uses
 
 ```bash
-kubectl get awsiamrole my-role -n my-namespace -o jsonpath='{.spec.configRef}'
+kubectl get iamrole my-role -n my-namespace -o jsonpath='{.spec.configRef}'
 ```
 
 ### List All Profiles in a Namespace
 
 ```bash
-kubectl get awsiamconfig -n kro-system
+kubectl get iamconfig -n kro-system
 ```
 
 ### Check Organization-Wide Defaults
 
 ```bash
-kubectl get awskropathconfig default -n kro-system -o yaml
+kubectl get kropathconfig default -n kro-system -o yaml
 ```
 
 ## Governance Best Practices

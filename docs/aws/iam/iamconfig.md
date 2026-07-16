@@ -1,10 +1,10 @@
-# AWSIAMConfig — Governance Configuration
+# IAMConfig — Governance Configuration
 
-The `AWSIAMConfig` resource defines governance profiles that control IAM behavior across your organization and namespaces. Platform teams create named profiles; developers and operators select the profile they need via `spec.configRef` on each IAM resource.
+The `IAMConfig` resource defines governance profiles that control IAM behavior across your organization and namespaces. Platform teams create named profiles; developers and operators select the profile they need via `spec.configRef` on each IAM resource.
 
 ## Overview
 
-`AWSIAMConfig` establishes two tiers of governance:
+`IAMConfig` establishes two tiers of governance:
 
 - **Mandatory tier** — Controls that cannot be overridden by developers (e.g., permissions boundary that all roles must use)
 - **Defaults tier** — Baseline values developers can override (e.g., default session duration if not specified on the role)
@@ -49,8 +49,8 @@ Default values apply only when **not specified** at the resource level:
 ### Conservative Baseline (general-policy)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: general-policy
   namespace: kro-system
@@ -69,8 +69,8 @@ spec:
 ### Hardened (pci)
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMConfig
 metadata:
   name: pci
   namespace: kro-system
@@ -90,8 +90,8 @@ spec:
 Select a profile on any IAM resource:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSIAMRole
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
 metadata:
   name: my-lambda-role
   namespace: my-namespace
@@ -107,8 +107,8 @@ If a named profile does not exist, resources fall back to `general-policy`.
 Set org-wide controls using the cloud provider's root configuration:
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKropathConfig
+apiVersion: aws.kropath.run/v1alpha1
+kind: KropathConfig
 metadata:
   name: default
   namespace: kro-system
@@ -132,12 +132,12 @@ spec:
 Verify a profile and its settings:
 
 ```bash
-kubectl get awsiamconfig general-policy -n kro-system -o yaml
-kubectl describe awsiamconfig pci -n kro-system
+kubectl get iamconfig general-policy -n kro-system -o yaml
+kubectl describe iamconfig pci -n kro-system
 ```
 
 Check what profile a resource is using:
 
 ```bash
-kubectl describe awsiamrole my-role -n my-namespace | grep configRef
+kubectl describe iamrole my-role -n my-namespace | grep configRef
 ```

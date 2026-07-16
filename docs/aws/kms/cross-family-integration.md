@@ -12,11 +12,11 @@ KMS is a foundational security service. Other AWS services integrate with KMS by
 - **Lambda** — Encrypts environment variables (deferred to P2+)
 - **EKS** — Encrypts Kubernetes secrets (deferred to P2+)
 
-All families follow the same pattern: reference the KMS key ARN from the `AWSKMSKey.status` fields.
+All families follow the same pattern: reference the KMS key ARN from the `KMSKey.status` fields.
 
 ## ARN Reference Patterns
 
-After an `AWSKMSKey` is created, three ARNs are available in the `status`:
+After an `KMSKey` is created, three ARNs are available in the `status`:
 
 ### Key ARN
 
@@ -66,8 +66,8 @@ Encrypt S3 bucket objects with server-side encryption (SSE-KMS).
 ### Step 1: Create the KMS Key
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: s3-encryption-key
   namespace: data-prod
@@ -83,8 +83,8 @@ spec:
 ### Step 2: Reference in S3 Bucket
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSS3Bucket
+apiVersion: aws.kropath.run/v1alpha1
+kind: S3Bucket
 metadata:
   name: product-data
   namespace: data-prod
@@ -98,7 +98,7 @@ spec:
 ```
 
 **Key points:**
-- Use `status.keyArn` from the `AWSKMSKey` resource
+- Use `status.keyArn` from the `KMSKey` resource
 - Set `algorithm: "aws:kms"` to enable KMS encryption
 - Set `bucketKeyEnabled: true` to reduce KMS API costs
 - S3 service needs `kms:Decrypt` and `kms:GenerateDataKey` permissions
@@ -114,8 +114,8 @@ Use a KMS key to encrypt RDS databases and backups.
 ### Create the KMS Key
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: rds-encryption-key
   namespace: databases
@@ -133,8 +133,8 @@ spec:
 ### Reference in RDS Database
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSRDSInstance  # Note: RDS family is Phase 2+
+apiVersion: aws.kropath.run/v1alpha1
+kind: RDSInstance  # Note: RDS family is Phase 2+
 metadata:
   name: production-db
   namespace: databases
@@ -151,8 +151,8 @@ spec:
 Encrypt EBS volumes.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSEBSVolume  # Note: EBS family is Phase 2+
+apiVersion: aws.kropath.run/v1alpha1
+kind: EBSVolume  # Note: EBS family is Phase 2+
 metadata:
   name: encrypted-data-volume
   namespace: compute
@@ -169,8 +169,8 @@ spec:
 Encrypt Lambda environment variables.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSLambdaFunction  # Note: Lambda family is Phase 2+
+apiVersion: aws.kropath.run/v1alpha1
+kind: LambdaFunction  # Note: Lambda family is Phase 2+
 metadata:
   name: secure-handler
   namespace: functions
@@ -189,8 +189,8 @@ spec:
 Encrypt Kubernetes secrets in EKS.
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSEKSCluster  # Note: EKS family is Phase 2+
+apiVersion: aws.kropath.run/v1alpha1
+kind: EKSCluster  # Note: EKS family is Phase 2+
 metadata:
   name: production-cluster
   namespace: platform
@@ -245,11 +245,11 @@ For services to use your KMS key, grant permissions in the key policy.
 }
 ```
 
-### Using AWSPolicyDocument
+### Using PolicyDocument
 
 ```yaml
-apiVersion: kropath.run/v1alpha1
-kind: AWSPolicyDocument
+apiVersion: aws.kropath.run/v1alpha1
+kind: PolicyDocument
 metadata:
   name: multi-service-key-policy
   namespace: security
@@ -275,8 +275,8 @@ spec:
       ]
     }
 ---
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: data-encryption-key
   namespace: security
@@ -297,8 +297,8 @@ spec:
 
 ```yaml
 # Step 1: Create KMS key
-apiVersion: kropath.run/v1alpha1
-kind: AWSKMSKey
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
 metadata:
   name: encryption-key
   namespace: data-prod
@@ -307,8 +307,8 @@ spec:
   keySpec: SYMMETRIC_DEFAULT
 ---
 # Step 2: Create bucket (after key status.keyArn is available)
-apiVersion: kropath.run/v1alpha1
-kind: AWSS3Bucket
+apiVersion: aws.kropath.run/v1alpha1
+kind: S3Bucket
 metadata:
   name: encrypted-bucket
   namespace: data-prod
@@ -342,6 +342,6 @@ spec:
 
 ## Next Steps
 
-- [AWSKMSKey Usage Guide](./awskmskey.md) — Configure individual keys
+- [KMSKey Usage Guide](./kmskey.md) — Configure individual keys
 - [Governance Guide](./governance.md) — Enforce KMS policies
 - [AWS KMS Documentation](https://docs.aws.amazon.com/kms/) — AWS native documentation
