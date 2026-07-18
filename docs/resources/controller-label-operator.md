@@ -32,9 +32,19 @@ The operator automatically covers:
 
 - **All Config resources** — `S3Config`, `IAMConfig`, `KMSConfig`, `CloudStorageBucketConfig`, `StorageAccountConfig`, and any future config kinds.
 - **All externally-referenced resources** — `IAMPolicyDocument`, `IAMPolicy`, `S3Bucket`, `IAMRole`, and any future resource kinds defined under `<provider>.kropath.run`.
-- **Any new CRD registered under a provider API group** — no code changes needed.
+- **Any new CRD registered under an existing provider API group** — no code changes needed. For example, if a new `S3AccessPoint` kind is added under `aws.kropath.run`, the operator automatically covers it.
 
 **Excluded:** `KropathConfig` resources use the `kropath.run` API group (not a provider-specific group), so they are outside the operator's scope.
+
+### Adding New Providers
+
+When a new provider is added in the future (e.g., a new `oracle.kropath.run` API group):
+
+- The operator **must be explicitly extended** to watch the new provider's API group.
+- This requires two changes:
+  1. **Controller configuration:** Add a new informer in `kropath-controller` startup to watch the new `<provider>.kropath.run` API group.
+  2. **RBAC update:** Update the Helm chart ClusterRole to grant permissions on the new API group (`get`, `list`, `watch`, `patch`).
+- These are configuration and deployment changes, not code changes. Once updated, the operator covers all resources in the new API group automatically.
 
 ### Provider Determination
 
@@ -45,8 +55,6 @@ The operator derives the provider from the resource's API group:
 | `aws.kropath.run` | AWS | `aws.kropath.run/resource-name` |
 | `gcp.kropath.run` | GCP | `gcp.kropath.run/resource-name` |
 | `azure.kropath.run` | Azure | `azure.kropath.run/resource-name` |
-
-If a new provider is added in the future, the operator automatically covers its resources as long as they follow the same `<provider>.kropath.run` API group pattern.
 
 ## Behavior When Unavailable
 
