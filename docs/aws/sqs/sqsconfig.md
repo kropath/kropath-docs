@@ -142,22 +142,24 @@ spec:
 
 ## Governance Cascade
 
-When a queue is created, kropath evaluates settings in this order (first match wins):
+The configuration cascade follows a priority system with mandatory controls always winning:
 
-1. **Queue-level spec** — What the developer specified on the queue CR
-2. **Mandatory tier** — SQSConfig mandatory controls (mandatory tier always wins)
-3. **Defaults tier** — SQSConfig defaults
-4. **Org-wide settings** — KropathConfig controls
-5. **Hardcoded defaults** — kropath fallback defaults
+**For mandatory fields:**
+- Org mandatory → SQSConfig mandatory → queue spec is ignored
+- Mandatory controls cannot be overridden by developers
 
-For **mandatory fields**, the cascade is:
-- Org mandatory → SQSConfig mandatory → cannot be overridden by queue
+**For defaults and overrideable fields:**
+- Queue-level spec (if provided) wins
+- SQSConfig defaults apply (if queue doesn't specify)
+- Org-wide defaults apply (if SQSConfig doesn't specify)
+- Hardcoded kropath defaults apply (as final fallback)
 
-For **numeric ceilings** (visibility timeout, retention period, message size):
-- Org mandatory and SQSConfig mandatory act as hard ceilings; queue values are clamped
+**For numeric ceilings** (visibility timeout, retention period, message size):
+- Org mandatory and SQSConfig mandatory act as hard ceilings
+- Queue values are clamped to the ceiling; values exceeding it are reduced
 
-For **string fields** (encryption type, naming template):
-- Org mandatory and SQSConfig mandatory override completely
+**For string fields** (encryption type, naming template):
+- Org mandatory and SQSConfig mandatory override queue-level choices completely
 
 ## Monitoring
 
@@ -173,11 +175,3 @@ Check what profile a queue is using:
 ```bash
 kubectl describe sqsqueue order-events -n payments-prod | grep configRef
 ```
-
-Inspect the effective configuration written by the controller:
-
-```bash
-kubectl get sqsconfig general-policy -n kro-system -o jsonpath='{.status.effectiveConfig}' | jq
-```
-
-The `status.effectiveConfig` field shows the merged configuration that queues actually use — a combination of org-wide, profile, and queue-level settings.

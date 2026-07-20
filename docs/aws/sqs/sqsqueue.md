@@ -69,7 +69,7 @@ This queue:
 - Deduplicates messages based on content hash
 - Stores the deduplication ID for 5 minutes (default)
 - Supports standard FIFO throughput (300 msg/sec per queue)
-- Queue name: `app-prod-order-events.fifo`
+- Queue name: `payments-prod-order-events.fifo`
 
 ### FIFO Queue with High Throughput
 
@@ -236,7 +236,15 @@ When a message is received 3 times and not deleted, it's moved to the dead-lette
 
 ### DLQ with Source Restrictions
 
-If the DLQ itself needs to know which queues can send to it:
+If the DLQ itself needs to know which queues can send to it, use `redriveAllowPolicy`:
+
+| Value | Behavior |
+|---|---|
+| `allowAll` | Any queue can send messages to this DLQ (default) |
+| `denyAll` | No queue can send messages to this DLQ (restrictive) |
+| `byQueue` | Only queues listed in `sourceQueueArns` can send to this DLQ |
+
+Example with `byQueue`:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -337,6 +345,7 @@ Look for:
 - `status.resourceName` — The actual queue name in AWS
 - `status.predictedArn` — The full ARN
 - `status.queueUrl` — The queue URL for SDK calls
+- `status.namingStatus` — `valid` or `invalid-unresolved-tokens` (indicates naming errors)
 - `status.conditions` — Ready, error, or warning states
 
 ## Deletion
