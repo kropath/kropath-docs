@@ -1,10 +1,10 @@
 # Dynamic Tag Fields in Naming Templates
 
-Kropath allows you to embed tag values directly into resource naming templates using the `{tag.fieldName}` placeholder syntax. This enables you to derive cloud resource names from Kubernetes labels, annotations, and tags without needing to use a separate `spec.nameOverride` field.
+Kropath allows you to embed tag values directly into resource naming templates using the `{tag.fieldName}` placeholder syntax. This enables you to derive cloud resource names from tags defined in your resource configuration without needing to use a separate `spec.nameOverride` field.
 
 ## Overview
 
-By default, kropath assigns names to cloud resources using a naming template like `{namespace}-{name}-{account_id}`. The dynamic tag field feature extends this by allowing you to reference any tag that is available in the resource's merged tags (from `syncedLabels`, `syncedAnnotations`, or explicit `spec.tags`).
+By default, kropath assigns names to cloud resources using a naming template like `{namespace}-{name}-{account_id}`. The dynamic tag field feature extends this by allowing you to reference any tag available in the resource's `spec.tags` field or injected by governance mandatory/default configuration.
 
 For example, if your resource has a tag `environment: production`, you can use the template `{tag.environment}-my-app-{name}` to generate a resource name like `production-my-app-my-resource`.
 
@@ -110,7 +110,7 @@ spec:
 
 ### AWS IAM Resources
 
-- **Length:** 1–64 characters for role, user, and group names
+- **Length:** 1–64 characters for role and user names; 1–128 characters for group names
 - **Character set:** Alphanumeric plus `+`, `=`, `,`, `.`, `@`, `-`, `_`
 - **No lowercase requirement**
 
@@ -215,6 +215,7 @@ spec:
     cost-center: analytics
   # Given defaults.namingTemplate: "{tag.team}-{tag.environment}-{name}"
   # effectiveName = "data-eng-staging-lambda-processor"
+  # NOTE: syncedLabels (cost-center) cannot be used in naming templates — only spec.tags
 ```
 
 ### Example 3: KMS Key with Service Name
@@ -277,8 +278,6 @@ spec:
 
 1. Ensure the tag key exists in one of these places:
    - `spec.tags` (instance-level)
-   - `spec.syncedLabels` (instance-level)
-   - `spec.syncedAnnotations` (instance-level)
    - Governance config mandatory or default tags (via `KropathConfig` or `<ResourceFamily>Config`)
 
 2. Check the tag name for typos. Tag keys are case-sensitive.
