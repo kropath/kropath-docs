@@ -195,7 +195,7 @@ IAM role names are derived from a naming template defined in your governance con
 
 Naming templates support `{tag.fieldName}` placeholders to embed tag values directly into role names. For example, a template like `{tag.team}-{tag.environment}-{name}` would create a role name from tag values combined with the CR name.
 
-Tag values are resolved from your resource's tags: `spec.tags`, `spec.syncedLabels`, and `spec.syncedAnnotations`. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`.
+Tag values are resolved from `spec.tags` combined with governance mandatory and default tags. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`. Note: only `spec.tags` are used for naming template resolution, not `syncedLabels` or `syncedAnnotations`.
 
 **Example:**
 

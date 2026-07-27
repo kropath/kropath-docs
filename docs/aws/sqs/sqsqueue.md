@@ -333,7 +333,7 @@ With `nameOverride`, the queue is named exactly `my-custom-queue` (no template a
 
 Queue naming templates support `{tag.fieldName}` placeholders to embed tag values directly into queue names. For example, a template like `{tag.environment}-{tag.service}-queue` would derive the queue name from tags combined with the CR name.
 
-Tag values are resolved from your resource's tags: `spec.tags`, `spec.syncedLabels`, and `spec.syncedAnnotations`. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`.
+Tag values are resolved from `spec.tags` combined with governance mandatory and default tags. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`. Note: only `spec.tags` are used for naming template resolution, not `syncedLabels` or `syncedAnnotations`.
 
 **Example:**
 

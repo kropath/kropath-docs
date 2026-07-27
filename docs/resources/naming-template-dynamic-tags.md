@@ -35,21 +35,23 @@ A single template can use multiple `{tag.fieldName}` placeholders, multiple stan
 
 ## Tag Resolution Order
 
-When a naming template is evaluated, the system resolves tags in a cascading order:
+When a naming template is evaluated, the system resolves tags from the `mergedTags` collection in a cascading order:
 
 1. **Mandatory tags** from the governance config (`<ResourceFamily>Config` or `KropathConfig`)
-2. **Instance-level tags** from `spec.tags`, `spec.syncedLabels`, and `spec.syncedAnnotations`
+2. **Instance-level tags** from `spec.tags` only
 3. **Default tags** from the governance config
 
 If a tag key exists at multiple levels (e.g., both mandatory and instance level), the mandatory value takes precedence. If a tag key does not exist at any level, the placeholder resolves to an empty string and the template validity check reports an error (see [Troubleshooting](#troubleshooting) below).
 
+**Important:** For naming template resolution, only `spec.tags` are included in `mergedTags`. Kubernetes-level metadata like `spec.syncedLabels` and `spec.syncedAnnotations` are NOT included in the tag resolution for naming templates — they are separate cloud metadata fields. A naming template that references a tag not in `spec.tags`, governance mandatory tags, or governance defaults tags will fail validation.
+
 ### Tag Sources
 
-Tag values for naming templates come from three sources:
+Tag values available for naming templates come from a single source: `spec.tags` combined with mandatory and default tags from the governance config:
 
 - **`spec.tags`** — Custom AWS/provider tags applied directly to the resource
-- **`spec.syncedLabels`** — Kubernetes labels mirrored as cloud tags (prefixed with `<provider>.kropath.run/`)
-- **`spec.syncedAnnotations`** — Kubernetes annotations mirrored as cloud tags (prefixed with `<provider>.kropath.run/`)
+- **Governance mandatory tags** — Tags enforced at the organization or profile level
+- **Governance default tags** — Tags applied when not explicitly overridden
 
 Example:
 
@@ -63,13 +65,12 @@ spec:
   tags:
     environment: production
     cost-center: engineering
-  syncedLabels:
-    data-sensitivity: high
-  syncedAnnotations:
-    owner: data-platform-team
   # If configRef points to a profile with:
   # - defaults.namingTemplate: "{tag.environment}-{tag.cost-center}-{namespace}-{name}"
   # Then effectiveName = "production-engineering-data-prod-my-bucket"
+  # 
+  # NOTE: spec.syncedLabels and spec.syncedAnnotations are NOT used for naming
+  # template tag resolution — only spec.tags are used.
 ```
 
 ## Supported Resource Families
@@ -109,7 +110,7 @@ spec:
 
 ### AWS IAM Resources
 
-- **Length:** 1–64 characters for role names; 1–128 for user/group names
+- **Length:** 1–64 characters for role, user, and group names
 - **Character set:** Alphanumeric plus `+`, `=`, `,`, `.`, `@`, `-`, `_`
 - **No lowercase requirement**
 
@@ -135,7 +136,7 @@ spec:
 KMS keys are identified by `KeyId` (a UUID-like string), not a human-readable name. However, you can apply tags to the key and reference them in the naming template for the `Alias` (friendly name):
 
 - **Alias length:** 1–256 characters
-- **Alias character set:** Alphanumeric plus `-` and `_`; must start with `aws/` prefix or your custom prefix
+- **Alias character set:** Alphanumeric plus `-` and `_`; customer-managed aliases must start with `alias/` prefix (the `aws/` prefix is reserved for AWS-managed keys)
 - **Important:** The alias is the human-friendly identifier; the key itself has an immutable ID
 
 Example:
@@ -234,7 +235,7 @@ spec:
 
 ### Example 4: SQS Queue with Governance Tags
 
-You can also combine governance-level tags (from `KropathConfig` or `<ResourceFamily>Config`) with instance-level tags:
+You can combine governance-level tags (from `KropathConfig` or `<ResourceFamily>Config`) with instance-level tags:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -246,14 +247,15 @@ spec:
   fifo: false
   tags:
     application: order-system
-  syncedLabels:
     environment: production
 ```
 
 If `KropathConfig.spec.defaults.tags` includes `{"cost-center": "operations"}` and the `SQSConfig` has `defaults.namingTemplate: "{tag.cost-center}-{tag.application}-queue"`, then:
 
-- **Merged tags:** `{cost-center: operations, application: order-system, environment: production}`
+- **Merged tags for naming:** `{cost-center: operations, application: order-system, environment: production}`
 - **effectiveName:** `operations-order-system-queue`
+
+Note: Only `spec.tags` and governance tags are used for naming template resolution. `syncedLabels` and `syncedAnnotations` are not included in the tag resolution for naming templates.
 
 ## Troubleshooting
 
@@ -345,7 +347,11 @@ spec:
 
 ## Related Resources
 
-- [Naming Conventions and effectiveName](../design/naming-convention.md) — Comprehensive guide to kropath's naming system
 - [S3 Bucket Documentation](../aws/s3/s3.md) — S3-specific naming and constraint details
 - [IAM Role Documentation](../aws/iam/iamrole.md) — IAM-specific naming and constraint details
-- [Governance Configuration](../design/governance-cascade.md) — How to set governance templates
+- [KMS Key Documentation](../aws/kms/kmskey.md) — KMS-specific alias naming details
+- [SQS Queue Documentation](../aws/sqs/sqsqueue.md) — SQS-specific naming constraint details
+
+For comprehensive design documentation on naming conventions and governance configuration, refer to `kropath-core` repository:
+- `docs/design/naming-convention.md` — Complete naming system reference
+- `docs/design/governance-cascade.md` — Governance configuration patterns
