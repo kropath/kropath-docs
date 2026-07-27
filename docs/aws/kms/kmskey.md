@@ -157,6 +157,43 @@ $ kubectl patch kmskey my-key --patch '{"spec":{"keySpec":"RSA_4096"}}'
 # Error: keySpec is immutable after creation
 ```
 
+## Naming and Key Aliases
+
+KMS keys themselves have immutable, AWS-generated IDs (e.g., `c1efd8fe-e91c-45c6-89d1-e12f1f8c3c3d`). The human-friendly name for a key is its **alias**, which is created from a naming template in your governance config.
+
+### Dynamic Tag Fields in Alias Templates
+
+Alias naming templates support `{tag.fieldName}` placeholders to embed tag values directly into key aliases. For example, a template like `alias/kms-{tag.application}-{tag.environment}-key` would create an alias from tag values combined with the key name.
+
+Tag values are resolved from your resource's tags: `spec.tags`, `spec.syncedLabels`, and `spec.syncedAnnotations`. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`.
+
+**Example:**
+
+```yaml
+spec:
+  tags:
+    application: user-database
+    tier: production
+  # With a naming template: "alias/kms-{tag.application}-{tag.tier}"
+  # Alias = "alias/kms-user-database-production"
+```
+
+### Resource Identity
+
+Once created, the key's identity is exposed in the CR status:
+
+```bash
+kubectl describe kmskey my-key -n default
+```
+
+Look for:
+- `status.resourceName` — The effective key alias (derived from naming template or `spec.nameOverride`)
+- `status.keyId` — The AWS-generated key ID (immutable identifier)
+- `status.arn` — The AWS ARN for the key
+- `status.namingStatus` — Validation status (`valid` or `invalid-unresolved-tokens`)
+
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../resources/naming-template-dynamic-tags.md).
+
 ## Governance Cascade
 
 When you don't specify a field, kropath resolves it using the governance cascade:
