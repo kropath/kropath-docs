@@ -187,6 +187,43 @@ spec:
 
 Value must not exceed mandatory limit from the config profile.
 
+## Naming and Resource Identification
+
+IAM role names are derived from a naming template defined in your governance config (e.g., `general-policy`). The default template is `{namespace}-{name}`, which derives the role name from the Kubernetes namespace and resource name.
+
+### Dynamic Tag Fields in Naming Templates
+
+Naming templates support `{tag.fieldName}` placeholders to embed tag values directly into role names. For example, a template like `{tag.team}-{tag.environment}-{name}` would create a role name from tag values combined with the CR name.
+
+Tag values are resolved from `spec.tags` combined with governance mandatory and default tags. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`. Note: only `spec.tags` are used for naming template resolution, not `syncedLabels` or `syncedAnnotations`.
+
+**Example:**
+
+```yaml
+spec:
+  type: lambda
+  tags:
+    team: data-eng
+    environment: staging
+  # With a naming template: "{tag.team}-{tag.environment}-{name}"
+  # effectiveName = "data-eng-staging-lambda-processor"
+```
+
+### Resource Identity
+
+Once created, the role's identity is exposed in the CR status:
+
+```bash
+kubectl describe iamrole my-role -n default
+```
+
+Look for:
+- `status.resourceName` — The effective IAM role name (derived from naming template or `spec.nameOverride`)
+- `status.predictedArn` — The AWS ARN for the role (e.g., `arn:aws:iam::123456789012:role/my-role`)
+- `status.namingStatus` — Validation status (`valid` or `invalid-unresolved-tokens`)
+
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../resources/naming-template-dynamic-tags.md).
+
 ## Monitoring
 
 Check role status:

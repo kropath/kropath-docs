@@ -329,6 +329,26 @@ spec:
 
 With `nameOverride`, the queue is named exactly `my-custom-queue` (no template applied).
 
+### Dynamic Tag Fields in Naming Templates
+
+Queue naming templates support `{tag.fieldName}` placeholders to embed tag values directly into queue names. For example, a template like `{tag.environment}-{tag.service}-queue` would derive the queue name from tags combined with the CR name.
+
+Tag values are resolved from `spec.tags` combined with governance mandatory and default tags. If a referenced tag does not exist, the naming validation reports `status.namingStatus: invalid-unresolved-tokens`. Note: only `spec.tags` are used for naming template resolution, not `syncedLabels` or `syncedAnnotations`.
+
+**Example:**
+
+```yaml
+spec:
+  fifo: false
+  tags:
+    environment: production
+    service: notifications
+  # With a naming template: "{tag.environment}-{tag.service}-{name}"
+  # Queue name = "production-notifications-order-events"
+```
+
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../resources/naming-template-dynamic-tags.md).
+
 **FIFO suffix:** FIFO queues automatically get `.fifo` appended:
 - Standard: `payments-prod-order-events`
 - FIFO: `payments-prod-order-events.fifo`
