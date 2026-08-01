@@ -218,4 +218,4 @@ The `status.effectiveConfig` shows:
 - All default fields (developer overrides possible)
 - AWS account and region information
 
-This single config CR is what all secrets reference via their RGD — ensuring consistent, auditable governance.
+This single config CR ensures consistent, auditable governance across all secrets that reference it.

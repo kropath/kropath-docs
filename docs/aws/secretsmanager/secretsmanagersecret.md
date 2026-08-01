@@ -32,7 +32,7 @@ The `SecretsManagerSecret` resource represents a single secret in AWS Secrets Ma
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `replicaRegions` | array | `[]` | Regions to replicate this secret to for disaster recovery. Overridable by governance mandatory tier. |
+| `replicaRegions` | array | `[]` | Regions to replicate this secret to for disaster recovery. Developer value is overridden by the governance mandatory tier when set. |
 | `replicaRegions[].region` | string | required | AWS region code (e.g. `us-west-2`) |
 | `replicaRegions[].kmsKeyID` | string | `""` | KMS key for the replica (defaults to AWS managed key in that region if empty) |
 | `forceOverwriteReplicaSecret` | boolean | `false` | If true, overwrite an existing secret with the same name in the destination region |
@@ -215,7 +215,7 @@ The effective configuration for each secret is determined by a three-tier cascad
 
 For example, if the PCI profile has `mandatory.kmsKeyID` set, that key is always used, even if the secret specifies `spec.kmsKeyArn`. If mandatory is empty but the secret doesn't specify encryption, the defaults apply.
 
-Platform teams use the mandatory tier for critical controls (compliance, encryption, replication); developers use the defaults tier for reasonable baselines that developers can override when needed.
+Platform teams use the mandatory tier for critical controls (compliance, encryption, replication); they also use the defaults tier to provide reasonable baselines that developers can override when needed.
 
 ## Key Behaviors
 
