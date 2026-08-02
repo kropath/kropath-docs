@@ -218,9 +218,3 @@ Check what profile a topic is using:
 ```bash
 kubectl describe snstopic order-events -n payments-prod | grep configRef
 ```
-
-View the effective configuration (merged from all layers):
-
-```bash
-kubectl get snsconfig general-policy -n kro-system -o json | jq .status.effectiveConfig
-```
