@@ -242,22 +242,23 @@ spec:
 EOF
 ```
 
-## Effective Configuration
+## How Governance Takes Effect
 
-When a table is created, kropath-controller reads the selected `DynamoDBConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
+When you create a `DynamoDBTable`, kropath resolves the mandatory and defaults values from the selected `DynamoDBConfig` profile. Mandatory values always apply; defaults fill in when not specified at the table level.
 
-Developers and platform teams can inspect the effective configuration:
+You can verify which profile a table is using:
 
 ```bash
-kubectl get dynamodbconfig general-policy -n kro-system -o yaml
+kubectl get dynamodbtable <name> -n <namespace> -o jsonpath='{.spec.configRef}'
 ```
 
-The `status.effectiveConfig` shows:
-- All mandatory fields (platform enforcement)
-- All default fields (developer overrides possible)
-- AWS account and region information
+To check the resulting table configuration, inspect the table's `spec` fields and verify the expected settings in `status.conditions`. For example:
 
-This single config CR ensures consistent, auditable governance across all tables that reference it.
+```bash
+kubectl get dynamodbtable user-orders -n app-team -o yaml
+```
+
+This shows which profile is active and whether the table was successfully configured according to governance rules.
 
 ## Naming Convention
 
