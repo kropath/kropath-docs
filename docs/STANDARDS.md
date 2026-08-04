@@ -1,89 +1,39 @@
-# kropath Engineering Standards
+# kropath-docs Standards
 
-**kropath** (kro + golden path) is a multi-cloud golden path platform.
-**ADR-015** (`docs/adrs/015-consolidated-platform-decisions.md`) is the primary agent reference. ADR-001, ADR-010, and ADR-011 are also active alongside it. All other ADRs are archived in `docs/adrs/archive/` for narrative context.
+**Shared engineering standards** (CRD/RGD schema, API groups, kind naming, label/annotation
+conventions, wiring, effectiveConfig cascade): see
+`kropath-core/docs/standards/engineering-standards.md`.
 
-## Repository Map
+---
 
-| Repo | Purpose |
-|---|---|
-| `kropath-core` | ADRs, design docs, SDD specs, shared standards (this repo) |
-| `kropath-aws` | CRDs + kro RGDs for AWS (ACK-based) |
-| `kropath-gcp` | CRDs + kro RGDs for GCP (KCC-based) |
-| `kropath-azure` | CRDs + kro RGDs for Azure (ASO-based) |
-| `kropath-controller` | Go controller — writes `status.effectiveConfig` (ADR-010) |
-| `kropath-idp` | Internal developer platform — cross-provider UI |
-| `kropath-docs` | Customer-facing documentation |
+## This Repository
 
-## Governance Config Hierarchy (ADR-010)
+`kropath-docs` — Customer-facing documentation only; no runnable code.
 
-Three layers per provider. **kropath-controller** pre-merges all sources and writes
-`status.effectiveConfig` onto the namespaced ResourceConfig CR — the single object RGDs read.
+- Guides, API references, and tutorials for kropath platform users
+- References specs and ADRs from `kropath-core` as the authoritative design record
+- Link to implementation details; never copy them here
+- No CRDs, kro RGDs, or Go code
 
-| Layer | Kind | Scope |
-|---|---|---|
-| 1 | `KropathConfig` | Org-wide + namespace |
-| 2 | `<ResourceFamily>Config` | ResourceConfig per-type (controller writes `status.effectiveConfig`) |
-| 3 | Resource instance `spec` | Developer overrides |
+---
 
-## CEL Cascade Pattern (ADR-010)
+## Documentation-Specific Rules
 
-**One `externalRef` lookup per RGD.** Controller pre-merges; RGD reads `effCfg` from a config CR:
+- **Link, don't copy.** Reference ADRs and specs by path from `kropath-core`. Do not
+  duplicate implementation content in this repo.
+- **API group in examples.** Use `<provider>.kropath.run` (e.g. `aws.kropath.run/v1alpha1`).
+  The bare `kropath.run` group is deprecated and must not appear in new examples.
+- **ExternalRef in examples.** All code examples must use `selector.matchLabels` for
+  `externalRef` lookups — never `metadata.name` with a CEL expression. (Theme 28, KRO-221)
+- **Kind names in examples.** No provider prefix in kind — `S3Config`, not
+  `AWSS3BucketConfig`; `KropathConfig`, not `AWSKropathConfig`.
 
-```cel
-resources:
-- id: rsrcCfg
-  externalRef:
-    apiVersion: aws.kropath.run/v1alpha1
-    kind: S3Config
-    metadata:
-      name: ${schema.spec.configRef}
-      namespace: ${schema.metadata.namespace}
-
-- id: ackResource
-  template:
-    spec:
-      tags: ${rsrcCfg.status.effectiveConfig.mandatory.tags + schema.spec.tags + rsrcCfg.status.effectiveConfig.defaults.tags}
-```
-
-Access pattern: `effCfg.mandatory.*`, `effCfg.defaults.*`, `effCfg.aws.*`.
-Never `effCfg.spec.*`.
-Status definitions live under `spec.schema.status`, not `spec.status`.
-
-## Naming Convention
-
-- `effectiveName` = cloud resource name (from naming template or `spec.nameOverride`).
-- `status.resourceName` exposes `effectiveName`.
-- `status.predictedArn` built from `effectiveName` — **never from `metadata.name`**.
-- `spec.nameOverride: string | default=""` required in every RGD schema.
-
-## Required Wiring (ADR-015 §6–7)
-
-Every child K8s resource must receive:
-- `metadata.labels` ← `mergedSyncedLabels` (prefixed `<privider>.kropath.run/`, eg. `aws.kropath.run`)
-- `metadata.labels` ← `app.kubernetes.io/managed-by: kro`
-- `metadata.labels` ← `app.kubernetes.io/instance: ${metadata.name}`
-- `metadata.annotations` ← `mergedSyncedAnnotations` (prefixed `<privider>.kropath.run/`, eg. `aws.kropath.run`)
-- Provider deletion policy annotation/field (see table)
-- Cloud resource tags ← `allCloudMetadata`
-
-**Deletion policy per provider:**
-
-| Provider | Field | retain value | delete value |
-|---|---|---|---|
-| AWS (ACK) | `metadata.annotations["services.k8s.aws/deletion-policy"]` | `retain` | `delete` |
-| GCP (KCC) | `metadata.annotations["cnrm.cloud.google.com/deletion-policy"]` | `abandon` | `delete` |
-| Azure (ASO) | `spec.reconcilePolicy.objectDeletionPolicy` | `Detach` | `Delete` |
-
-## CRD Rules (ADR-015 §4)
-
-- Every field in **both** `spec.mandatory` and `spec.defaults` with safe zero-value defaults.
-- `x-kubernetes-validations` to prevent both tiers being set simultaneously.
-- `crds/` = CRDs only; `rgds/` = kro RGDs only.
+---
 
 ## Metadata Key Convention
 
-All agents use these standard keys in the Multica issue metadata bag. Keys outside this table require justification.
+All agents use these standard keys in the Multica issue metadata bag. Keys outside this table
+require justification.
 
 | Key | Type | Set by | Read by | Meaning |
 |---|---|---|---|---|
@@ -92,20 +42,21 @@ All agents use these standard keys in the Multica issue metadata bag. Keys outsi
 | `blocked_by` | string | Issue creator | All agents | Prerequisite issue ID |
 | `waiting_on` | string | Any | Any | Current blocker role or description |
 | `completed_steps` | string (JSON array) | Any | Same agent on re-entry | Steps completed in a multi-step task |
-| `design_status` | string | Design Reviewer | Spec Analyst | `draft` / `submitted` / `changes_requested` / `approved` |
-| `specs_completed` | number | Spec Analyst | Design Reviewer, Human | Count of specs drafted |
-| `specs_total` | number | Spec Analyst | Design Reviewer, Human | Total specs expected |
 
 ### Usage rules
 
-- **Read on entry.** Run `multica issue metadata list <id> --output json` at the start of every run. Check `blocked_by` first — if set, fetch that issue and verify its status is `done` before proceeding.
-- **Write sparingly.** Pin a value only when BOTH are true: (a) it is materially important to this issue's progress, AND (b) a future run on this same issue is likely to read it rather than re-derive it from comments or code.
-- **Clean up stale keys on exit.** If a key you read on entry is now stale (e.g. `waiting_on` was set but the blocker has resolved), overwrite or delete it before exiting.
-- **Never pin secrets, tokens, or API keys.** Never write logs, long quotes, or summaries — those belong in comments.
+- **Read on entry.** Run `multica issue metadata list <id> --output json` at the start of
+  every run. Check `blocked_by` first — if set, verify its status is `done` before proceeding.
+- **Write sparingly.** Pin a value only when BOTH are true: (a) it is materially important to
+  this issue's progress, AND (b) a future run on this same issue is likely to read it rather
+  than re-derive it from comments or code.
+- **Clean up stale keys on exit.** Overwrite or delete stale keys before exiting.
+- **Never pin secrets, tokens, or API keys.**
+
+---
 
 ## Other Standards
 
 - **Security First:** Default to secure; mandatory config overrides user input.
-- **API group:** `<provider>.kropath.run` (e.g. `apiVersion: aws.kropath.run/v1alpha1`).
 - **Licensing:** Apache 2.0 headers in every RGD and script.
 - **CEL:** Use `${}` for all dynamic values.
