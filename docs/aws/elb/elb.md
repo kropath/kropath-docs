@@ -82,12 +82,12 @@ spec:
     internalOnly: false
     crossZoneEnabled: true
     idleTimeoutSeconds: 60
-  namingTemplate: "{namespace}-{name}-{configRef}"
-  tags:
-    managed-by: platform-team
-    cost-center: platform
-  syncedLabels:
-    governance: production
+    namingTemplate: "{namespace}-{name}-{configRef}"
+    tags:
+      managed-by: platform-team
+      cost-center: platform
+    syncedLabels:
+      governance: production
 ```
 
 ### Governance Cascade
@@ -401,7 +401,7 @@ spec:
 ## Cross-Provider Notes
 
 - **Load Balancer Types:** AWS ELBv2 provides ALB, NLB, and GWLB. GCP uses separate resources for HTTP(S) Load Balancer and Cloud Network Load Balancer. Azure uses Load Balancer (standard SKU) for both L4 and L7.
-- **ARN Naming:** AWS load balancer and target group ARNs include a hash suffix assigned at creation time. Use `status.ackResourceMetadata.arn` at runtime; `status.predictedArn` is not available.
+- **ARN Naming:** AWS load balancer and target group ARNs include a hash suffix assigned at creation time. The full ARN is available in the resource status once the load balancer or target group is created in AWS.
 - **TLS Policies:** AWS TLS policies are AWS-specific (e.g., `"ELBSecurityPolicy-TLS13-1-2-2021-06"`). GCP and Azure use different SSL policy models.
 - **Listener vs. Rules:** ALB supports routing rules for content-based routing. NLB and GWLB forward all traffic to a single target group.
 - **Cross-Zone:** AWS allows toggling cross-zone load balancing. GCP built-in; Azure built-in.
