@@ -23,7 +23,7 @@ Integration with other kropath families:
 
 ## Configuration
 
-Kropath's ELB configuration is managed through resources generated from kro RGDs (Resource Group Definitions), which auto-generate their CRDs. These include:
+Kropath's ELB configuration is managed through the following resources:
 
 - `ELBConfig`: Governance profiles that enforce organization-wide policies across load balancers, target groups, and listeners.
 - `ELBLoadBalancer`: Instances representing individual load balancers.
@@ -64,9 +64,35 @@ Kropath's ELB configuration is managed through resources generated from kro RGDs
 - `production`: Stricter profile mandatory deletion protection, mandatory access logging, mandatory TLS policy for listeners.
 - `internal-only`: Forces all load balancers to be internal-facing.
 
-### Ten-Tier Governance Cascade
+#### Example ELBConfig
 
-Kropath uses a ten-tier cascade (ADR-010, ADR-015) to resolve effective configuration for ELB resources:
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ELBConfig
+metadata:
+  name: production
+  namespace: platform-engineering
+spec:
+  mandatory:
+    deletionProtection: true
+    accessLogsEnabled: true
+    accessLogsS3Bucket: org-lb-logs
+    sslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+  defaults:
+    internalOnly: false
+    crossZoneEnabled: true
+    idleTimeoutSeconds: 60
+  namingTemplate: "{namespace}-{name}-{configRef}"
+  tags:
+    managed-by: platform-team
+    cost-center: platform
+  syncedLabels:
+    governance: production
+```
+
+### Governance Cascade
+
+Kropath uses a layered cascade to resolve effective configuration for ELB resources:
 
 1. **KropathConfig org-wide mandatory** → Org-wide enforcement (applies to all resources)
 2. **ELBConfig profile mandatory** → Profile-specific enforcement
@@ -74,7 +100,7 @@ Kropath uses a ten-tier cascade (ADR-010, ADR-015) to resolve effective configur
 4. **ELBConfig profile defaults** → Profile-specific defaults
 5. **KropathConfig org-wide defaults** → Org-wide defaults
 
-The `kropath-controller` pre-merges all sources into `status.effectiveConfig` on the namespaced `ELBConfig` CR. All RGDs (load balancers, target groups, listeners, rules) read this single config object via a labelSelector-based lookup.
+The governance cascade is applied during resource reconciliation. All resources (load balancers, target groups, listeners, rules) read the effective configuration from the selected `ELBConfig` profile.
 
 **When to use `KropathConfig.elb` vs. `ELBConfig`:**
 
