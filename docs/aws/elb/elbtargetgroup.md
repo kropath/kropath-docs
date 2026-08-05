@@ -272,7 +272,6 @@ For application-controlled cookies:
 stickiness:
   enabled: true
   type: app_cookie
-  cookieName: JSESSIONID        # Your app's session cookie name
   durationSeconds: 3600
 ```
 

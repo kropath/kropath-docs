@@ -129,23 +129,6 @@ defaultActions:
       messageBody: "Service Unavailable"
 ```
 
-### Authenticate (Cognito/OIDC)
-
-Authenticate users before forwarding:
-
-```yaml
-defaultActions:
-  - type: authenticate-cognito
-    authenticateCognitoConfig:
-      userPoolArn: "arn:aws:cognito-idp:us-east-1:123:userpool/us-east-1_abc123"
-      userPoolClientId: "abc123def456"
-      userPoolDomain: "my-domain"
-    order: 1  # Must be first
-  - type: forward
-    targetGroupRef: api-targets
-    order: 2  # Executed after auth
-```
-
 ## Complete Examples
 
 ### HTTP Listener with Simple Forward
@@ -270,37 +253,6 @@ spec:
         targetGroupStickinessConfig:
           enabled: true
           durationSeconds: 86400
-```
-
-### Listener with Chained Actions
-
-Authenticate, then forward:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ELBListener
-metadata:
-  name: secure-listener
-  namespace: api-team
-spec:
-  configRef: general-policy
-  loadBalancerRef: api-alb
-  protocol: HTTPS
-  port: 443
-  certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/12345678"
-  defaultActions:
-    - type: authenticate-cognito
-      authenticateCognitoConfig:
-        userPoolArn: "arn:aws:cognito-idp:us-east-1:123:userpool/us-east-1_abc123"
-        userPoolClientId: "abc123def456"
-        userPoolDomain: "api-team"
-        sessionCookieName: "X-Amzn-Cognito-Session"
-        sessionTimeout: 604800
-        onUnauthenticatedRequest: "authenticate"
-      order: 1
-    - type: forward
-      targetGroupRef: api-targets
-      order: 2
 ```
 
 ## Protocol and Port Constraints

@@ -162,7 +162,6 @@ spec:
     - subnet-0a1b2c3d4e5f6g7h8
     - subnet-0b2c3d4e5f6g7h8i9
   crossZoneLoadBalancing: true
-  idleTimeoutSeconds: 120
   tags:
     scope: internal
 ```

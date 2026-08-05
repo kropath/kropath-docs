@@ -127,7 +127,7 @@ spec:
     accessLogsS3Bucket: ""
     crossZoneEnabled: true
     internalOnly: false
-    idleTimeoutSeconds: 60
+    idleTimeoutSeconds: 0
     sslPolicy: ""
     namingTemplate: "{namespace}-{name}"
     tags: {}
