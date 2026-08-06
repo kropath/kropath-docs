@@ -19,10 +19,10 @@ The RDS family in kropath provides a declarative Kubernetes interface for managi
 apiVersion: aws.kropath.run/v1alpha1
 kind: RDSSubnetGroup
 metadata:
-  name: default-subnets
-  namespace: kro-system
+  name: app-subnets
+  namespace: default
 spec:
-  description: "Default multi-AZ subnet group"
+  description: "Multi-AZ subnet group for RDS"
   subnetIDs:
     - subnet-1a-id
     - subnet-1b-id
@@ -42,7 +42,7 @@ spec:
   engineVersion: "15.4"
   dbInstanceClass: db.m5.large
   allocatedStorage: 100
-  dbSubnetGroupName: default-subnets
+  dbSubnetGroupName: default-app-subnets  # Matches {namespace}-{name} from subnet group
   masterUsername: postgres
   masterUserPassword:
     name: postgres-secret

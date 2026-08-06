@@ -183,10 +183,7 @@ spec:
   preferredBackupWindow: "03:00-05:00"
   preferredMaintenanceWindow: "Sun:05:00-Sun:06:00"
   
-  # Monitoring
-  monitoringInterval: 60
-  monitoringRoleARN: arn:aws:iam::123456789012:role/rds-monitoring
-  enablePerformanceInsights: true
+  # Logging (optional)
   enableCloudwatchLogsExports:
     - postgresql
   

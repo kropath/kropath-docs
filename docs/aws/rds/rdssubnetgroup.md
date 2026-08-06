@@ -92,16 +92,17 @@ spec:
     - subnet-prod-1b
 
 ---
-# Staging: single-AZ in us-west-2 (cost saving)
+# Staging: multi-AZ in us-west-2 (cost saving)
 apiVersion: aws.kropath.run/v1alpha1
 kind: RDSSubnetGroup
 metadata:
-  name: staging-single-az
+  name: staging-multi-az
   namespace: database-staging
 spec:
-  description: "Staging single-AZ database subnets"
+  description: "Staging multi-AZ database subnets"
   subnetIDs:
     - subnet-staging-2a
+    - subnet-staging-2b
 ```
 
 ## Referencing from RDS Instances and Clusters
