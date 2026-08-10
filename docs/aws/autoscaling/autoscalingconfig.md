@@ -240,8 +240,8 @@ Check what profile a group is using:
 kubectl describe autoscalinggroup web-fleet -n services-prod | grep configRef
 ```
 
-View effective governance configuration:
+View governance configuration:
 
 ```bash
-kubectl get autoscalingconfig production -n kro-system -o jsonpath='{.status.effectiveConfig}' | jq
+kubectl get autoscalingconfig production -n kro-system -o yaml
 ```

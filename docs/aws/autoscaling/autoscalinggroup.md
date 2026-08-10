@@ -124,6 +124,29 @@ This group:
 - Provides 4 instance type options (flexibility = better Spot availability)
 - Total potential capacity: 50 instances at <20% On-Demand cost
 
+**Alternative: Attribute-Based Selection**
+
+Instead of specifying `overrides` with explicit instance types, use `instanceRequirements` for attribute-based selection:
+
+```yaml
+mixedInstancesPolicy:
+  onDemandBaseCapacity: 2
+  onDemandPercentageAboveBaseCapacity: 20
+  spotAllocationStrategy: "capacity-optimized"
+  instanceRequirements:
+    vCpuCount:
+      min: 2
+      max: 4
+    memoryMiB:
+      min: 4096
+      max: 8192
+    cpuManufacturers:
+      - "intel"
+      - "amd"
+```
+
+This automatically selects instance types matching the criteria instead of maintaining a manual list. Useful when flexibility across instance families is desired.
+
 ### Graceful Termination with Lifecycle Hooks
 
 ```yaml
@@ -144,6 +167,7 @@ spec:
       defaultResult: "CONTINUE"
       heartbeatTimeout: 120
       notificationTargetArn: "arn:aws:sqs:us-east-1:123456789012:worker-drain"
+      notificationMetadata: "environment=prod,service=worker"
       roleArn: "arn:aws:iam::123456789012:role/autoscaling-lifecycle"
   tags:
     graceful-drain: "true"
@@ -243,7 +267,23 @@ spec:
 
 Instances are marked unhealthy based on application-level health checks from the load balancer. Better for application-level failures.
 
-**Both:**
+**EBS Health Checks:**
+```yaml
+spec:
+  healthCheckType: "EBS"  # EBS-level health checks
+```
+
+Instances are marked unhealthy based on EBS volume status. Useful for storage-intensive workloads.
+
+**VPC Lattice Health Checks:**
+```yaml
+spec:
+  healthCheckType: "VPC_LATTICE"  # VPC Lattice health checks
+```
+
+Instances are marked unhealthy based on VPC Lattice service-level health checks. Enables service mesh integration.
+
+**Multiple Checks:**
 ```yaml
 spec:
   healthCheckType: "EC2,ELB"  # Both EC2 and ELB health checks
@@ -262,7 +302,7 @@ spec:
 
 Gives instances time to initialize and become healthy before checks begin. Use longer periods (600s) for applications with slow startup.
 
-**Note:** Setting `healthCheckGracePeriod: 0` is treated as "not set" — it falls through to profile defaults. This is a known limitation of the sentinel pattern. To achieve a 0-second grace period, set it in `AutoScalingConfig.defaults.healthCheckGracePeriod`.
+**Note:** Setting `healthCheckGracePeriod: 0` is treated as "not set" — it falls through to profile defaults. To achieve a 0-second grace period, set it in `AutoScalingConfig.defaults.healthCheckGracePeriod`.
 
 ## Instance Lifecycle
 
