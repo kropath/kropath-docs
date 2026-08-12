@@ -199,8 +199,8 @@ An `ECSTaskDefinition` resource defines the template for tasks: container images
 
 #### IAM Roles
 
-*   `executionRoleArn` (string): ARN of the task execution role (ECS agent permissions).
-*   `taskRoleArn` (string): ARN of the task role (application permissions).
+*   `executionRoleARN` (string): ARN of the task execution role (ECS agent permissions).
+*   `taskRoleARN` (string): ARN of the task role (application permissions).
 
 #### Volumes
 
