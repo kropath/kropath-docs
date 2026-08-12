@@ -18,7 +18,7 @@
 
 | Field | Type | Purpose |
 |---|---|---|
-| `arn` | string | CloudFront function ARN (e.g., `arn:aws:cloudfront::123456789012:function/my-function`) |
+| `predictedArn` | string | CloudFront function ARN (e.g., `arn:aws:cloudfront::123456789012:function/my-function`) |
 | `resourceName` | string | Effective function name (after naming template) |
 | `namingStatus` | string | `"valid"` or `"invalid-unresolved-tokens"` |
 | `conditions[]` | array | Reconciliation status |

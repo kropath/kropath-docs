@@ -11,7 +11,7 @@
 | `description` | string | `""` | Free-text description of this OAC's purpose |
 | `originAccessControlOriginType` | string | required | Origin type: `s3`, `mediastore`, `lambda`, or `mediapackagev2` |
 | `signingBehavior` | string | `""` | Request signing: `"always"`, `"never"`, `"no-override"`, or `""` (use governance default) |
-| `signingProtocol` | string | `"sigv4"` | Only SigV4 is currently supported |
+| `signingProtocol` | string | `"sigv4"` | Only SigV4 is supported |
 | `nameOverride` | string | `""` | Bypass the naming template and set the OAC name directly |
 | `deletionPolicy` | string | `"retain"` | `"retain"` (keep OAC in AWS) or `"delete"` (remove it) |
 | `syncedLabels` | map | `{}` | Kubernetes labels (no AWS tags for OAC) |

@@ -9,6 +9,7 @@
 | `configRef` | string | `"general-policy"` | Selects `CloudFrontConfig` governance profile |
 | `name` | string | `""` | Human-readable policy name |
 | `comment` | string | `""` | Free-text description |
+| `nameOverride` | string | `""` | Bypass naming template and set policy name directly |
 | `deletionPolicy` | string | `"retain"` | `"retain"` or `"delete"` |
 | `syncedLabels` | map | `{}` | Kubernetes labels only |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations |

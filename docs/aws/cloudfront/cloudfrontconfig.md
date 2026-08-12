@@ -130,16 +130,16 @@ spec:
       compliance: pci
     syncedAnnotations: {}
   defaults:
-    viewerProtocolPolicy: "https-only"
-    minimumProtocolVersion: "TLSv1.2_2021"
-    httpVersion: "http2and3"
-    sslSupportMethod: "sni-only"
-    loggingEnabled: true
-    loggingBucket: "org-cf-logs.s3.amazonaws.com"
+    viewerProtocolPolicy: ""  # Enforced in mandatory
+    minimumProtocolVersion: ""  # Enforced in mandatory
+    httpVersion: ""  # Enforced in mandatory
+    sslSupportMethod: ""  # Enforced in mandatory
+    loggingEnabled: false  # Enforced in mandatory
+    loggingBucket: ""  # Enforced in mandatory
     priceClass: "PriceClass_200"  # Use fewer edge locations
-    webACLRequired: true
+    webACLRequired: false  # Enforced in mandatory
     geoRestrictionType: "none"
-    oacSigningBehavior: "always"
+    oacSigningBehavior: ""  # Enforced in mandatory
     namingTemplate: "{namespace}-{configRef}-{name}"
     tags:
       security-profile: strict
