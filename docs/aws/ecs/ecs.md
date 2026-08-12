@@ -90,7 +90,7 @@ Task execute command allows operators to run commands inside running tasks (e.g.
 
 ```yaml
 executeCommandConfiguration:
-  logging: CloudWatchLogs                    # Logging backend (CloudWatchLogs or S3)
+  logging: DEFAULT                           # Logging backend (NONE | DEFAULT | OVERRIDE)
   kmsKeyID: arn:aws:kms:region:account:key/  # KMS key for log encryption (optional)
   logConfiguration:
     cloudWatchLogGroupName: /ecs/cluster/     # CloudWatch log group name
@@ -158,10 +158,10 @@ An `ECSService` resource manages an ECS service—the construct that runs and ma
 
 #### Service Connect
 
-*   `serviceConnect`:
+*   `serviceConnectConfiguration`:
     *   `enabled` (boolean): Enable service connect for this service.
     *   `namespace` (string): CloudMap namespace for DNS service discovery.
-    *   `portMappings` ([]object): Port mappings for service connect.
+    *   `services` ([]object): Service endpoint definitions for service connect.
 
 #### Placement (EC2 launch type only)
 
@@ -273,10 +273,13 @@ autoScalingGroupProvider:
   managedTerminationProtection: ENABLED
 ```
 
-**Managed Instances Provider** (Fargate-managed capacity):
+**Managed Instances Provider** (ECS-managed capacity):
 ```yaml
 managedInstancesProvider:
-  status: ENABLED
+  infrastructureRoleARN: arn:aws:iam::123456789:role/ecsInstanceRole
+  instanceLaunchTemplate:
+    launchTemplateId: lt-0123456789abcdef0
+    version: "$Default"
 ```
 
 #### Immutability Constraints
@@ -345,7 +348,7 @@ spec:
     - FARGATE
   containerInsights: true
   executeCommandConfiguration:
-    logging: CloudWatchLogs
+    logging: DEFAULT
     logConfiguration:
       cloudWatchLogGroupName: /ecs/api-cluster
       cloudWatchEncryptionEnabled: true
@@ -365,8 +368,8 @@ metadata:
   namespace: workloads
 spec:
   configRef: production
-  clusterName: api-cluster
-  taskDefinitionFamily: api-task
+  cluster: api-cluster
+  taskDefinition: api-task
   desiredCount: 3
   launchType: FARGATE
   platformVersion: "1.4.0"
@@ -406,8 +409,8 @@ spec:
   networkMode: awsvpc
   cpu: "512"
   memory: "1024"
-  executionRoleArn: arn:aws:iam::123456789:role/ecsTaskExecutionRole
-  taskRoleArn: arn:aws:iam::123456789:role/api-task-role
+  executionRoleARN: arn:aws:iam::123456789:role/ecsTaskExecutionRole
+  taskRoleARN: arn:aws:iam::123456789:role/api-task-role
   containerDefinitions:
     - name: api
       image: 123456789.dkr.ecr.us-east-1.amazonaws.com/api:latest
