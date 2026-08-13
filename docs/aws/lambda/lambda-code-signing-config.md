@@ -228,7 +228,7 @@ Signature validation happens every time a function is invoked. Rejected invocati
 ### Policy Applies to New and Updated Functions
 
 - Existing functions without code signing are unaffected unless explicitly updated to use a code signing config
-- New functions with code signing must have signed code or have `codeSigningPolicyAllowUnsigned: true`
+- New functions with code signing must have signed code or have `untrustedArtifactOnDeployment: "Warn"`
 
 ### Signing Profile Must Exist
 
@@ -254,13 +254,13 @@ Verify the signing profile exists in AWS Signer and the ARN is correct (check ac
 
 ### Unsigned Code Rejected
 
-If `codeSigningPolicyAllowUnsigned: false`, all code must be signed. Either:
+If `untrustedArtifactOnDeployment: "Enforce"`, all code must be signed. Either:
 - Sign the code using the signing profile
-- Change policy to `allowUnsigned: true` temporarily for testing
+- Change policy to `untrustedArtifactOnDeployment: "Warn"` temporarily for testing
 
 ### Migration Too Slow with Strict Policy
 
-Use a separate config with `codeSigningPolicyAllowUnsigned: true` during migration, then switch to strict policy once all code is signed.
+Use a separate config with `untrustedArtifactOnDeployment: "Warn"` during migration, then switch to strict policy once all code is signed.
 
 ## Reference
 
