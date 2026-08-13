@@ -26,6 +26,13 @@ Once published, a version cannot be modified. To make changes, edit `$LATEST`, t
 
 ## Core Fields
 
+### Governance and Selection
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `configRef` | string | `"general-policy"` | Selects which `LambdaConfig` governance profile to apply (for tags/labels only) |
+| `deletionPolicy` | string | `"retain"` | Behavior on resource deletion: `"retain"` (keep AWS version) or `"delete"` (remove version) |
+
 ### Target Function
 
 | Field | Type | Default | Purpose |
@@ -37,14 +44,15 @@ Once published, a version cannot be modified. To make changes, edit `$LATEST`, t
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `description` | string | `""` | Human-readable description of this version (e.g., "Fixed DB connection pool") |
+| `codeSHA256` | string | `""` | Only publish if function code SHA256 matches this value (safety check); `""` = publish unconditionally |
 
 ### Provisioned Concurrency
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `provisionedConcurrentExecutions` | integer | `-1` | Provisioned concurrency: `-1` = not set, `≥0` = reserved concurrent invocations for warm starts |
+| `provisionedConcurrentExecutions` | integer | `0` | Provisioned concurrency: `0` = not set, `>0` = reserved concurrent invocations for warm starts |
 
-**Note:** Provisioned concurrency is set per version, not globally. Different versions can have different concurrency reservations.
+**Note:** Provisioned concurrency is set per version, not globally. Different versions can have different concurrency reservations. Only set when `> 0`.
 
 ### Async Invocation
 
@@ -59,8 +67,8 @@ Once published, a version cannot be modified. To make changes, edit `$LATEST`, t
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `tags` | map | `{}` | AWS tags; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`; **versions do NOT sync to cloud tags**) |
+| `tags` | map | `{}` | Kubernetes metadata only (AWS Lambda versions do not support cloud tags) |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
 **Important:** Lambda versions do NOT support cloud tags (AWS doesn't tag versions). `syncedLabels` and `syncedAnnotations` only apply to Kubernetes.

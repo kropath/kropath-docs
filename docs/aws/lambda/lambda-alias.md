@@ -50,7 +50,7 @@ Example: `{"2": 0.1}` routes 10% to version 2, 90% to `functionVersion`.
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `provisionedConcurrentExecutions` | integer | `-1` | Provisioned concurrency: `-1` = not set, `≥0` = reserved concurrent invocations for warm starts |
+| `provisionedConcurrentExecutions` | integer | `0` | Provisioned concurrency: `0` = not set, `>0` = reserved concurrent invocations for warm starts |
 
 ### Async Invocation
 
@@ -65,8 +65,8 @@ Example: `{"2": 0.1}` routes 10% to version 2, 90% to `functionVersion`.
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `tags` | map | `{}` | AWS tags; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`; **aliases do NOT sync to cloud tags**) |
+| `tags` | map | `{}` | Kubernetes metadata only (AWS Lambda aliases do not support cloud tags) |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
 **Important:** Aliases do NOT support cloud tags (AWS doesn't tag aliases). `syncedLabels` and `syncedAnnotations` only apply to Kubernetes.

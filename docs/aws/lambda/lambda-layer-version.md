@@ -20,6 +20,13 @@ Functions reference layers via ARN; a function can use up to 5 layers.
 
 ## Core Fields
 
+### Governance and Selection
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `configRef` | string | `"general-policy"` | Selects which `LambdaConfig` governance profile to apply (for tags/labels only) |
+| `deletionPolicy` | string | `"retain"` | Behavior on resource deletion: `"retain"` (keep AWS layer) or `"delete"` (remove layer) |
+
 ### Deployment Package
 
 | Field | Type | Default | Purpose |
@@ -40,8 +47,8 @@ Functions reference layers via ARN; a function can use up to 5 layers.
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `layerDescription` | string | `""` | Human-readable description of the layer's purpose |
-| `tags` | map | `{}` | AWS tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`; **layers do NOT sync to cloud tags**) |
+| `tags` | map | `{}` | Kubernetes metadata only (AWS Lambda layers do not support cloud tags) |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
 **Important:** Layers do NOT support cloud tags (AWS doesn't tag layers). `syncedLabels` and `syncedAnnotations` only apply to Kubernetes.

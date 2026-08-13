@@ -17,32 +17,39 @@ To use code signing:
 
 ## Core Fields
 
+### Governance and Selection
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `configRef` | string | `"general-policy"` | Selects which `LambdaConfig` governance profile to apply (for tags/labels only) |
+| `deletionPolicy` | string | `"retain"` | Behavior on resource deletion: `"retain"` (keep AWS config) or `"delete"` (remove config) |
+
 ### Code Signing Configuration
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `signingProfileVersionArn` | string | required | ARN of the AWS Signer signing profile (e.g., `arn:aws:signer:us-east-1:123456789012:/signing-profile/my-profile:version`) |
+| `allowedPublishers.signingProfileVersionArns` | []string | required | Array of AWS Signer signing profile ARNs (e.g., `["arn:aws:signer:us-east-1:123456789012:/signing-profile/my-profile:version/1"]`) |
 
 ### Validation Policy
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `codeSigningPolicyAllowUnsigned` | boolean | `false` | `false` = reject unsigned code; `true` = allow unsigned code (not recommended) |
+| `untrustedArtifactOnDeployment` | string | `"Warn"` | Policy for unsigned/invalid code: `"Warn"` = allow with warnings; `"Enforce"` = reject unsigned code |
 
 **Security note:**
-- `false` (default) — Only signed code executes; unsigned code is rejected at invocation
-- `true` — Unsigned code is allowed but warnings are logged; use only during migration
+- `"Enforce"` (strict) — Only signed code executes; unsigned code is rejected at invocation
+- `"Warn"` (permissive) — Unsigned code is allowed but warnings are logged; use for testing/migration
 
 ### Metadata
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `codeSigningDescription` | string | `""` | Human-readable description of this signing config |
-| `tags` | map | `{}` | AWS tags; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`; **code signing configs do NOT sync to cloud tags**) |
+| `description` | string | `""` | Human-readable description of this signing config |
+| `tags` | map | `{}` | AWS tags; merged with governance tags (code signing configs support cloud tags) |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
-**Important:** Code signing configs do NOT support cloud tags (AWS doesn't tag them). `syncedLabels` and `syncedAnnotations` only apply to Kubernetes.
+**Important:** Code signing configs support cloud tags via `spec.tags` → AWS tags. `syncedLabels` and `syncedAnnotations` only apply to Kubernetes.
 
 ## Status Outputs
 
@@ -73,9 +80,12 @@ metadata:
   name: prod-signing
   namespace: security
 spec:
-  signingProfileVersionArn: "arn:aws:signer:us-east-1:123456789012:/signing-profile/prod-profile:version/1"
-  codeSigningPolicyAllowUnsigned: false  # Reject unsigned code
-  codeSigningDescription: "Production code signing policy"
+  configRef: general-policy
+  allowedPublishers:
+    signingProfileVersionArns:
+      - "arn:aws:signer:us-east-1:123456789012:/signing-profile/prod-profile:version/1"
+  untrustedArtifactOnDeployment: "Enforce"  # Reject unsigned code
+  description: "Production code signing policy"
   tags:
     environment: "production"
     compliance: "required"
@@ -124,9 +134,12 @@ metadata:
   name: migration-signing
   namespace: security
 spec:
-  signingProfileVersionArn: "arn:aws:signer:us-east-1:123456789012:/signing-profile/migration-profile:version/1"
-  codeSigningPolicyAllowUnsigned: true  # Allow unsigned (temporary)
-  codeSigningDescription: "Temporary config for migration; unsigned code allowed with warnings"
+  configRef: general-policy
+  allowedPublishers:
+    signingProfileVersionArns:
+      - "arn:aws:signer:us-east-1:123456789012:/signing-profile/migration-profile:version/1"
+  untrustedArtifactOnDeployment: "Warn"  # Allow unsigned (temporary)
+  description: "Temporary config for migration; unsigned code allowed with warnings"
   tags:
     migration-phase: "2"
 ```
@@ -147,9 +160,12 @@ metadata:
   name: corporate-signing
   namespace: security
 spec:
-  signingProfileVersionArn: "arn:aws:signer:us-east-1:999999999999:/signing-profile/corporate-profile:version/2"
-  codeSigningPolicyAllowUnsigned: false
-  codeSigningDescription: "Corporate signing profile from central security account"
+  configRef: general-policy
+  allowedPublishers:
+    signingProfileVersionArns:
+      - "arn:aws:signer:us-east-1:999999999999:/signing-profile/corporate-profile:version/2"
+  untrustedArtifactOnDeployment: "Enforce"
+  description: "Corporate signing profile from central security account"
   tags:
     signing-account: "999999999999"
     compliance: "sox"
