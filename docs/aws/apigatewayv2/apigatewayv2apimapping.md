@@ -216,19 +216,17 @@ spec:
 
 ## Tags and Labels
 
-Add organization metadata:
+Add organization metadata (Kubernetes only):
 
 ```yaml
 spec:
-  tags:
-    team: api-platform
   syncedLabels:
     app: microservices
   syncedAnnotations:
     managed-by: "kropath"
 ```
 
-Note: `ApiGatewayV2ApiMapping` does not support cloud tags on the AWS side (G-7), but Kubernetes labels and annotations are still applied.
+Note: `ApiGatewayV2ApiMapping` does not support cloud tags on the AWS side (G-7). Kubernetes labels and annotations are still applied via `syncedLabels` and `syncedAnnotations`.
 
 ## Deletion Policy
 
