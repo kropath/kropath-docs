@@ -49,6 +49,8 @@ CloudWatch Logs supports only specific retention periods. Valid values are:
 
 Any other value will be rejected. The value `0` means "not set" (indefinite retention or uses the next tier in the cascade).
 
+**How the cascade works:** When you create a log group, the platform merges mandatory and defaults tiers with organization-wide settings to determine the effective configuration. For details on this governance cascade and how developers can override defaults, see [Governance Cascade](./cloudwatchlogsloggroup.md#governance-cascade) in the CloudWatchLogsLogGroup documentation.
+
 ## Example Profiles
 
 ### Baseline (general-policy)
@@ -133,7 +135,7 @@ metadata:
 spec:
   mandatory:
     kmsKeyId: "arn:aws:kms:us-east-1:123456789012:key/mrk-hipaa-compliance"
-    retentionDays: 2557  # 7 years (AWS maximum)
+    retentionDays: 2557  # ~7 years (HIPAA minimum audit retention)
     namingTemplate: ""
     tags:
       compliance: hipaa
@@ -195,23 +197,6 @@ spec:
   configRef: general-policy  # Selects the profile
 EOF
 ```
-
-## Effective Configuration
-
-When a log group is created, kropath-controller reads the selected `CloudWatchLogsConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
-
-Developers and platform teams can inspect the effective configuration:
-
-```bash
-kubectl get cloudwatchlogsconfig general-policy -n kro-system -o yaml
-```
-
-The `status.effectiveConfig` shows:
-- All mandatory fields (platform enforcement)
-- All default fields (developer overrides possible)
-- AWS account and region information
-
-This single config CR ensures consistent, auditable governance across all log groups that reference it.
 
 ## Cluster Setup
 
