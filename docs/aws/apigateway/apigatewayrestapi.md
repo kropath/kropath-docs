@@ -58,10 +58,10 @@ spec:
           integration:
             type: AWS_PROXY
             uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:create-order/invocations
-    - pathPart: orders
+    - pathPart: "{id}"
+      parentPath: orders
       methods:
         - httpMethod: GET
-          pathPart: "{id}"
           integration:
             type: HTTP_PROXY
             uri: https://backend.example.com/orders/{id}
@@ -86,11 +86,11 @@ resources:
   - pathPart: orders         # /orders
     methods:
       - httpMethod: GET
-    - pathPart: "{id}"       # /orders/{id}
-      parentPath: orders     # Parent segment
-      methods:
-        - httpMethod: GET
-        - httpMethod: DELETE
+  - pathPart: "{id}"         # /orders/{id}
+    parentPath: orders       # Parent segment
+    methods:
+      - httpMethod: GET
+      - httpMethod: DELETE
 ```
 
 The `parentPath` field specifies the parent path segment. For the root level (e.g. `/orders`), leave `parentPath` empty.
