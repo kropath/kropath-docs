@@ -233,11 +233,12 @@ To attach an ACL and users:
      name: appuser
      namespace: cache-prod
    spec:
-     type: password
      accessString: "on >password +@all"
-     passwords:
-       - secretName: appuser-pwd
-         key: password
+     authenticationMode:
+       type: password
+       passwords:
+         - name: appuser-pwd
+           key: password
    ```
 
 3. Reference the ACL in the cluster:
