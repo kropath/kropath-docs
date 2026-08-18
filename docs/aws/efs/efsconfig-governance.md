@@ -81,19 +81,17 @@ spec:
     syncedLabels:
       pci-scope: "true"
   defaults:
-    encrypted: true
-    kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/pci-key
-    performanceMode: generalPurpose
-    throughputMode: elastic
-    backupEnabled: true
-    transitionToIA: AFTER_30_DAYS
-    transitionToArchive: AFTER_90_DAYS
-    transitionToPrimaryStorage: AFTER_1_ACCESS
-    replicationOverwriteProtection: ENABLED
-    tags:
-      compliance: pci
-    syncedLabels:
-      pci-scope: "true"
+    encrypted: false                                          # Zero value; mandatory governs
+    kmsKeyId: ""                                              # Zero value; mandatory governs
+    performanceMode: ""                                       # Zero value; mandatory governs
+    throughputMode: ""                                        # Zero value; mandatory governs
+    backupEnabled: false                                      # Zero value; mandatory governs
+    transitionToIA: ""                                        # Zero value; mandatory governs
+    transitionToArchive: ""                                   # Zero value; mandatory governs
+    transitionToPrimaryStorage: ""                            # Zero value; mandatory governs
+    replicationOverwriteProtection: ""                        # Zero value; mandatory governs
+    tags: {}                                                  # Zero value; mandatory governs
+    syncedLabels: {}                                          # Zero value; mandatory governs
 ```
 
 ## HIPAA Compliance Profile
@@ -126,20 +124,17 @@ spec:
       hipaa-scope: "true"
       pii-data: "yes"
   defaults:
-    encrypted: true
-    kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/hipaa-key
-    performanceMode: generalPurpose
-    throughputMode: elastic
-    backupEnabled: true
-    transitionToIA: AFTER_60_DAYS
-    transitionToArchive: AFTER_180_DAYS
-    transitionToPrimaryStorage: AFTER_1_ACCESS
-    replicationOverwriteProtection: ENABLED
-    tags:
-      compliance: hipaa
-      pii: "yes"
-    syncedLabels:
-      hipaa-scope: "true"
+    encrypted: false                                          # Zero value; mandatory governs
+    kmsKeyId: ""                                              # Zero value; mandatory governs
+    performanceMode: ""                                       # Zero value; mandatory governs
+    throughputMode: ""                                        # Zero value; mandatory governs
+    backupEnabled: false                                      # Zero value; mandatory governs
+    transitionToIA: ""                                        # Zero value; mandatory governs
+    transitionToArchive: ""                                   # Zero value; mandatory governs
+    transitionToPrimaryStorage: ""                            # Zero value; mandatory governs
+    replicationOverwriteProtection: ""                        # Zero value; mandatory governs
+    tags: {}                                                  # Zero value; mandatory governs
+    syncedLabels: {}                                          # Zero value; mandatory governs
 ```
 
 ## Development/Test Profile
@@ -205,7 +200,6 @@ spec:
     kmsKeyId: arn:aws:kms:us-east-1:123456789012:key/analytics-key
     performanceMode: maxIO                                 # Optimized for throughput (big data)
     throughputMode: provisioned
-    provisionedThroughputInMiBps: 256                      # Baseline throughput
     backupEnabled: true
     transitionToIA: AFTER_90_DAYS                          # Cold data → IA after 90 days
     transitionToArchive: AFTER_180_DAYS                    # Then → Archive after 6 months

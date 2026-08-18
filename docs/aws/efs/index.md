@@ -175,7 +175,7 @@ The naming convention (templates and `spec.nameOverride`) does **not apply** to 
 
 - **Automatic Backup:** Controlled by `backupEnabled`; integrates with AWS Backup.
 - **Lifecycle Tiering:** Transitions data to cheaper storage classes:
-  - `transitionToIA` — Infrequent access (7, 14, 30, 60, 90, 180, 365 days)
+  - `transitionToIA` — Infrequent access (1, 7, 14, 30, 60, 90, 180, 270, 365 days)
   - `transitionToArchive` — Archive tier (same intervals)
   - `transitionToPrimaryStorage` — Transition back from IA/Archive to primary (only `AFTER_1_ACCESS`)
 
@@ -256,4 +256,3 @@ Naming conventions, immutable fields, and governance structures differ across pr
 
 - [Governance Cascade and Effective Config](../resources/governance-cascade.md) — Deep dive into how the three-tier cascade works
 - [EFSConfig Governance Profiles](efsconfig-governance.md) — Platform engineering guide to creating and managing profiles
-- [EFS Monitoring and Troubleshooting](efs-monitoring.md) — CloudWatch metrics, logs, and common issues
