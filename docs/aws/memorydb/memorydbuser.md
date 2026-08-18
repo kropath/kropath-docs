@@ -12,29 +12,23 @@ The `MemoryDBUser` resource represents a single user identity for MemoryDB clust
 | `nameOverride` | string | `""` | Bypasses naming template; sets user name directly |
 | `deletionPolicy` | string | `"retain"` | `"retain"` (keep AWS resources) or `"delete"` (remove them) |
 
-### Authentication Type
-
-| Field | Type | Default | Purpose |
-|---|---|---|---|
-| `type` | string | required | `"password"` or `"iam"` |
-
 ### Access Control
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `accessString` | string | required | Redis ACL string defining command/key/channel permissions (e.g. `"on >password +@all"`) |
 
-### Password Authentication (type: password)
+### Authentication Mode
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `passwords` | array | [] | List of Kubernetes Secrets containing user passwords (one entry per password rotation/history) |
-| `passwords[].secretName` | string | required | Kubernetes Secret name containing the password |
-| `passwords[].key` | string | required | Key within the Secret holding the password value |
+| `authenticationMode.type` | string | required | `"password"` or `"iam"` |
+| `authenticationMode.passwords` | array | [] | List of Kubernetes Secret references containing user passwords (required when `type="password"`) |
+| `authenticationMode.passwords[].name` | string | required | Kubernetes Secret name containing the password |
+| `authenticationMode.passwords[].key` | string | required | Key within the Secret holding the password value |
+| `authenticationMode.passwords[].namespace` | string | optional | Namespace of the Secret (defaults to resource namespace) |
 
-### IAM Authentication (type: iam)
-
-No additional fields; IAM authentication uses the AWS IAM role attached to the pod/IRSA.
+**Note on ACK field mapping:** The ACK `User` CRD exposes this field as `spec.authenticationMode.type_` (with a trailing underscore, a Go reserved-word workaround). The kropath schema uses `spec.authenticationMode.type` (no underscore) for cleaner UX — the RGD template automatically maps between them.
 
 ### Metadata and Tags
 
@@ -53,16 +47,17 @@ metadata:
   name: appuser
   namespace: cache-prod
 spec:
-  type: password
   deletionPolicy: retain
   
   # Redis access string: on (enabled), >password (password required), +@all (all commands)
   accessString: "on >password +@all"
   
-  # Password secret reference(s)
-  passwords:
-    - secretName: appuser-password
-      key: password
+  # Authentication mode with password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: appuser-password
+        key: password
   
   # Tags
   tags:
@@ -79,14 +74,14 @@ metadata:
   name: readonly-user
   namespace: cache-prod
 spec:
-  type: password
-  
   # Read-only: allow GET and MGET on all keys, deny writes
   accessString: "on >password +@read"
   
-  passwords:
-    - secretName: readonly-password
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: readonly-password
+        key: password
 ```
 
 ## Complete Example: IAM-Based User
@@ -98,12 +93,12 @@ metadata:
   name: iam-app-user
   namespace: cache-prod
 spec:
-  type: iam
-  
   # IAM auth: pod identity (IRSA) is used instead of password
   accessString: "on ~* +@all"     # All commands on all keys via IAM
   
-  # No passwords field — IAM role provides credentials
+  authenticationMode:
+    type: iam
+    # No passwords field for IAM — pod IRSA role provides credentials
 ```
 
 ## Access String Syntax
@@ -153,11 +148,12 @@ accessString: "on >password +@all -@admin"
 
 ```yaml
 spec:
-  type: password
   accessString: "on >password +@all"
-  passwords:
-    - secretName: myuser-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: myuser-pwd
+        key: password
 ```
 
 Create the Secret:
@@ -180,11 +176,13 @@ To rotate passwords without downtime:
 1. Add the new password to the list:
    ```yaml
    spec:
-     passwords:
-       - secretName: myuser-pwd-old
-         key: password
-       - secretName: myuser-pwd-new  # New password added
-         key: password
+     authenticationMode:
+       type: password
+       passwords:
+         - name: myuser-pwd-old
+           key: password
+         - name: myuser-pwd-new  # New password added
+           key: password
    ```
 
 2. Applications gradually switch to the new password
@@ -192,9 +190,11 @@ To rotate passwords without downtime:
 3. Remove the old password from the list once all apps are switched:
    ```yaml
    spec:
-     passwords:
-       - secretName: myuser-pwd-new
-         key: password
+     authenticationMode:
+       type: password
+       passwords:
+         - name: myuser-pwd-new
+           key: password
    ```
 
 ## IAM Authentication
@@ -208,9 +208,10 @@ metadata:
   name: iam-user
   namespace: cache-prod
 spec:
-  type: iam
   accessString: "on ~* +@all"
-  # No passwords field
+  authenticationMode:
+    type: iam
+    # No passwords field for IAM
 ```
 
 The pod must have an IAM role with MemoryDB permissions:
@@ -238,6 +239,8 @@ status:
   namingStatus: "valid"                        # "valid" | "invalid-unresolved-tokens"
   predictedArn: "arn:aws:memorydb:ap-southeast-2:123456789012:user/cache-prod-appuser"
   userStatus: "active"                         # active | modifying | deleting
+  aclNames:                                    # List of ACLs this user belongs to
+    - production-acl
   conditions:
     - type: Ready
       status: "True"
@@ -343,11 +346,12 @@ metadata:
   name: app-user
   namespace: cache-prod
 spec:
-  type: password
   accessString: "on >password +@all"
-  passwords:
-    - secretName: app-user-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: app-user-pwd
+        key: password
   tags:
     role: application
 
@@ -359,11 +363,12 @@ metadata:
   name: monitoring-user
   namespace: cache-prod
 spec:
-  type: password
   accessString: "on >password +@read"
-  passwords:
-    - secretName: monitoring-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: monitoring-pwd
+        key: password
   tags:
     role: monitoring
 
@@ -375,11 +380,12 @@ metadata:
   name: admin-user
   namespace: cache-prod
 spec:
-  type: password
   accessString: "on >password +@all +@admin"
-  passwords:
-    - secretName: admin-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: admin-pwd
+        key: password
   tags:
     role: admin
 
@@ -419,11 +425,12 @@ metadata:
   name: app-user
   namespace: cache-prod
 spec:
-  type: password
   accessString: "on >password +@all"
-  passwords:
-    - secretName: app-user-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: app-user-pwd
+        key: password
 ```
 
 ### Create a read-only user

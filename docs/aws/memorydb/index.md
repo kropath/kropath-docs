@@ -56,11 +56,12 @@ metadata:
   name: appuser
   namespace: cache-prod
 spec:
-  type: password
   accessString: "on >password +@all"
-  passwords:
-    - secretName: memorydb-appuser-pwd
-      key: password
+  authenticationMode:
+    type: password
+    passwords:
+      - name: memorydb-appuser-pwd
+        key: password
 
 ---
 # Subnet group for VPC placement

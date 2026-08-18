@@ -75,11 +75,12 @@ spec:
      name: appuser
      namespace: cache-prod
    spec:
-     type: password
      accessString: "on >password +@all"
-     passwords:
-       - secretName: appuser-pwd
-         key: password
+     authenticationMode:
+       type: password
+       passwords:
+         - name: appuser-pwd
+           key: password
    ```
 
 2. **Group users into an ACL**:
