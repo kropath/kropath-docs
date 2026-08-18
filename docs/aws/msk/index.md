@@ -66,7 +66,7 @@ An `MSKConfig` instance defines governance for Kafka version, broker instance ty
 
 #### Tags and Labels
 
-*   **`tags`** (map<string,string>, default: `{}`): AWS cloud tags applied to all MSK resources created with this profile. When set in the `mandatory` tier, these tags are merged into all resource tags and cannot be removed. When set in the `defaults` tier, they provide a baseline that resources can augment.
+*   **`tags`** (map<string,string>, default: `{}`): AWS cloud tags applied to all MSK resources created with this profile. When set in the `mandatory` tier, these tags are merged into all resource tags and cannot be removed. When set in the `defaults` tier, they provide a baseline that resources can augment. **Note:** `MSKConfiguration` is an exception — the underlying ACK kafka/Configuration CRD does not support tags, so tag governance does not apply to `MSKConfiguration` resources.
 
 *   **`syncedLabels`** (map<string,string>, default: `{}`): Kubernetes labels that are automatically mirrored as AWS cloud tags (prefixed with `aws.kropath.run/`) and as Kubernetes resource labels. This enables consistent labeling across both platforms.
 
@@ -200,22 +200,29 @@ The effective name (called `effectiveName` in the RGD) is resolved from the nami
 
 ## Ten-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve the effective configuration for each MSK resource:
+Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve the effective configuration for each MSK resource. The cascade is split between **GLOBAL** (organization-wide, via `KropathConfig`) and **LOCAL** (per-profile, via `MSKConfig`) governance:
 
-1. **`KropathConfig.mandatory`** — org-wide forced values
-2. **`KropathConfig.mandatory.msk`** — org-wide forced MSK-family values
-3. **`MSKConfig.mandatory`** — profile-specific forced values
-4. **`MSKConfig.mandatory` (msk)** — profile-specific forced MSK values
-5. **Resource `spec`** — instance-level overrides
-6. **`MSKConfig.defaults`** — profile-specific defaults
-7. **`MSKConfig.defaults` (msk)** — profile-specific MSK defaults
-8. **`KropathConfig.defaults`** — org-wide MSK-family defaults
-9. **`KropathConfig.defaults.msk`** — org-wide MSK defaults
-10. **Built-in defaults** — hardcoded defaults in the RGD schema
+**GLOBAL (org-wide via KropathConfig):**
+1. **`KropathConfig.mandatory`** — org-wide forced values (any MSK field)
+2. **`KropathConfig.mandatory.msk`** — org-wide forced MSK-specific fields
+
+**LOCAL (per-profile via MSKConfig):**
+3. **`MSKConfig.mandatory`** — profile-specific forced values (any MSK field)
+4. **Resource `spec`** — instance-level overrides
+5. **`MSKConfig.defaults`** — profile-specific defaults (any MSK field)
+
+**GLOBAL defaults (org-wide via KropathConfig):**
+6. **`KropathConfig.defaults.msk`** — org-wide MSK-specific defaults
+7. **`KropathConfig.defaults`** — org-wide defaults (any MSK field)
+
+**Built-in:**
+8. **Built-in defaults** — hardcoded defaults in the RGD schema
+
+Tiers 1–5 are **mandatory-or-override** tiers (they enforce or override values). Tiers 6–8 are **defaults-only** tiers (they apply only when no mandatory or override value is present). Within each tier group, more specific scopes (MSK-specific, then profile-level, then org-wide) take precedence over general scopes.
 
 The `kropath-controller` pre-merges all governance sources and writes `status.effectiveConfig` onto the namespaced `MSKConfig` CR. Resource instances (clusters, configurations, etc.) read this single, pre-merged configuration and do not directly access the cascade — this ensures a consistent view of governance.
 
-**Mutation rule:** Mandatory fields cannot be overridden by lower-priority tiers. If a field is set in any `mandatory` tier (levels 1–4), that value is fixed regardless of instance-level or defaults-tier settings.
+**Mutation rule:** Mandatory fields cannot be overridden by lower-priority tiers. If a field is set in any `mandatory` tier (levels 1–3), that value is fixed regardless of instance-level or defaults-tier settings.
 
 ## Validation Rules
 
