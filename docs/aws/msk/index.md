@@ -13,7 +13,7 @@ The AWS MSK family within kropath provides abstractions for managing Amazon MSK 
 
 ## Configuration
 
-Kropath's MSK configuration is managed through `MSKConfig` custom resources that define per-profile governance policies. These resources leverage a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to ensure compliance while providing flexibility.
+Kropath's MSK configuration is managed through `MSKConfig` custom resources that define per-profile governance policies. These resources leverage an eight-tier governance cascade (ADR-010, ADR-015 §5.3) to ensure compliance while providing flexibility.
 
 ### MSKConfig Governance Resource
 
