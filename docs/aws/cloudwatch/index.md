@@ -223,9 +223,9 @@ spec:
 
 ## Limitations
 
-**Dashboard cloud tags:** CloudWatchDashboard does not support AWS cloud tags due to ACK controller limitations. Governance-mandated tags cannot be applied to Dashboard cloud resources. Governance-mandated `syncedLabels` are mirrored to Kubernetes metadata only.
+**Dashboard cloud tags:** CloudWatchDashboard does not support AWS cloud tags due to a current platform limitation. Governance-mandated tags cannot be applied to Dashboard cloud resources. Governance-mandated `syncedLabels` are mirrored to Kubernetes metadata only.
 
-**Metric stream format:** `outputFormat` is not currently governed by `KropathConfig` org-wide settings; it is a `CloudWatchConfig`-only field. This may change in future versions.
+**Metric stream format:** `outputFormat` is not governed by `KropathConfig` org-wide settings; it is a `CloudWatchConfig`-only field.
 
 ## Prerequisites
 

@@ -33,7 +33,7 @@ Default values apply only when **not specified** at the resource level:
 
 | Field | Type | Applies To | Purpose |
 |---|---|---|---|
-| `actionsEnabled` | boolean | Alarms only | Default alarm action setting when instance doesn't specify. Absent (nil) = use RGD built-in true. |
+| `actionsEnabled` | boolean | Alarms only | Default alarm action setting when instance doesn't specify. Absent (nil) = use platform default true. |
 | `treatMissingData` | string | Alarms only | Default missing data treatment when instance doesn't specify. Default: `"missing"` (AWS default). |
 | `outputFormat` | string | Metric Streams only | Default output format when stream doesn't specify. Default: `"json"`. |
 | `namingTemplate` | string | All resources | Default naming pattern (e.g. `{namespace}-{name}`). Applied when resource doesn't use `spec.nameOverride`. |
@@ -68,11 +68,11 @@ The `namingTemplate` field supports dynamic token substitution:
 
 When you create a CloudWatch resource, the platform merges organizational governance (KropathConfig), profile settings (CloudWatchConfig), and instance-level overrides:
 
-**For alarm `actionsEnabled`:** Mandatory (if set) → Instance override → Defaults → RGD built-in `true`
+**For alarm `actionsEnabled`:** Mandatory (if set) → Instance override → Defaults → platform default `true`
 
-**For alarm `treatMissingData`:** Mandatory (if set) → Instance override → Defaults → RGD built-in `"missing"`
+**For alarm `treatMissingData`:** Mandatory (if set) → Instance override → Defaults → platform default `"missing"`
 
-**For metric stream `outputFormat`:** Mandatory (if set) → Instance override → Defaults → RGD built-in `"json"`
+**For metric stream `outputFormat`:** Mandatory (if set) → Instance override → Defaults → platform default `"json"`
 
 **For tags/labels:** Additive merge: mandatory + instance + defaults (mandatory keys cannot be removed)
 
@@ -251,4 +251,4 @@ All CloudWatch resources will fall back to `general-policy` if a referenced prof
 
 ## Dashboard Tag Exception
 
-**Note:** CloudWatchDashboard does not support cloud tags due to ACK controller limitations. Governance-mandated tags from `CloudWatchConfig` cannot be applied to Dashboard cloud resources. Governance-mandated `syncedLabels` and `syncedAnnotations` are mirrored to Kubernetes metadata only, not to cloud tags.
+**Note:** CloudWatchDashboard does not support cloud tags due to a current platform limitation. Governance-mandated tags from `CloudWatchConfig` cannot be applied to Dashboard cloud resources. Governance-mandated `syncedLabels` and `syncedAnnotations` are mirrored to Kubernetes metadata only, not to cloud tags.

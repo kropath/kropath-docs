@@ -14,7 +14,7 @@ CloudWatch dashboards are global AWS resources (no region scoping) that display 
 | `nameOverride` | string | `` | Bypasses naming template; sets cloud dashboard name directly |
 | `deletionPolicy` | string | `retain` | Deletion behavior: `retain` (keep) or `delete` (remove cloud resource) |
 | `dashboardBody` | string | `` | **Required.** Dashboard layout as JSON string defining widgets, metrics, and layout |
-| `tags` | map | `{}` | *Not applied to cloud resource.* Dashboards do not support cloud tags (ACK limitation). This field is accepted for cross-resource consistency. |
+| `tags` | map | `{}` | *Not applied to cloud resource.* Dashboards do not support cloud tags (platform limitation). This field is accepted for cross-resource consistency. |
 | `syncedLabels` | map | `{}` | Synced to Kubernetes labels only (not to cloud tags due to Dashboard tag limitation). Prefixed `aws.kropath.run/` |
 | `syncedAnnotations` | map | `{}` | Synced to Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
@@ -27,7 +27,7 @@ CloudWatch dashboards are global AWS resources (no region scoping) that display 
 
 ## Important Constraints
 
-**Cloud tags not supported:** The AWS CloudWatch Dashboard API does not support tags at creation time. Governance-mandated tags from `CloudWatchConfig` cannot be applied to Dashboard cloud resources. This is a known limitation of the ACK CloudWatch controller.
+**Cloud tags not supported:** The AWS CloudWatch Dashboard API does not support tags at creation time. Governance-mandated tags from `CloudWatchConfig` cannot be applied to Dashboard cloud resources. This is a current platform limitation.
 
 **Synced labels:** `syncedLabels` are mirrored to Kubernetes metadata only, not to cloud tags.
 

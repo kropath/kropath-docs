@@ -65,7 +65,7 @@ Each filter has:
 
 **Include/exclude mutual exclusivity:** You cannot set both `includeFilters` and `excludeFilters` simultaneously. The AWS API enforces this and returns `InvalidParameterInput` error if both are populated.
 
-**Firehose and role requirements:** Both `firehoseArn` and `roleArn` are semantically required by the AWS API, even though the ACK CRD may not explicitly mark them as required. Omitting either causes reconciliation failure.
+**Firehose and role requirements:** Both `firehoseArn` and `roleArn` are semantically required by the AWS API, even though the resource schema may not explicitly mark them as required. Omitting either causes reconciliation failure.
 
 **Statistics configurations:** Additional statistics (e.g. percentiles) are only supported on specific metrics and statistics. Consult the AWS CloudWatch Metric Streams documentation for supported combinations.
 
