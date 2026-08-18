@@ -198,9 +198,9 @@ The effective name (called `effectiveName` in the RGD) is resolved from the nami
 
 **Note on ARN prediction:** Unlike some services, MSK cluster and configuration ARNs include an AWS-assigned UUID component that cannot be predicted before creation. Therefore, `status.predictedArn` is omitted from `MSKCluster` and `MSKConfiguration` resources. After creation, `status.clusterArn` and `status.configurationArn` (populated from the underlying ACK resource metadata) provide the full ARN.
 
-## Ten-Tier Governance Cascade
+## Eight-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve the effective configuration for each MSK resource. The cascade is split between **GLOBAL** (organization-wide, via `KropathConfig`) and **LOCAL** (per-profile, via `MSKConfig`) governance:
+Kropath employs an eight-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve the effective configuration for each MSK resource. The cascade is split between **GLOBAL** (organization-wide, via `KropathConfig`) and **LOCAL** (per-profile, via `MSKConfig`) governance:
 
 **GLOBAL (org-wide via KropathConfig):**
 1. **`KropathConfig.mandatory`** — org-wide forced values (any MSK field)
