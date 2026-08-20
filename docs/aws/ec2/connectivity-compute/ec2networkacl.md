@@ -30,8 +30,7 @@ spec:
       portRange:
         from: 80
         to: 80
-      cidrBlocks:
-        - "0.0.0.0/0"
+      cidrBlock: "0.0.0.0/0"
       egress: false
       ruleAction: "allow"
     - ruleNumber: 110
@@ -39,14 +38,12 @@ spec:
       portRange:
         from: 443
         to: 443
-      cidrBlocks:
-        - "0.0.0.0/0"
+      cidrBlock: "0.0.0.0/0"
       egress: false
       ruleAction: "allow"
     - ruleNumber: 100
       protocol: "-1"  # All protocols
-      cidrBlocks:
-        - "0.0.0.0/0"
+      cidrBlock: "0.0.0.0/0"
       egress: true
       ruleAction: "allow"
   subnetIds:

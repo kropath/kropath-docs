@@ -8,7 +8,8 @@ EC2FlowLog represents a VPC Flow Log—a managed AWS service that captures IP tr
 *   `resourceType` (string, required): Type of resource (`"VPC"` or `"Subnet"`).
 *   `trafficType` (string, required): Type of traffic to log (`"ACCEPT"` for accepted, `"REJECT"` for rejected, `"ALL"` for both).
 *   `logDestinationType` (string, required): Destination type for logs (`"cloud-watch-logs"`, `"s3"`, or `"kinesis-data-firehose"`).
-*   `logDestination` (string, required): ARN of the destination (CloudWatch log group ARN, S3 bucket ARN, or Firehose ARN).
+*   `logGroupName` (string, default: ""): CloudWatch Logs log group name (when `logDestinationType` is `cloud-watch-logs`).
+*   `logDestination` (string, required): ARN of the destination for S3 or Firehose (S3 bucket ARN or Firehose ARN; not used for CloudWatch Logs).
 *   `deliverLogsPermissionArn` (string, required): IAM role ARN with permissions to deliver logs to the destination.
 *   `logFormat` (string, optional): Custom log format for flow log records.
 *   `maxAggregationInterval` (integer, default: 600): Time in seconds to aggregate traffic (60 or 600).
@@ -36,7 +37,7 @@ spec:
   resourceType: "VPC"
   trafficType: "ALL"
   logDestinationType: "cloud-watch-logs"
-  logDestination: "arn:aws:logs:us-east-1:123456789012:log-group:/aws/vpc/flowlogs/prod"
+  logGroupName: "/aws/vpc/flowlogs/prod"
   deliverLogsPermissionArn: "arn:aws:iam::123456789012:role/vpc-flow-logs-role"
   maxAggregationInterval: 600
   tags:
