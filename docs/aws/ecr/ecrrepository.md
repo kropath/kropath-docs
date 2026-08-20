@@ -1,183 +1,218 @@
-# ECRRepository — Creating and Managing Container Image Repositories
+# ECRRepository — Creating and Managing Container Repositories
 
-The `ECRRepository` resource represents a private container image repository in AWS Elastic Container Registry. This guide covers all configuration fields, governance, naming, and real-world usage patterns.
+The `ECRRepository` resource creates and manages private AWS Elastic Container Registry repositories. Use it to store, manage, and deploy container images with encryption, tag mutability controls, and lifecycle management.
 
 ## Core Fields
 
 ### Governance and Selection
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
+|---|---|---|---|
 | `configRef` | string | `"general-policy"` | Selects which `ECRConfig` governance profile to apply |
-| `nameOverride` | string | `""` | Bypasses the naming template; sets the repository name directly |
-| `deletionPolicy` | string | `"retain"` | Behavior when the resource is deleted: `"retain"` (keep in AWS) or `"delete"` (remove from AWS) |
+| `deletionPolicy` | string | `"retain"` | Behavior when the repository resource is deleted: `"retain"` (safe) or `"delete"` |
 
-### Image Tag Mutability
+### Repository Identity
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `imageTagMutability` | string | `""` | Force tags to be `"IMMUTABLE"` or `"MUTABLE"`. Empty uses governance or AWS default (MUTABLE). Mandatory governance tier overrides this. |
-| `imageTagMutabilityExclusionFilters` | array | `[]` | List of tag patterns to exempt from mutability enforcement. Useful to keep `latest` mutable while other tags are immutable. |
-
-**Exclusion filter object:**
-```yaml
-imageTagMutabilityExclusionFilters:
-  - filter: "latest"
-    filterType: "WILDCARD"  # or EXACTMATCH
-  - filter: "dev-*"
-    filterType: "WILDCARD"
-```
+|---|---|---|---|
+| `nameOverride` | string | `""` | Bypasses the naming template; sets the repository name directly |
+| `registryID` | string | `""` | AWS account ID; defaults to the cluster's AWS account |
 
 ### Encryption
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `encryptionType` | string | `""` | Force encryption to `"AES256"` (AWS-managed) or `"KMS"` (customer-managed). Empty uses governance or AWS default. Mandatory governance tier overrides this. |
-| `kmsKeyRef` | string | `""` | Reference to a local `KMSKey` CR. Mutually exclusive with `kmsKeyArn`. |
-| `kmsKeyArn` | string | `""` | Direct AWS KMS key ARN, key ID, or alias. Mutually exclusive with `kmsKeyRef`. |
+|---|---|---|---|
+| `encryptionType` | string | `""` | `AES256` (AWS-managed) or `KMS` (customer-managed); falls through to governance |
+| `kmsKeyRef` | string | `""` | Reference to a kropath `KMSKey` resource (mutually exclusive with `kmsKeyArn`) |
+| `kmsKeyArn` | string | `""` | Direct KMS key ARN (mutually exclusive with `kmsKeyRef`) |
 
-**Important:** `kmsKeyRef` and `kmsKeyArn` are mutually exclusive — set one or neither.
-
-### Lifecycle Management
+### Image Tag Mutability
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `lifecyclePolicy` | string | `""` | JSON lifecycle policy document defining image retention rules. See AWS documentation for structure. |
-| `policy` | string | `""` | JSON repository resource-based policy (for cross-account or cross-role access). |
+|---|---|---|---|
+| `imageTagMutability` | string | `""` | `MUTABLE` (default, tags can be overwritten) or `IMMUTABLE` (supply chain security) |
+| `imageTagMutabilityExclusionFilters` | array | `[]` | Exempt specific tags from mutability setting (e.g., exclude `latest` from IMMUTABLE) |
+
+### Lifecycle and Access
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `lifecyclePolicy` | string | `""` | JSON policy to auto-expire images (e.g., untagged after 30 days) |
+| `policy` | string | `""` | JSON repository access policy (cross-account access, role permissions) |
 
 ### Metadata and Tags
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `tags` | map | `{}` | AWS tags applied to the repository; merged with governance tags |
-| `syncedLabels` | map | `{}` | Kubernetes labels and AWS tags (prefixed `aws.kropath.run/`) |
+|---|---|---|---|
+| `tags` | map | `{}` | AWS tags; merged with governance tags |
+| `syncedLabels` | map | `{}` | Kubernetes labels also synced to cloud tags (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
-### Operational Fields
+### Deprecated Fields
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `registryID` | string | `""` | AWS account ID. Empty uses the account where the controller runs. |
-| `scanOnPush` | boolean | `false` | Enable image scanning on push (deprecated by AWS). |
+|---|---|---|---|
+| `scanOnPush` | boolean | `false` | **Deprecated** — AWS recommends registry-level scanning instead; kept for backward compatibility |
 
-## Status Outputs
+## Status Fields
 
-After reconciliation, the repository's status contains:
+After the repository is created, you can read these output fields:
 
 | Field | Type | Purpose |
 |---|---|---|
-| `resourceName` | string | The effective repository name in AWS (derived from naming template or `nameOverride`) |
-| `namingStatus` | string | `"valid"` if the resource name is ready, `"invalid-unresolved-tokens"` if naming template has unresolved tokens |
-| `predictedArn` | string | ARN of the repository: `arn:aws:ecr:region:account:repository/resourceName` |
-| `repositoryURI` | string | Full push/pull URI (e.g. `123456789012.dkr.ecr.us-east-1.amazonaws.com/my-team/my-app`) — used by CI/CD pipelines and application deployments |
-| `conditions[]` | array | Standard Kubernetes conditions (Ready, etc.) |
+| `resourceName` | string | The effective repository name (after naming template substitution) |
+| `namingStatus` | string | `valid` or `invalid-unresolved-tokens` (indicates if all naming tokens resolved) |
+| `predictedArn` | string | Full ARN of the repository (e.g., `arn:aws:ecr:us-east-1:123456789012:repository/team/my-app`) |
+| `repositoryURI` | string | **The primary runtime output** — use this in image pull secrets and deployments (e.g., `123456789012.dkr.ecr.us-east-1.amazonaws.com/team/my-app`) |
 
-**`repositoryURI` is the operationally significant output.** Use this to configure image pull secrets, CI/CD pipeline push targets, and Pod `image` fields.
-
-## Naming Convention
-
-Repositories are named using a configurable template. The default template is `{namespace}/{name}`, which produces names like `app-team/my-app` (where `app-team` is the Kubernetes namespace and `my-app` is the resource name).
-
-**Available naming tokens:**
-- `{name}` — The resource's Kubernetes name
-- `{namespace}` — The resource's Kubernetes namespace
-- `{configRef}` — The selected governance profile name
-- `{account_id}` — AWS account ID
-- `{region}` — AWS region
-- `{tag.KEY}` — Any tag key from the merged tags (e.g. `{tag.environment}`)
-
-**Example template:** `{namespace}/{configRef}/{tag.environment}/{name}` produces `payments/pci/production/payment-processor` for a resource in the `payments` namespace with `configRef: pci` and `environment: production`.
-
-**Important:** The repository name is immutable after creation in AWS. Changing `spec.nameOverride` or the governance naming template on an existing repository does not rename the AWS repository.
-
-## Complete Examples
-
-### Basic Repository
-
-Create a simple repository with defaults:
+## Basic Example
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRRepository
 metadata:
   name: my-app
-  namespace: app-team
+  namespace: default
 spec:
   configRef: general-policy
   deletionPolicy: retain
-```
-
-Result:
-- Repository named `app-team/my-app` (using default naming template)
-- AWS-managed encryption (`AES256`)
-- Mutable image tags
-- URI: `123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app`
-
-### Repository with Immutable Tags and Custom Encryption
-
-Enforce immutable tags and customer-managed encryption:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepository
-metadata:
-  name: critical-service
-  namespace: payments
-spec:
-  configRef: pci
-  imageTagMutability: "IMMUTABLE"
-  encryptionType: "KMS"
-  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/mrk-payments"
   tags:
-    business-critical: "true"
-    cost-center: "payments"
-  deletionPolicy: retain
+    team: backend
+    environment: production
 ```
 
-Result:
-- Repository named `payments/pci/critical-service` (using PCI profile's naming template)
-- Immutable image tags (cannot reassign tags)
-- Encrypted with customer-managed KMS key
-- Business-critical and cost-center tags applied
+After reconciliation:
 
-### Exclude Latest Tag from Mutability
+```bash
+$ kubectl get ecrrepository my-app -o jsonpath='{.status.repositoryURI}'
+123456789012.dkr.ecr.us-east-1.amazonaws.com/default/my-app
+```
 
-Keep `latest` mutable for rapid iteration while other tags are immutable:
+Use this URI in your deployments:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-pod
+spec:
+  containers:
+  - name: app
+    image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/default/my-app:latest
+```
+
+## Encryption Examples
+
+### AWS-Managed Encryption (Default)
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRRepository
 metadata:
-  name: web-app
-  namespace: frontend
+  name: basic-app
+  namespace: default
 spec:
   configRef: general-policy
-  imageTagMutability: "IMMUTABLE"
+  # No encryption fields — falls back to AES256
+```
+
+- Encryption type: AES256 (AWS-managed)
+- AWS manages key rotation automatically
+- No additional cost
+
+### Customer-Managed KMS Encryption
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: secure-app
+  namespace: default
+spec:
+  configRef: general-policy
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+```
+
+- Encryption type: KMS (customer-managed key)
+- You control key access via IAM policies
+- Required for compliance (PCI, HIPAA, SOC 2)
+- **Important:** Cannot be changed after repository creation
+
+### KMS Encryption via Reference
+
+Use a kropath `KMSKey` resource instead of a direct ARN:
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: KMSKey
+metadata:
+  name: my-key
+  namespace: default
+spec:
+  keySpec: SYMMETRIC_DEFAULT
+
+---
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: secure-app
+  namespace: default
+spec:
+  configRef: general-policy
+  encryptionType: KMS
+  kmsKeyRef: my-key  # References the KMSKey resource above
+```
+
+## Image Tag Mutability
+
+### Mutable Tags (Default)
+
+```yaml
+spec:
+  imageTagMutability: MUTABLE
+```
+
+- Tags can be overwritten (typical for `latest`)
+- Flexible for CI/CD pipelines
+- May mask supply chain issues
+
+### Immutable Tags (Supply Chain Security)
+
+```yaml
+spec:
+  imageTagMutability: IMMUTABLE
+```
+
+- Tags are permanent once pushed
+- Ensures reproducibility and traceability
+- Recommended for production workloads
+- Prevents accidental overwrite of released versions
+
+### Immutable with Exclusions
+
+Allow specific tags to be mutable while others remain immutable:
+
+```yaml
+spec:
+  imageTagMutability: IMMUTABLE
   imageTagMutabilityExclusionFilters:
-    - filter: "latest"
-      filterType: "WILDCARD"
-    - filter: "dev-*"
-      filterType: "WILDCARD"
-  deletionPolicy: retain
+  - filter: "latest"
+    filterType: WILDCARD
+  - filter: "dev-*"
+    filterType: WILDCARD
 ```
 
-Result:
-- Tags like `v1.0`, `v1.1`, `v1.2` are immutable
-- Tags like `latest`, `dev-`, `dev-branch-1` can be reassigned
-- Developers can rapidly iterate with `latest` while production uses immutable version tags
+- Released versions (`v1.0`, `v1.1`) are immutable
+- Development tags (`latest`, `dev-*`) can be overwritten
+- Useful for gradual compliance enforcement
 
-### Lifecycle Policy for Image Retention
+## Lifecycle Policies
 
-Define retention rules for automatic cleanup:
+Automatically expire old images to reduce storage costs:
 
 ```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepository
-metadata:
-  name: build-artifacts
-  namespace: ci-cd
 spec:
-  configRef: general-policy
   lifecyclePolicy: |
     {
       "rules": [
@@ -196,10 +231,10 @@ spec:
         },
         {
           "rulePriority": 2,
-          "description": "Keep only 10 most recent tagged images",
+          "description": "Keep only last 10 builds",
           "selection": {
             "tagStatus": "tagged",
-            "tagPrefixList": ["release-"],
+            "tagPrefixList": ["build-"],
             "countType": "imageCountMoreThan",
             "countNumber": 10
           },
@@ -209,26 +244,50 @@ spec:
         }
       ]
     }
-  deletionPolicy: retain
 ```
 
-Result:
-- Untagged images (build artifacts with no version tag) expire after 7 days
-- Only the 10 most recent `release-*` tagged images are kept
-- Older images are automatically removed, reducing storage costs
+**Common patterns:**
 
-### Cross-Account Repository Access
+**Expire old untagged images:**
+```json
+{
+  "rules": [{
+    "rulePriority": 1,
+    "description": "Expire untagged after 30 days",
+    "selection": {
+      "tagStatus": "untagged",
+      "countType": "sinceImagePushed",
+      "countUnit": "days",
+      "countNumber": 30
+    },
+    "action": { "type": "expire" }
+  }]
+}
+```
 
-Grant another AWS account permission to pull images:
+**Keep only latest release images:**
+```json
+{
+  "rules": [{
+    "rulePriority": 1,
+    "description": "Keep last 5 releases",
+    "selection": {
+      "tagStatus": "tagged",
+      "tagPrefixList": ["release-"],
+      "countType": "imageCountMoreThan",
+      "countNumber": 5
+    },
+    "action": { "type": "expire" }
+  }]
+}
+```
+
+## Repository Access Control
+
+Grant other AWS accounts or roles permission to pull images:
 
 ```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepository
-metadata:
-  name: shared-library
-  namespace: platform
 spec:
-  configRef: general-policy
   policy: |
     {
       "Version": "2012-10-17",
@@ -237,7 +296,133 @@ spec:
           "Sid": "AllowCrossAccountPull",
           "Effect": "Allow",
           "Principal": {
-            "AWS": "arn:aws:iam::111111111111:root"
+            "AWS": "arn:aws:iam::999888777666:root"
+          },
+          "Action": [
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage",
+            "ecr:DescribeImages"
+          ]
+        }
+      ]
+    }
+```
+
+This allows the account `999888777666` to pull images from your repository.
+
+## Governance Examples
+
+### Development Repository (Permissive)
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: dev-api
+  namespace: team-backend
+spec:
+  configRef: development  # References the development ECRConfig profile
+  tags:
+    team: backend
+```
+
+**Profile enforcement:**
+- Mutable tags (can overwrite `latest`)
+- AES256 encryption
+- No lifecycle policy
+- Naming: `team-backend/dev-api`
+
+### Production Repository (Strict)
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: prod-api
+  namespace: team-backend
+spec:
+  configRef: production  # References the production ECRConfig profile
+  tags:
+    team: backend
+```
+
+**Profile enforcement (from production ECRConfig):**
+- Immutable tags (supply chain security)
+- KMS encryption (compliance requirement)
+- Automatic lifecycle policy (clean up old images)
+- Naming: `team-backend/production/prod-api`
+
+### Custom Naming
+
+Override the default naming template:
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: my-service
+  namespace: default
+spec:
+  nameOverride: "legacy-service-v1"  # Direct repository name
+  tags:
+    team: platform
+```
+
+Repository name: `legacy-service-v1` (naming template ignored)
+
+## Complete Production Example
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: payment-processor
+  namespace: payments
+spec:
+  configRef: production
+  deletionPolicy: retain
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/cmk-payments"
+  imageTagMutability: IMMUTABLE
+  imageTagMutabilityExclusionFilters:
+  - filter: "latest"
+    filterType: WILDCARD
+  lifecyclePolicy: |
+    {
+      "rules": [
+        {
+          "rulePriority": 1,
+          "description": "Expire untagged after 7 days",
+          "selection": {
+            "tagStatus": "untagged",
+            "countType": "sinceImagePushed",
+            "countUnit": "days",
+            "countNumber": 7
+          },
+          "action": { "type": "expire" }
+        },
+        {
+          "rulePriority": 2,
+          "description": "Keep last 10 release images",
+          "selection": {
+            "tagStatus": "tagged",
+            "tagPrefixList": ["v"],
+            "countType": "imageCountMoreThan",
+            "countNumber": 10
+          },
+          "action": { "type": "expire" }
+        }
+      ]
+    }
+  policy: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowPaymentTeamPull",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::123456789012:role/payment-team"
           },
           "Action": [
             "ecr:GetDownloadUrlForLayer",
@@ -246,100 +431,82 @@ spec:
         }
       ]
     }
-  deletionPolicy: retain
+  tags:
+    team: payments
+    compliance: pci-dss
+    criticality: high
+  syncedLabels:
+    data-sensitivity: financial
 ```
 
-Result:
-- AWS account `111111111111` can pull images from this repository
-- They cannot push or delete images
-- Repository remains in your account; only read access is granted
-
-## Governance Cascade
-
-The effective configuration for each repository is determined by a three-tier cascade:
-
-1. **Governance mandatory tier** (highest priority) — Platform enforcement that overrides everything
-2. **Repository spec** (middle) — Developer choices
-3. **Governance defaults tier** (lowest priority) — Fallback values
-
-**Example:**
-- PCI profile has `mandatory.imageTagMutability: "IMMUTABLE"`
-- Repository specifies `imageTagMutability: "MUTABLE"`
-- **Result:** Repository uses `IMMUTABLE` (mandatory overrides repository spec)
-
-Platform teams use the mandatory tier for critical controls; they use the defaults tier to provide reasonable baselines that developers can override when needed.
-
-## URI and Pull Secrets
-
-The `status.repositoryURI` output is what you use to configure container deployments. Example URI: `123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app`
-
-### In Kubernetes Pod Specs
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: my-app
-  namespace: app-team
-spec:
-  containers:
-    - name: my-app
-      image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app:latest
-      imagePullPolicy: IfNotPresent
-  imagePullSecrets:
-    - name: ecr-pull-secret
-```
-
-### In CI/CD Pipelines
-
-Use the URI as your image push target:
-
-```bash
-# Build image
-docker build -t 123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app:v1.0 .
-
-# Push to ECR
-docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app:v1.0
-```
-
-## Key Behaviors
-
-### Immutable Repository Name After Creation
-
-Once created in AWS ECR, a repository's name cannot be changed. The naming template or `nameOverride` field determines the name at creation time only.
-
-### Encryption Configuration is Immutable
-
-AWS ECR does not allow changing the encryption configuration after repository creation. You cannot convert from AES256 to KMS or vice versa without deleting and recreating the repository.
-
-### Tag Format Conversion
-
-Tags in kropath are specified as a map (e.g. `environment: production`). AWS ECR stores tags as a list of key-value pairs. The conversion is handled automatically.
-
-### Deletion Policy
-
-- `retain` (default) — Deleting the Kubernetes resource keeps the repository and all images safe in AWS ECR
-- `delete` — Deleting the Kubernetes resource also deletes the ECR repository and all images (use with caution)
+**Result:**
+- Repository: `payments/production/payment-processor`
+- KMS encryption with customer-managed key
+- Immutable release tags, mutable `latest` tag
+- Auto-expires untagged images after 7 days
+- Keeps last 10 release images
+- Only the payments team can pull
+- Tags and labels synced to AWS
 
 ## Troubleshooting
 
-### Repository Not Creating
+### Repository URI Not Available
 
-Check `status.namingStatus`:
-- If `invalid-unresolved-tokens`, the naming template has a token that cannot be resolved (e.g. a tag key that doesn't exist). Fix the template or ensure required tags are present.
-- If `valid` but repository not created, check `status.conditions` for errors from AWS (e.g., permission issues, duplicate name).
+If `status.repositoryURI` is empty:
 
-### Can't Override Encryption or Tag Mutability
+1. Check that the resource has reconciled successfully
+2. View the conditions: `kubectl describe ecrrepository <name>`
+3. Ensure the underlying ACK Repository resource was created: `kubectl get repository -n <namespace>`
 
-If governance has a mandatory tier set, those values cannot be overridden at the repository level. Only the defaults tier can be overridden by the developer. Contact your platform team if you need different settings.
+### Naming Validation Failed
 
-### Repository Won't Delete When `deletionPolicy: delete`
+If `status.namingStatus` is `invalid-unresolved-tokens`:
 
-Ensure the Kubernetes service account running kropath has AWS IAM permissions for `ecr:DeleteRepository`. The repository must also be empty (no images) before deletion, or the AWS API will reject the delete operation.
+1. Check the naming template for unresolved tokens (e.g., `{tag.missing-key}`)
+2. Ensure all referenced tags exist in `spec.tags`
+3. Fix the naming template or add missing tags
 
-### URI Shows But Image Push Fails
+### Encryption Configuration Cannot Be Changed
 
-Check:
-1. Your CI/CD pipeline has AWS credentials with `ecr:PutImage` permission
-2. You've authenticated Docker to ECR (run `aws ecr get-login-password | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com`)
-3. The image name matches the repository name exactly
+If you try to change encryption on an existing repository:
+
+Encryption configuration (type and key) is **immutable** after creation. To change encryption:
+
+1. Create a new ECRRepository resource
+2. Migrate images to the new repository
+3. Delete the old repository
+
+This is an AWS API limitation, not a kropath limitation.
+
+## Using Repository URIs in Deployments
+
+The `repositoryURI` is the full DNS name for pushing and pulling images:
+
+```bash
+# Push an image
+docker tag my-image:latest 123456789012.dkr.ecr.us-east-1.amazonaws.com/team/my-app:v1.0
+docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/team/my-app:v1.0
+
+# Pull from Kubernetes (requires image pull secret)
+kubectl create secret docker-registry ecr-secret \
+  --docker-server=123456789012.dkr.ecr.us-east-1.amazonaws.com \
+  --docker-username=AWS \
+  --docker-password=$(aws ecr get-login-password --region us-east-1)
+```
+
+Deployment example:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+      - name: ecr-secret
+      containers:
+      - name: app
+        image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/team/my-app:v1.0
+```

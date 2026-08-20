@@ -1,201 +1,55 @@
-# ECRRepositoryCreationTemplate — Governing Auto-Created Repositories
+# ECRRepositoryCreationTemplate — Configuring Auto-Created Repositories
 
-The `ECRRepositoryCreationTemplate` resource governs how repositories are automatically created by ECR when triggered by pull-through cache rules or cross-region replication. When ECR auto-creates a repository, it matches the image path against your templates and applies the matching template's encryption, tag mutability, lifecycle policy, and tags to the new repository.
+The `ECRRepositoryCreationTemplate` resource defines configuration templates for repositories that are automatically created by pull-through cache rules or cross-region replication. When ECR auto-creates a repository, it applies the matching template to set encryption, tag mutability, lifecycle policies, and access control.
 
-## Use Cases
+## When to Use Creation Templates
 
-- **Compliance enforcement:** Ensure all auto-created repositories have KMS encryption and immutable tags
-- **Cost governance:** Apply lifecycle policies to auto-created repositories for automatic cleanup
-- **Tagging automation:** Add required AWS tags to repositories created by pull-through cache
-- **Cross-region replication:** Control how repositories are configured when replicated to other regions
+- **Enforce configuration on cached repositories** — Ensure auto-created repositories follow the same governance as manually-created ones
+- **Standardize encryption and compliance** — Apply KMS encryption to all auto-created repositories automatically
+- **Manage lifecycle across dynamic repositories** — Define expiration policies that apply to all generated repositories
 
 ## Core Fields
 
-### Template Identity
+### Governance and Selection
 
-| Field | Type | Required | Immutable | Purpose |
-|---|---|---|---|---|
-| `prefix` | string | Yes | Yes | Namespace prefix for auto-created repositories (e.g. `"prod/"`, `"staging/"`, `"ROOT"` for catch-all). Immutable after creation. |
-| `appliedFor` | array | Yes | No | When the template applies: `["PULL_THROUGH_CACHE"]`, `["REPLICATION"]`, or both |
-| `description` | string | No | No | Human-readable description of when and why this template is used |
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `configRef` | string | `"general-policy"` | Selects which `ECRConfig` governance profile to apply (for tags/labels) |
+| `deletionPolicy` | string | `"retain"` | Behavior when the template is deleted: `"retain"` (safe) or `"delete"` |
 
-**Prefix matching:** Repositories created with names matching the prefix use this template's configuration.
+### Template Identity (Immutable)
+
+| Field | Type | Required | Purpose |
+|---|---|---|---|
+| `prefix` | string | Yes | Namespace prefix for matching auto-created repositories (e.g., `"docker-hub"`, `"prod/"`, `"ROOT"` for catch-all) |
+| `appliedFor` | array | Yes | Scenarios where this template applies: `["PULL_THROUGH_CACHE"]` and/or `["REPLICATION"]` |
+| `description` | string | No | Human-readable description of the template |
 
 ### Repository Configuration
 
-These fields are applied to auto-created repositories (not subject to `ECRConfig` governance):
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `encryptionType` | string | `""` | `AES256` (AWS-managed) or `KMS` (customer-managed) for auto-created repos |
+| `kmsKeyRef` | string | `""` | Reference to a kropath `KMSKey` resource (mutually exclusive with `kmsKeyArn`) |
+| `kmsKeyArn` | string | `""` | Direct KMS key ARN (mutually exclusive with `kmsKeyRef`) |
+| `imageTagMutability` | string | `""` | `MUTABLE` or `IMMUTABLE` for auto-created repos |
+| `imageTagMutabilityExclusionFilters` | array | `[]` | Exempt specific tags from mutability setting |
+| `lifecyclePolicy` | string | `""` | JSON lifecycle policy for auto-created repos |
+| `repositoryPolicy` | string | `""` | JSON resource-based access policy for auto-created repos |
+| `resourceTags` | array | `[]` | Cloud tags applied to auto-created repos (as `{key, value}` pairs) |
+| `customRoleArn` | string | `""` | IAM role ARN for template-driven repository creation |
+
+### Metadata
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `encryptionType` | string | `""` | Force auto-created repos to use `"AES256"` or `"KMS"` encryption. Empty uses AWS default. |
-| `kmsKeyRef` | string | `""` | Reference to a local `KMSKey` CR for encryption. Mutually exclusive with `kmsKeyArn`. |
-| `kmsKeyArn` | string | `""` | Direct KMS key ARN for encryption. Mutually exclusive with `kmsKeyRef`. |
-| `imageTagMutability` | string | `""` | Force auto-created repos to use `"IMMUTABLE"` or `"MUTABLE"` tags. Empty uses AWS default. |
-| `imageTagMutabilityExclusionFilters` | array | `[]` | Exemptions to tag mutability (e.g., allow `latest` to be mutable) |
-| `lifecyclePolicy` | string | `""` | JSON lifecycle policy for automatic image cleanup |
-| `repositoryPolicy` | string | `""` | JSON resource-based policy for access control |
-| `resourceTags` | array | `[]` | Cloud resource tags (`{key, value}` pairs) applied to auto-created repos |
-| `customRoleArn` | string | `""` | IAM role ARN for template-driven creation |
-
-### Governance and Deletion
-
-| Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `configRef` | string | `"general-policy"` | Selects which `ECRConfig` profile for K8s-level tagging (not for repository configuration) |
-| `deletionPolicy` | string | `"retain"` | When the template resource is deleted: `"retain"` or `"delete"` |
-| `tags` | map | `{}` | Kubernetes labels on this template resource (K8s metadata only) |
-| `syncedLabels` | map | `{}` | Kubernetes labels synced to the template (prefixed `aws.kropath.run/`) |
+|---|---|---|---|
+| `tags` | map | `{}` | Kubernetes tags on this template resource |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
 
-## Complete Examples
+## Basic Examples
 
-### Production Template with KMS and Immutable Tags
-
-Ensure all production repositories are encrypted with KMS and have immutable tags:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepositoryCreationTemplate
-metadata:
-  name: prod-template
-  namespace: kro-system
-spec:
-  prefix: "prod/"
-  appliedFor:
-    - "PULL_THROUGH_CACHE"
-    - "REPLICATION"
-  description: "Production repositories: KMS encryption, immutable tags, strict lifecycle"
-  encryptionType: "KMS"
-  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/mrk-production"
-  imageTagMutability: "IMMUTABLE"
-  lifecyclePolicy: |
-    {
-      "rules": [
-        {
-          "rulePriority": 1,
-          "description": "Expire untagged images after 30 days",
-          "selection": {
-            "tagStatus": "untagged",
-            "countType": "sinceImagePushed",
-            "countUnit": "days",
-            "countNumber": 30
-          },
-          "action": {
-            "type": "expire"
-          }
-        }
-      ]
-    }
-  resourceTags:
-    - key: environment
-      value: production
-    - key: compliance
-      value: required
-  deletionPolicy: retain
-```
-
-Result:
-- Repositories with names starting with `prod/` are created with:
-  - KMS encryption using the specified production key
-  - Immutable tags (cannot reassign tags)
-  - Lifecycle policy that removes untagged images after 30 days
-  - AWS tags `environment=production` and `compliance=required`
-
-### Staging Template with Default Encryption
-
-Staging repositories use AWS-managed encryption and mutable tags for faster iteration:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepositoryCreationTemplate
-metadata:
-  name: staging-template
-  namespace: kro-system
-spec:
-  prefix: "staging/"
-  appliedFor:
-    - "PULL_THROUGH_CACHE"
-  description: "Staging repositories: AWS-managed encryption, mutable tags"
-  encryptionType: "AES256"
-  imageTagMutability: "MUTABLE"
-  resourceTags:
-    - key: environment
-      value: staging
-  deletionPolicy: retain
-```
-
-Result:
-- Repositories with names starting with `staging/` are created with:
-  - AWS-managed AES256 encryption
-  - Mutable tags for rapid iteration
-  - Staging environment tag
-
-### Exclude Latest Tag from Immutability
-
-Keep `latest` mutable for rapid pushes while other tags are immutable:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepositoryCreationTemplate
-metadata:
-  name: ci-cd-template
-  namespace: kro-system
-spec:
-  prefix: "ci-cd/"
-  appliedFor:
-    - "PULL_THROUGH_CACHE"
-  description: "CI/CD repositories: immutable version tags, mutable latest"
-  imageTagMutability: "IMMUTABLE"
-  imageTagMutabilityExclusionFilters:
-    - filter: "latest"
-      filterType: "WILDCARD"
-    - filter: "dev-*"
-      filterType: "WILDCARD"
-  resourceTags:
-    - key: purpose
-      value: cicd-builds
-  deletionPolicy: retain
-```
-
-Result:
-- Repositories with names starting with `ci-cd/` are created with:
-  - Immutable tags for production versions
-  - Exception: `latest` and `dev-*` tags can be reassigned
-  - CI/CD purpose tag
-
-### Cross-Region Replication Template
-
-Configure repositories created by cross-region replication:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRRepositoryCreationTemplate
-metadata:
-  name: replication-template
-  namespace: kro-system
-spec:
-  prefix: "replicated/"
-  appliedFor:
-    - "REPLICATION"
-  description: "Repositories created by cross-region replication"
-  encryptionType: "KMS"
-  kmsKeyArn: "arn:aws:kms:us-west-2:123456789012:key/mrk-dr"
-  imageTagMutability: "IMMUTABLE"
-  resourceTags:
-    - key: purpose
-      value: disaster-recovery
-  deletionPolicy: retain
-```
-
-Result:
-- Repositories created during cross-region replication with names starting with `replicated/` are configured with:
-  - Regional KMS encryption (using the DR region's key)
-  - Immutable tags
-  - Disaster-recovery purpose tag
-
-### Permissive Catch-All Template
-
-A catch-all template (ROOT prefix) applied when no more specific template matches:
+### Default Configuration for Cached Repositories
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -204,90 +58,348 @@ metadata:
   name: default-template
   namespace: kro-system
 spec:
-  prefix: "ROOT"
+  prefix: ROOT  # Matches all auto-created repositories
   appliedFor:
-    - "PULL_THROUGH_CACHE"
-    - "REPLICATION"
-  description: "Default template for all other repositories"
-  encryptionType: "AES256"
-  imageTagMutability: "MUTABLE"
-  resourceTags:
-    - key: managed-by
-      value: kropath
+  - PULL_THROUGH_CACHE
+  description: "Default configuration for pull-through cached repositories"
   deletionPolicy: retain
 ```
 
-Result:
-- Any repository not matching a more specific prefix uses this default template
-- AWS-managed encryption, mutable tags
+**Behavior:** Any repository auto-created by pull-through cache rules receives default settings (AES256 encryption, mutable tags, no lifecycle policy).
 
-## How Templates are Matched
+### KMS-Encrypted Repositories
 
-When ECR creates a repository, it searches for matching templates based on the repository name (prefix):
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: kms-template
+  namespace: kro-system
+spec:
+  prefix: docker-hub
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  description: "KMS-encrypted template for Docker Hub cached images"
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  imageTagMutability: IMMUTABLE
+  deletionPolicy: retain
+```
 
-1. **Exact match:** If a template has `prefix: "prod/nginx/"` and the repo is `prod/nginx/api`, use that template
-2. **Longest prefix:** If multiple templates match, the one with the longest matching prefix is used
-3. **ROOT fallback:** If no prefix matches, the template with `prefix: "ROOT"` is used
+**Behavior:** When a Docker Hub image is pulled for the first time, ECR auto-creates the repository with:
+- KMS encryption using the specified key
+- Immutable tags (supply chain security)
 
-**Example matching:**
-- Repository name: `prod/web/frontend`
-- Available templates:
-  - `prefix: "prod/"` (matches)
-  - `prefix: "prod/web/"` (matches, longer)
-  - `prefix: "staging/"` (no match)
-  - `prefix: "ROOT"` (fallback)
-- **Result:** Template with `prefix: "prod/web/"` is used
+### Production Template with Lifecycle Policy
 
-## Key Behaviors
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: prod-template
+  namespace: kro-system
+spec:
+  prefix: prod/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  - REPLICATION
+  description: "Production template: KMS encryption + lifecycle management"
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/mrk-prod"
+  imageTagMutability: IMMUTABLE
+  lifecyclePolicy: |
+    {
+      "rules": [
+        {
+          "rulePriority": 1,
+          "description": "Expire untagged after 30 days",
+          "selection": {
+            "tagStatus": "untagged",
+            "countType": "sinceImagePushed",
+            "countUnit": "days",
+            "countNumber": 30
+          },
+          "action": { "type": "expire" }
+        }
+      ]
+    }
+  resourceTags:
+  - key: environment
+    value: production
+  - key: compliance
+    value: pci-dss
+  deletionPolicy: retain
+```
 
-### Immutable Prefix
+**Behavior:** Any repository auto-created under the `prod/` prefix receives:
+- KMS encryption with the production CMK
+- Immutable tags
+- Automatic cleanup of untagged images after 30 days
+- Tags: `environment=production`, `compliance=pci-dss`
 
-Once created, the `prefix` cannot be changed. To change the prefix, delete the template and create a new one.
+## Advanced Configuration
 
-### Not Governed by ECRConfig
+### Immutable Tags with Exclusions
 
-Unlike `ECRRepository` resources, the template's encryption, tag mutability, and lifecycle policy settings are **NOT** subject to `ECRConfig` governance. The template itself IS the governance mechanism for auto-created repositories.
+Allow specific tags to be mutable while enforcing immutability for releases:
 
-This is intentional: templates are platform infrastructure that control auto-creation, while `ECRConfig` controls manual repository creation.
+```yaml
+spec:
+  prefix: releases/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  imageTagMutability: IMMUTABLE
+  imageTagMutabilityExclusionFilters:
+  - filter: "latest"
+    filterType: WILDCARD
+  - filter: "dev-*"
+    filterType: WILDCARD
+```
 
-### Fields vs Template Configuration
+**Behavior:** Auto-created repositories allow `latest` and `dev-*` tags to be overwritten, but release tags (e.g., `v1.0`) are immutable.
 
-The `tags` field (Kubernetes metadata) is different from `resourceTags`:
-- **`tags`** — Kubernetes labels on the template resource itself
-- **`resourceTags`** — AWS tags applied to the auto-created repositories
+### Multi-Scenario Template
 
-### No Direct Management of Auto-Created Repositories
+Apply the same template to both pull-through cache and cross-region replication scenarios:
 
-Auto-created repositories are created directly by AWS ECR, not through kropath. You cannot update an auto-created repository through Kubernetes (it has no Kubernetes resource). To change an auto-created repository's configuration, update the template and recreate the repository in AWS (delete and re-pull the image).
+```yaml
+spec:
+  prefix: shared/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  - REPLICATION
+  description: "Template applies to both cached and replicated repositories"
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/..."
+```
+
+**Behavior:** Whether the repository is created by a pull-through cache rule or by cross-region replication, this template applies.
+
+### Cross-Account Access
+
+Grant another AWS account permission to pull from auto-created repositories:
+
+```yaml
+spec:
+  prefix: shared/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  repositoryPolicy: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowCrossAccountPull",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::999888777666:root"
+          },
+          "Action": [
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage"
+          ]
+        }
+      ]
+    }
+```
+
+## Immutable Fields
+
+The `prefix` field **cannot be changed** after creation:
+
+| Field | Mutable | Reason |
+|---|---|---|
+| `prefix` | No | Used by ECR to match repositories at creation time |
+| `appliedFor` | Yes | Can be updated to apply to additional scenarios |
+| Other fields | Yes | Can be updated for new repositories or via reapplication |
+
+To change the `prefix`, delete the template and create a new one:
+
+```bash
+kubectl delete ecrrepositorycreationtemplate old-template
+kubectl apply -f new-template.yaml
+```
+
+**Note:** Existing repositories created under the old prefix are not affected.
+
+## Combining with Pull-Through Cache Rules
+
+Templates and pull-through cache rules work together:
+
+```yaml
+---
+# Cache rule
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: docker-hub
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: docker-hub
+  upstreamRegistryURL: registry-1.docker.io
+
+---
+# Template for repositories created by the cache rule
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: docker-hub-template
+  namespace: kro-system
+spec:
+  prefix: docker-hub
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/..."
+  imageTagMutability: IMMUTABLE
+```
+
+**Workflow:**
+
+1. User pulls: `123456789012.dkr.ecr.us-east-1.amazonaws.com/docker-hub/nginx:latest`
+2. ECR checks: Does this repository exist?
+3. If not: Looks for a matching template (prefix `docker-hub`)
+4. Finds the template and auto-creates the repository with KMS encryption + immutable tags
+5. Fetches the image from Docker Hub and caches it
+
+## Complete Example: Multi-Template Setup
+
+```yaml
+---
+# Default template (development)
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: dev-template
+  namespace: kro-system
+spec:
+  prefix: dev/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  description: "Development caches: AES256 encryption, mutable tags"
+  encryptionType: AES256
+  imageTagMutability: MUTABLE
+  deletionPolicy: retain
+
+---
+# Staging template (moderate controls)
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: staging-template
+  namespace: kro-system
+spec:
+  prefix: staging/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  - REPLICATION
+  description: "Staging caches: KMS encryption, immutable tags"
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/mrk-staging"
+  imageTagMutability: IMMUTABLE
+  resourceTags:
+  - key: environment
+    value: staging
+  deletionPolicy: retain
+
+---
+# Production template (strict controls)
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: prod-template
+  namespace: kro-system
+spec:
+  prefix: prod/
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  - REPLICATION
+  description: "Production caches: KMS encryption, immutable tags, lifecycle, compliance tags"
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/mrk-prod"
+  imageTagMutability: IMMUTABLE
+  lifecyclePolicy: |
+    {
+      "rules": [
+        {
+          "rulePriority": 1,
+          "description": "Expire untagged after 7 days",
+          "selection": {
+            "tagStatus": "untagged",
+            "countType": "sinceImagePushed",
+            "countUnit": "days",
+            "countNumber": 7
+          },
+          "action": { "type": "expire" }
+        }
+      ]
+    }
+  resourceTags:
+  - key: environment
+    value: production
+  - key: compliance
+    value: pci-dss
+  - key: managed-by
+    value: kropath
+  deletionPolicy: retain
+
+---
+# Cache rules using these templates
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: dev-docker-hub
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: dev/docker-hub
+  upstreamRegistryURL: registry-1.docker.io
+
+---
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: prod-ghcr
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: prod/ghcr
+  upstreamRegistryURL: ghcr.io
+```
+
+**Results:**
+- Development caches: `dev/docker-hub/*` — AES256, mutable tags
+- Staging caches: `staging/*` — KMS encryption, immutable tags
+- Production caches: `prod/*` — Strict controls, lifecycle management, compliance tags
 
 ## Troubleshooting
 
 ### Template Not Applied
 
-Check:
-1. The repository name matches the template's `prefix`
-2. The template's `appliedFor` includes the scenario (PULL_THROUGH_CACHE or REPLICATION)
-3. The template is in the `kro-system` namespace
+If auto-created repositories don't match the template configuration:
 
-### Can't Change Immutable Fields
+1. **Check prefix matching:**
+   - Template prefix: `docker-hub`
+   - Repository created: `docker-hub/nginx`
+   - Match: ✓
 
-Once created, these cannot be changed without recreating:
-- `prefix`
+2. **Verify `appliedFor`:**
+   - If the repository was created via pull-through cache, check that `appliedFor` includes `PULL_THROUGH_CACHE`
 
-To change the prefix, delete the template and create a new one. **Note:** This does not affect already auto-created repositories.
+3. **Check ECR templates:**
+   ```bash
+   aws ecr describe-repository-creation-templates --region us-east-1
+   ```
 
-### Auto-Created Repository Has Wrong Configuration
+### Cannot Change Prefix
 
-If an auto-created repository doesn't have the expected encryption or tags:
+If you need to change the prefix:
 
-1. Check that a matching template exists and is applied for the scenario
-2. Verify the repository was created **after** the template was deployed
-3. If created before the template existed, it won't use the template's configuration — you must delete and recreate it (pull the image again)
+1. Delete the template: `kubectl delete ecrrepositorycreationtemplate <name>`
+2. Create a new template with the desired prefix
+3. Old repositories retain their original configuration
+4. New repositories use the new template
 
-### Multiple Templates Match, Wrong One Applied
+## See Also
 
-If multiple templates have prefixes that match the repository name, the one with the **longest prefix** is used. Ensure your template organization has non-overlapping or hierarchical prefixes:
-- `prod/` (matches all prod repositories)
-- `prod/web/` (matches prod web repos specifically)
-
-Use hierarchical prefixes to avoid ambiguity.
+- [ECRPullThroughCacheRule](ecrpullthroughcacherule.md) — Configure pull-through caching
+- [ECRRepository](ecrrepository.md) — Create manual repositories
+- [ECRConfig](ecrconfig.md) — Set governance policies
