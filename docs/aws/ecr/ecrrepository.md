@@ -44,7 +44,6 @@ imageTagMutabilityExclusionFilters:
 |---|---|---|---|---|
 | `lifecyclePolicy` | string | `""` | JSON lifecycle policy document defining image retention rules. See AWS documentation for structure. |
 | `policy` | string | `""` | JSON repository resource-based policy (for cross-account or cross-role access). |
-| `deletionPolicy` | string | `"retain"` | When the Kubernetes resource is deleted, whether to `"retain"` or `"delete"` the AWS repository |
 
 ### Metadata and Tags
 

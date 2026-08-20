@@ -172,16 +172,6 @@ Result:
 Cache images from a private registry that requires authentication:
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: private-registry-creds
-  namespace: kro-system
-type: Opaque
-data:
-  username: bXl1c2VyYW1l  # myusername (base64)
-  password: bXlwYXNzd29yZA==  # mypassword (base64)
----
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRPullThroughCacheRule
 metadata:
@@ -194,7 +184,7 @@ spec:
   deletionPolicy: retain
 ```
 
-**Note:** The `credentialArn` references a Secrets Manager secret (managed outside of this example). Store your upstream registry credentials in Secrets Manager, then reference the ARN here.
+**Setup:** Store your upstream registry credentials in AWS Secrets Manager (not Kubernetes Secrets). The secret must contain `username` and `password` fields. ECR assumes an IAM role with permission to read from Secrets Manager, then uses those credentials to authenticate to the private registry. Update the `credentialArn` to point to your Secrets Manager secret ARN.
 
 ### ROOT Prefix (Catch-All Rule)
 
@@ -235,9 +225,9 @@ To change any of these, delete the rule and create a new one.
 
 When a pull matches a cache rule, ECR automatically creates the destination repository if it doesn't exist. If you have an `ECRRepositoryCreationTemplate` with a matching prefix, that template's encryption, tag mutability, and lifecycle policy settings are applied to the auto-created repository.
 
-### Image Metadata Not Cached
+### Image Metadata Refresh
 
-Only image layers are cached. Image metadata (e.g., the image manifest, creation date) is fetched fresh from the upstream registry on each pull. This ensures you always get the latest metadata while benefiting from cached image data.
+Image layers are cached locally for performance. Image metadata (e.g., the image manifest) is re-fetched from the upstream registry on each pull to ensure consistency between the cached layers and the upstream manifest. This prevents stale or mismatched image data after cached layers are pulled.
 
 ### Permissions Required
 

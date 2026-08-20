@@ -185,7 +185,9 @@ spec:
 
 ### Tier Mutual Exclusivity
 
-For each governance field, either the mandatory tier **or** the defaults tier may be set, but not both. If you try to set the same field in both tiers, kropath rejects the profile. This ensures clear precedence: mandatory always wins, or defaults always apply.
+For scalar governance fields (imageTagMutability, encryptionType, kmsKeyID, lifecyclePolicy, namingTemplate), either the mandatory tier **or** the defaults tier may be set, but not both. If you try to set the same scalar field in both tiers, kropath rejects the profile.
+
+Map fields (tags, syncedLabels, syncedAnnotations) are exempt from this rule and can appear in both tiers — they merge additively (see Tag Merging below).
 
 ### Tag Merging
 
@@ -310,7 +312,7 @@ Error: The same field is configured in both tiers. Fix: Remove the field from on
 
 ### Repositories Not Using Updated Profile
 
-Changes to `ECRConfig` apply only to new repositories. Existing repositories keep their configuration from when they were created. To apply a profile update to existing repositories, update the repository's `spec` directly (if the new setting is not mandatory).
+Changes to mandatory and defaults tiers in `ECRConfig` propagate to existing repositories on the next reconciliation cycle, since repositories read the profile's `status.effectiveConfig` at every reconcile loop. However, ECR itself enforces immutability constraints on certain fields: encryption type and repository name cannot be changed after creation. Mutable settings (tag mutability, lifecycle policies, tags, and naming conventions applied at creation time) do propagate on profile updates. For fields locked by ECR's immutability constraints, update the repository's `spec` directly if you need to change them.
 
 ### "Invalid encryption configuration"
 
