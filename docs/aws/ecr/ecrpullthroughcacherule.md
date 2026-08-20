@@ -339,7 +339,7 @@ When the first image is pulled via the cache rule, ECR auto-creates the reposito
 
 4. **Check credentials (if using private registry):**
    ```bash
-   aws secretsmanager get-secret-value --secret-id ecr-upstream-creds
+   aws secretsmanager get-secret-value --secret-id ecr-pullthroughcache/upstream-creds
    ```
 
 ### Cannot Change Immutable Fields
