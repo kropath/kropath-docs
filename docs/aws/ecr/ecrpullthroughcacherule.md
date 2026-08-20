@@ -175,7 +175,7 @@ metadata:
 spec:
   ecrRepositoryPrefix: private
   upstreamRegistryURL: registry.company.com
-  credentialArn: "arn:aws:secretsmanager:us-east-1:123456789012:secret:ecr-upstream-creds"
+  credentialArn: "arn:aws:secretsmanager:us-east-1:123456789012:secret:ecr-pullthroughcache/upstream-creds"
   deletionPolicy: retain
 ```
 
@@ -185,7 +185,7 @@ spec:
 
    ```bash
    aws secretsmanager create-secret \
-     --name ecr-upstream-creds \
+     --name ecr-pullthroughcache/upstream-creds \
      --secret-string '{"username":"user","password":"pass"}'
    ```
 

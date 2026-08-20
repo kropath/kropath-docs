@@ -197,7 +197,7 @@ spec:
 - You manage key rotation
 - Cannot be changed after repository creation
 
-**Important:** If you set both `encryptionType: KMS` AND `kmsKeyID` in the **same tier** (both in `mandatory` or both in `defaults`), the profile is invalid. Split them: KMS enforcement in mandatory, specific key in defaults, or use separate profiles.
+**Important:** Setting both `encryptionType: KMS` AND `kmsKeyID` in the **same tier** (both in `mandatory` or both in `defaults`) is the correct PCI pattern. Never combine `encryptionType: AES256` with `kmsKeyID`—the controller rejects this because AES256 does not use a customer-managed key.
 
 ## Lifecycle Policies
 
