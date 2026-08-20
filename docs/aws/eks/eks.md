@@ -39,7 +39,7 @@ Kropath's EKS configuration is managed through governance layers and resource in
 *   `authenticationMode` (string, default: `"API"` in defaults): Enforces the cluster authentication mode. Valid values: `"API"` (modern API-based auth), `"API_AND_CONFIG_MAP"` (hybrid), `"CONFIG_MAP"` (legacy aws-auth ConfigMap). Recommended value: `"API"`.
 *   `encryptionKeyArn` (string, default: `""` = not enforced): KMS key ARN for secrets envelope encryption. When set in `mandatory`, all clusters must encrypt secrets with this key. When set in `defaults`, clusters can override with a different key or omit encryption.
 *   `loggingTypes` ([]string, default: `[]` = not enforced): Enables control plane logs. Valid types: `api`, `audit`, `authenticator`, `controllerManager`, `scheduler`. Mandatory tier log types are always exported; instance cannot disable them.
-*   `endpointPublicAccess` (boolean, default: `true` in defaults): Controls whether the public API endpoint is enabled. When set in `mandatory`, enforces the setting for all clusters. Defaults to `true`. **Boolean Sentinel Note:** Setting `endpointPublicAccess: true` in the `mandatory` tier enforces that the endpoint **must be public**; setting `endpointPublicAccess: false` enforces that it **must be private** (disabled). This differs from "not enforced" — if the field is not in `mandatory` at all, instances can choose freely.
+*   `endpointPublicAccess` (boolean, default: `true` in defaults): Controls whether the public API endpoint is enabled. When set in `mandatory`, enforces the setting for all clusters. Defaults to `true`. **Boolean Sentinel Note:** Setting `endpointPublicAccess: true` in the `mandatory` tier enforces that the endpoint **must be public**; setting `endpointPublicAccess: false` enforces that **the public endpoint must be disabled**. This differs from "not enforced" — if the field is not in `mandatory` at all, instances can choose freely.
 *   `endpointPrivateAccess` (boolean, default: `true` in defaults): Controls whether the private API endpoint is enabled. When set in `mandatory`, enforces the setting. Defaults to `true`. **Boolean Sentinel Note:** Setting `endpointPrivateAccess: true` in the `mandatory` tier enforces that the endpoint **must be private**; setting `endpointPrivateAccess: false` enforces that it **must not be private** (disabled). If the field is not in `mandatory`, instances can choose freely.
 *   `supportType` (string, default: `"STANDARD"` in defaults): Enforces the cluster support policy. Valid values: `"STANDARD"` (standard support, 14-month availability), `"EXTENDED"` (extended support, longer availability). Mandatory tier overrides instance selection.
 *   `namingTemplate` (string, default: `"{namespace}-{name}"` in defaults): The pattern for generating EKS cluster names. Token vocabulary: `{name}`, `{namespace}`, `{account_id}`, `{region}`, `{configRef}`, `{tag.<key>}`.
@@ -108,10 +108,10 @@ Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolv
 
 | Tier | Source | Scope | Example |
 |------|--------|-------|---------|
-| 1 | Instance spec (resource YAML) | Single resource | `EKSCluster.spec.version: "1.31"` |
+| 1 | KropathConfig.spec.eks.mandatory (global) | Organization-wide | KropathConfig enforces `encryptionKeyArn` for all profiles |
 | 2 | EKSConfig.spec.mandatory | Profile-scoped | `general-policy` EKSConfig enforces `authenticationMode: API` |
-| 3 | EKSConfig.spec.defaults | Profile-scoped | `general-policy` EKSConfig defaults `supportType: STANDARD` |
-| 4 | KropathConfig.spec.eks.mandatory (global) | Organization-wide | KropathConfig enforces `encryptionKeyArn` for all profiles |
+| 3 | Instance spec (resource YAML) | Single resource | `EKSCluster.spec.version: "1.31"` |
+| 4 | EKSConfig.spec.defaults | Profile-scoped | `general-policy` EKSConfig defaults `supportType: STANDARD` |
 | 5 | KropathConfig.spec.eks.defaults (global) | Organization-wide | KropathConfig defaults `version: "1.30"` for all clusters |
 | 6 | Namespace-level defaults (future) | Namespace-scoped | Reserved for namespace governance |
 | 7 | Workspace-level settings (future) | Workspace-scoped | Reserved for workspace governance |
@@ -120,10 +120,10 @@ Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolv
 | 10 | Hard-coded final default | — | Kropath built-in fallback (e.g., `endpointPublicAccess: true`) |
 
 **Example cascade resolution for `authenticationMode`:**
-- If `EKSCluster.spec.accessConfig.authenticationMode` is set, use that (Tier 1).
+- If `KropathConfig.spec.eks.mandatory.authenticationMode` is set, enforce that (Tier 1).
 - Else if the cluster's `EKSConfig` profile has `mandatory.authenticationMode`, enforce that (Tier 2).
-- Else if the cluster's `EKSConfig` profile has `defaults.authenticationMode`, use that (Tier 3).
-- Else if `KropathConfig.spec.eks.mandatory.authenticationMode` is set, enforce that (Tier 4).
+- Else if `EKSCluster.spec.accessConfig.authenticationMode` is set, use that (Tier 3).
+- Else if the cluster's `EKSConfig` profile has `defaults.authenticationMode`, use that (Tier 4).
 - Else if `KropathConfig.spec.eks.defaults.authenticationMode` is set, use that (Tier 5).
 - Else use the provider default (Tier 8) or Kropath built-in default (Tier 10).
 
