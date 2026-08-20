@@ -1,58 +1,51 @@
-# ECRPullThroughCacheRule — Transparent Image Caching from Upstream Registries
+# ECRPullThroughCacheRule — Caching Public Container Images
 
-The `ECRPullThroughCacheRule` resource enables transparent caching of container images from upstream public registries (Docker Hub, ECR Public, GitHub Container Registry, Quay, etc.) into your private ECR. When you pull an image that matches a cache rule, ECR automatically fetches it from the upstream registry and caches it locally for future pulls.
+The `ECRPullThroughCacheRule` resource sets up pull-through caching in AWS ECR. Pull-through caching transparently proxies container images from public registries (Docker Hub, GitHub Container Registry, Quay, etc.) into your private ECR, caching them for faster and more reliable access.
 
-## Use Cases
+## When to Use Pull-Through Cache
 
-- **Compliance:** Cache images in your private registry for regulatory or security auditing
-- **Performance:** Eliminate repeated pulls from upstream registries; reduce bandwidth costs
-- **Availability:** Reduce dependency on upstream registry availability
-- **Image scanning:** Run vulnerability scanning on cached images before they're deployed
-- **Cost optimization:** Upstream registries may charge per pull; caching reduces those costs
+- **Reduce dependency on public registries** — Air-gapped or intermittently connected environments
+- **Improve image availability** — Cache frequently-used base images locally
+- **Control security scanning** — Apply compliance scanning to cached images
+- **Bandwidth optimization** — Multiple pulls from the same image pull from cache
 
 ## Core Fields
 
-### Rule Identity
+### Governance and Selection
 
-| Field | Type | Required | Immutable | Purpose |
-|---|---|---|---|---|
-| `ecrRepositoryPrefix` | string | Yes | Yes | Local ECR prefix for cached images (e.g. `"docker-hub"`, `"ecr-public"`). Use `"ROOT"` for a catch-all rule. |
-| `upstreamRegistryURL` | string | Yes | Yes | URL of the upstream registry (e.g. `"registry-1.docker.io"`, `"public.ecr.aws"`, `"ghcr.io"`, `"quay.io"`). |
-| `upstreamRegistry` | string | No | Yes | Enum name of the upstream registry (e.g. `"docker-hub"`, `"ecr-public"`, `"github-container-registry"`, `"quay"`). Optional; AWS infers from URL if not set. |
-| `upstreamRepositoryPrefix` | string | No | Yes | Upstream namespace prefix to match (e.g. `"library"` for Docker Hub's public library). Defaults to `"ROOT"` (match all upstream repos). |
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `configRef` | string | `"general-policy"` | Selects which `ECRConfig` governance profile to apply (for tags/labels) |
+| `deletionPolicy` | string | `"retain"` | Behavior when the rule is deleted: `"retain"` (safe) or `"delete"` |
 
-**Important:** `ecrRepositoryPrefix`, `upstreamRegistryURL`, `upstreamRegistry`, and `upstreamRepositoryPrefix` are immutable after creation. To change these, you must delete and recreate the rule.
+### Cache Rule Identity (Immutable)
+
+| Field | Type | Required | Purpose |
+|---|---|---|---|
+| `ecrRepositoryPrefix` | string | Yes | Local ECR prefix for cached images (e.g., `"docker-hub"`, `"ghcr"`, `"ROOT"` for catch-all) |
+| `upstreamRegistryURL` | string | Yes | URL of the upstream registry (e.g., `"registry-1.docker.io"`, `"ghcr.io"`) |
+| `upstreamRegistry` | string | No | Enum name (e.g., `"docker-hub"`, `"ecr-public"`, `"github-container-registry"`) |
+| `upstreamRepositoryPrefix` | string | No | Filter images by upstream namespace (e.g., `"library"` for `library/*` images) |
 
 ### Authentication
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `credentialArn` | string | `""` | ARN of a Secrets Manager secret containing upstream registry credentials |
-| `credentialRef` | string | `""` | Reference to resolve credential ARN (Phase 2 feature; currently not supported) |
-| `customRoleArn` | string | `""` | IAM role ARN that ECR assumes for authentication (for AWS services or federated identity) |
-| `customRoleRef` | string | `""` | Reference to resolve role ARN (Phase 2 feature; currently not supported) |
+|---|---|---|---|
+| `credentialArn` | string | `""` | ARN of Secrets Manager secret with upstream registry credentials (for private registries) |
+| `customRoleArn` | string | `""` | IAM role ARN for upstream authentication |
 
-### Governance and Deletion
+### Metadata
 
 | Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `configRef` | string | `"general-policy"` | Selects which `ECRConfig` profile to apply (for tagging only) |
-| `deletionPolicy` | string | `"retain"` | Behavior when the resource is deleted: `"retain"` or `"delete"` |
-| `tags` | map | `{}` | Kubernetes labels and AWS tags (K8s metadata only — pull-through rules don't support cloud tags) |
-| `syncedLabels` | map | `{}` | Kubernetes labels synced to the rule (prefixed `aws.kropath.run/`) |
+|---|---|---|---|
+| `tags` | map | `{}` | Kubernetes tags; merged with governance tags |
+| `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
 | `syncedAnnotations` | map | `{}` | Kubernetes annotations (prefixed `aws.kropath.run/`) |
+| `registryID` | string | `""` | AWS account ID; defaults to the cluster's account |
 
-### Operational Fields
+## Basic Examples
 
-| Field | Type | Default | Purpose |
-|---|---|---|---|---|
-| `registryID` | string | `""` | AWS account ID. Empty uses the account where the controller runs. |
-
-## Common Upstream Registries
-
-### Docker Hub
-
-Cache public images from Docker Hub:
+### Docker Hub Caching
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -64,13 +57,17 @@ spec:
   ecrRepositoryPrefix: docker-hub
   upstreamRegistryURL: registry-1.docker.io
   upstreamRegistry: docker-hub
+  deletionPolicy: retain
 ```
 
-Usage: Pull `123456789012.dkr.ecr.us-east-1.amazonaws.com/docker-hub/library/ubuntu:latest` to cache Docker Hub's `library/ubuntu:latest`.
+**How it works:**
 
-### ECR Public
+1. User pulls: `123456789012.dkr.ecr.us-east-1.amazonaws.com/docker-hub/nginx:latest`
+2. ECR checks: Does `docker-hub/nginx:latest` exist locally?
+3. If not: Fetches `nginx:latest` from Docker Hub (`registry-1.docker.io/library/nginx:latest`)
+4. If yes: Returns from cache
 
-Cache images from AWS's public registry:
+### ECR Public Registry
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -82,13 +79,12 @@ spec:
   ecrRepositoryPrefix: ecr-public
   upstreamRegistryURL: public.ecr.aws
   upstreamRegistry: ecr-public
+  deletionPolicy: retain
 ```
 
-Usage: Pull `123456789012.dkr.ecr.us-east-1.amazonaws.com/ecr-public/amazonlinux/amazonlinux:latest` to cache `public.ecr.aws/amazonlinux/amazonlinux:latest`.
+**Result:** Cached images available as `123456789012.dkr.ecr.us-east-1.amazonaws.com/ecr-public/...`
 
 ### GitHub Container Registry
-
-Cache images from GitHub Packages:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -100,13 +96,12 @@ spec:
   ecrRepositoryPrefix: ghcr
   upstreamRegistryURL: ghcr.io
   upstreamRegistry: github-container-registry
+  deletionPolicy: retain
 ```
 
-Usage: Pull `123456789012.dkr.ecr.us-east-1.amazonaws.com/ghcr/myorg/myimage:latest` to cache `ghcr.io/myorg/myimage:latest`.
+**Result:** Cached images available as `123456789012.dkr.ecr.us-east-1.amazonaws.com/ghcr/...`
 
 ### Quay.io
-
-Cache images from Quay:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -118,83 +113,42 @@ spec:
   ecrRepositoryPrefix: quay
   upstreamRegistryURL: quay.io
   upstreamRegistry: quay
+  deletionPolicy: retain
 ```
 
-Usage: Pull `123456789012.dkr.ecr.us-east-1.amazonaws.com/quay/coreos/etcd:latest` to cache `quay.io/coreos/etcd:latest`.
+## Advanced Configuration
 
-## Complete Examples
+### Filtering by Upstream Namespace
 
-### Basic Cache Rule (Public Registry)
-
-Cache public images from Docker Hub without authentication:
+Cache only images from a specific upstream namespace:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRPullThroughCacheRule
 metadata:
-  name: docker-hub
+  name: docker-library
   namespace: kro-system
 spec:
-  ecrRepositoryPrefix: docker-hub
+  ecrRepositoryPrefix: docker-library
   upstreamRegistryURL: registry-1.docker.io
   upstreamRegistry: docker-hub
+  upstreamRepositoryPrefix: "library"  # Only cache official Docker images
   deletionPolicy: retain
 ```
 
-Result:
-- Any pull of `<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/docker-hub/*` is transparently proxied to Docker Hub
-- Image is cached locally for future pulls
+**Caches:** `docker-library/nginx:latest` (from `library/nginx:latest`)
 
-### Cache Specific Namespace
+**Does NOT cache:** Images from other namespaces like `myrepo/custom-app:latest`
 
-Cache only the `library` namespace from Docker Hub:
+### ROOT Prefix (Catch-All)
+
+Cache images from any upstream namespace under a single prefix:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRPullThroughCacheRule
 metadata:
-  name: docker-hub-library
-  namespace: kro-system
-spec:
-  ecrRepositoryPrefix: docker-hub-library
-  upstreamRegistryURL: registry-1.docker.io
-  upstreamRegistry: docker-hub
-  upstreamRepositoryPrefix: library
-  deletionPolicy: retain
-```
-
-Result:
-- Pulls of `<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/docker-hub-library/*` proxy to `registry-1.docker.io/library/*`
-- Attempts to cache from other namespaces (e.g., `myorg/myimage`) will fail
-
-### Private Registry with Credentials
-
-Cache images from a private registry that requires authentication:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRPullThroughCacheRule
-metadata:
-  name: private-registry
-  namespace: kro-system
-spec:
-  ecrRepositoryPrefix: private-registry
-  upstreamRegistryURL: registry.example.com
-  credentialArn: "arn:aws:secretsmanager:us-east-1:123456789012:secret:ecr-pullthroughcache/private-registry"
-  deletionPolicy: retain
-```
-
-**Setup:** Store your upstream registry credentials in AWS Secrets Manager (not Kubernetes Secrets). The secret must contain `username` and `password` fields. ECR assumes an IAM role with permission to read from Secrets Manager, then uses those credentials to authenticate to the private registry. Update the `credentialArn` to point to your Secrets Manager secret ARN.
-
-### ROOT Prefix (Catch-All Rule)
-
-Cache all images from a registry under a single prefix:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRPullThroughCacheRule
-metadata:
-  name: all-registries
+  name: all-docker-hub
   namespace: kro-system
 spec:
   ecrRepositoryPrefix: ROOT
@@ -203,60 +157,202 @@ spec:
   deletionPolicy: retain
 ```
 
-Result:
-- Any pull of `<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/library/ubuntu` proxies to `registry-1.docker.io/library/ubuntu`
-- Any pull of `<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/myorg/myimage` proxies to `registry-1.docker.io/myorg/myimage`
-- Single rule handles all Docker Hub namespaces
+**Caches all images:**
+- `123456789012.dkr.ecr.us-east-1.amazonaws.com/library/nginx:latest`
+- `123456789012.dkr.ecr.us-east-1.amazonaws.com/myrepo/custom-app:latest`
+- `123456789012.dkr.ecr.us-east-1.amazonaws.com/...`
 
-## Key Behaviors
+### Private Registry with Credentials
 
-### Immutable Configuration
+Cache images from a private container registry that requires authentication:
 
-Once created, these fields cannot be changed:
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: private-registry
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: private
+  upstreamRegistryURL: registry.company.com
+  credentialArn: "arn:aws:secretsmanager:us-east-1:123456789012:secret:ecr-pullthroughcache/upstream-creds"
+  deletionPolicy: retain
+```
+
+**Prerequisites:**
+
+1. Create a Secrets Manager secret with upstream registry credentials:
+
+   ```bash
+   aws secretsmanager create-secret \
+     --name ecr-pullthroughcache/upstream-creds \
+     --secret-string '{"username":"user","password":"pass"}'
+   ```
+
+2. Grant ECR permission to access the secret (via IAM policy or resource policy)
+
+## Immutable Fields
+
+Once created, these fields **cannot be changed**:
+
 - `ecrRepositoryPrefix`
 - `upstreamRegistryURL`
 - `upstreamRegistry`
 - `upstreamRepositoryPrefix`
 - `registryID`
 
-To change any of these, delete the rule and create a new one.
+**To change any of these:** Delete the rule and create a new one.
 
-### Automatic Repository Creation
+```bash
+kubectl delete ecrpullthroughcacherule docker-hub
+kubectl apply -f docker-hub-updated.yaml
+```
 
-When a pull matches a cache rule, ECR automatically creates the destination repository if it doesn't exist. If you have an `ECRRepositoryCreationTemplate` with a matching prefix, that template's encryption, tag mutability, and lifecycle policy settings are applied to the auto-created repository.
+## Complete Example: Multi-Registry Setup
 
-### Image Metadata Refresh
+```yaml
+---
+# Docker Hub official images
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: docker-official
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: docker
+  upstreamRegistryURL: registry-1.docker.io
+  upstreamRegistry: docker-hub
+  upstreamRepositoryPrefix: "library"
+  deletionPolicy: retain
+  tags:
+    source: docker-hub
 
-Image layers are cached locally for performance. Image metadata (e.g., the image manifest) is re-fetched from the upstream registry on each pull to ensure consistency between the cached layers and the upstream manifest. This prevents stale or mismatched image data after cached layers are pulled.
+---
+# GitHub Container Registry
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: ghcr
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: ghcr
+  upstreamRegistryURL: ghcr.io
+  upstreamRegistry: github-container-registry
+  deletionPolicy: retain
+  tags:
+    source: github
 
-### Permissions Required
+---
+# ECR Public Registry
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: ecr-public
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: ecr-public
+  upstreamRegistryURL: public.ecr.aws
+  upstreamRegistry: ecr-public
+  deletionPolicy: retain
+  tags:
+    source: aws
 
-Your AWS account needs:
-- `ecr:CreateRepository` (to create the destination repository on first cache hit)
-- `ecr:PutImage` (to cache image layers)
-- Upstream registry access credentials (if the registry requires authentication)
+---
+# Quay.io
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: quay
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: quay
+  upstreamRegistryURL: quay.io
+  upstreamRegistry: quay
+  deletionPolicy: retain
+  tags:
+    source: quay
+```
+
+Users can now pull from any of these upstream registries via local ECR:
+
+```bash
+docker pull 123456789012.dkr.ecr.us-east-1.amazonaws.com/docker/nginx:latest
+docker pull 123456789012.dkr.ecr.us-east-1.amazonaws.com/ghcr/my-org/my-app:v1.0
+docker pull 123456789012.dkr.ecr.us-east-1.amazonaws.com/ecr-public/amazon/aws-cli:latest
+docker pull 123456789012.dkr.ecr.us-east-1.amazonaws.com/quay/coreos/etcd:v3.5.0
+```
+
+## Combining with ECRRepositoryCreationTemplate
+
+Pull-through cache rules work with `ECRRepositoryCreationTemplate` to apply encryption and policies to auto-created repositories.
+
+When a pull-through cache rule creates a new repository (on first pull), ECR looks for a matching `ECRRepositoryCreationTemplate` by prefix and applies its settings:
+
+```yaml
+---
+# Cache rule
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRPullThroughCacheRule
+metadata:
+  name: docker-hub
+  namespace: kro-system
+spec:
+  ecrRepositoryPrefix: docker-hub
+  upstreamRegistryURL: registry-1.docker.io
+
+---
+# Template defining how cached repositories should be configured
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepositoryCreationTemplate
+metadata:
+  name: docker-hub-template
+  namespace: kro-system
+spec:
+  prefix: docker-hub
+  appliedFor:
+  - PULL_THROUGH_CACHE
+  encryptionType: KMS
+  kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/..."
+  imageTagMutability: IMMUTABLE
+```
+
+When the first image is pulled via the cache rule, ECR auto-creates the repository and applies the template settings (KMS encryption, immutable tags, etc.).
 
 ## Troubleshooting
 
-### Pull Fails with "Repository Not Found"
+### Image Pull Fails
 
-Check:
-1. The cache rule exists and is configured correctly
-2. The image name matches the `ecrRepositoryPrefix` (e.g., pull from `docker-hub/library/ubuntu`, not just `library/ubuntu`)
-3. You've authenticated to ECR (run `aws ecr get-login-password | docker login ...`)
+1. **Verify the rule is created:**
+   ```bash
+   kubectl get ecrpullthroughcacherule
+   ```
 
-### Pull Fails with "Unauthorized"
+2. **Check ECR status:**
+   ```bash
+   aws ecr describe-pull-through-cache-rules --region us-east-1
+   ```
 
-- **Public registry:** This error is unexpected. Check the upstream registry URL and authentication settings.
-- **Private registry:** Verify the `credentialArn` points to a valid Secrets Manager secret with correct credentials.
+3. **Verify upstream registry is accessible:**
+   ```bash
+   docker pull registry-1.docker.io/library/nginx:latest
+   ```
 
-### Can't Modify Rule After Creation
+4. **Check credentials (if using private registry):**
+   ```bash
+   aws secretsmanager get-secret-value --secret-id ecr-pullthroughcache/upstream-creds
+   ```
 
-Immutable fields cannot be changed. If you need to change `ecrRepositoryPrefix` or `upstreamRegistryURL`, delete the rule and create a new one.
+### Cannot Change Immutable Fields
 
-### Images Not Being Cached
+If you try to update an immutable field:
 
-Ensure:
-1. The pull command uses the ECR URI (e.g., `123456789012.dkr.ecr.us-east-1.amazonaws.com/docker-hub/...`)
-2. The image name matches a configured cache rule's `ecrRepositoryPrefix`
-3. Your cluster has internet access to reach the upstream registry (if it's public)
+1. Delete the rule: `kubectl delete ecrpullthroughcacherule <name>`
+2. Cached images remain in ECR
+3. Create a new rule with updated settings
+4. Old cached images can be manually deleted if needed
+
+## See Also
+
+- [ECRRepositoryCreationTemplate](ecrrepositorycreationtemplate.md) — Configure auto-created repositories
+- [ECRRepository](ecrrepository.md) — Create manual repositories
+- [ECRConfig](ecrconfig.md) — Set governance policies

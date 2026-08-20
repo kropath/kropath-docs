@@ -1,74 +1,52 @@
-# ECRConfig — Setting Up Governance Profiles
+# ECRConfig — ECR Governance and Policy
 
-The `ECRConfig` resource defines governance profiles that control encryption, tag immutability, naming conventions, and lifecycle policies for all repositories in your organization. Platform teams use these profiles to enforce compliance and establish sensible defaults for developers.
+The `ECRConfig` resource defines governance policies for ECR repositories in your cluster. Platform teams use ECRConfig profiles to enforce compliance requirements, encryption standards, and naming conventions across all repositories.
+
+## When to Use ECRConfig
+
+ECRConfig is for **platform teams** managing cluster-wide policies. Developers interact with it indirectly via `ECRRepository.spec.configRef`.
+
+- Define mandatory encryption, tag immutability, and lifecycle policies
+- Create named profiles (e.g., `production`, `pci`, `development`)
+- Set organization-wide defaults
+- Enforce naming conventions
 
 ## Core Concepts
 
-Each `ECRConfig` profile has two tiers:
+### Governance Tiers
 
-- **Mandatory tier** — Organization-wide enforcement that overrides developer choices
-- **Defaults tier** — Fallback values applied when a repository doesn't specify a setting
+ECRConfig has two tiers:
 
-For example, a `pci` profile might mandate immutable tags and KMS encryption, while a `general-policy` profile provides defaults but lets developers choose their encryption.
+| Tier | Purpose | Behavior |
+|---|---|---|
+| **Mandatory** | Platform enforcement | Always applied; developers cannot override |
+| **Defaults** | Sensible defaults | Applied only if the developer doesn't specify a value |
+
+For example, if the `production` profile mandates `imageTagMutability: IMMUTABLE`, all repositories using that profile must have immutable tags, even if they specify `imageTagMutability: MUTABLE`.
 
 ## Configuration Fields
 
-### Image Tag Mutability
+### Governance Fields
 
-| Field | Tier | Type | Default | Purpose |
-|---|---|---|---|---|
-| `imageTagMutability` | Mandatory | string | `""` (not enforced) | Force all repositories to `IMMUTABLE` or `MUTABLE` tags. Mandatory tier overrides developer choice. |
-| `imageTagMutability` | Defaults | string | `"MUTABLE"` | Default tag mutability when the repository doesn't specify one |
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `imageTagMutability` | string | `"MUTABLE"` (defaults tier) | Force IMMUTABLE or MUTABLE tags across repositories |
+| `encryptionType` | string | `"AES256"` (defaults tier) | Force KMS or AES256 encryption |
+| `kmsKeyID` | string | `""` | ARN of a specific KMS key to enforce (requires `encryptionType: KMS`) |
+| `lifecyclePolicy` | string | `""` | JSON lifecycle policy applied to all repositories |
+| `namingTemplate` | string | `"{namespace}/{name}"` | Enforce a specific naming pattern (e.g., `"{namespace}/{configRef}/{name}"`) |
 
-**Values:** `"IMMUTABLE"` or `"MUTABLE"`
+### Tagging Fields
 
-### Encryption
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `tags` | map | `{}` | Cloud tags merged with repository tags |
+| `syncedLabels` | map | `{}` | Kubernetes labels also synced to cloud tags |
+| `syncedAnnotations` | map | `{}` | Kubernetes annotations on the repository |
 
-| Field | Tier | Type | Default | Purpose |
-|---|---|---|---|---|
-| `encryptionType` | Mandatory | string | `""` (not enforced) | Force all repositories to use `"AES256"` (AWS-managed) or `"KMS"` (customer-managed). Mandatory tier overrides developer choice. |
-| `encryptionType` | Defaults | string | `"AES256"` | Default encryption type when the repository doesn't specify one |
-| `kmsKeyID` | Mandatory | string | `""` (not set) | ARN of the KMS key to enforce for all repositories. Only applies if `encryptionType` is `"KMS"`. |
-| `kmsKeyID` | Defaults | string | `""` | Default KMS key ARN when the repository doesn't specify one and `encryptionType` is `"KMS"` |
+## Profile Examples
 
-**Important:** When `encryptionType` is `"AES256"`, `kmsKeyID` must be empty — AES256 encryption does not use a customer-managed key.
-
-### Lifecycle Policies
-
-| Field | Tier | Type | Default | Purpose |
-|---|---|---|---|---|
-| `lifecyclePolicy` | Mandatory | string | `""` (not enforced) | Force all repositories to use this lifecycle policy JSON document. Overrides developer choice. |
-| `lifecyclePolicy` | Defaults | string | `""` | Default lifecycle policy when the repository doesn't specify one |
-
-**Format:** Standard AWS ECR lifecycle policy JSON (see AWS documentation for structure).
-
-### Naming Convention
-
-| Field | Tier | Type | Default | Purpose |
-|---|---|---|---|---|
-| `namingTemplate` | Mandatory | string | `""` (not enforced) | Force all repositories to follow this naming pattern. Overrides developer `spec.nameOverride`. |
-| `namingTemplate` | Defaults | string | `"{namespace}/{name}"` | Default naming pattern when the repository doesn't specify one |
-
-**Available tokens:** `{name}`, `{namespace}`, `{account_id}`, `{region}`, `{configRef}`, `{tag.KEY}` (any tag key)
-
-### Tags and Metadata
-
-| Field | Tier | Type | Default | Purpose |
-|---|---|---|---|---|
-| `tags` | Mandatory | map | `{}` | AWS tags that all repositories inherit (cannot be removed by developers) |
-| `tags` | Defaults | map | `{}` | Default AWS tags applied when the repository doesn't specify any |
-| `syncedLabels` | Mandatory | map | `{}` | Kubernetes labels synced to AWS tags (prefixed `aws.kropath.run/`) |
-| `syncedLabels` | Defaults | map | `{}` | Default synced labels applied when the repository doesn't specify any |
-| `syncedAnnotations` | Mandatory | map | `{}` | Kubernetes annotations that repositories inherit |
-| `syncedAnnotations` | Defaults | map | `{}` | Default synced annotations applied when the repository doesn't specify any |
-
-## Built-In Profiles
-
-kropath includes three example profiles:
-
-### general-policy (Default)
-
-Minimal enforcement with sensible defaults:
+### Default Profile (Development)
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -86,34 +64,72 @@ spec:
     namingTemplate: "{namespace}/{name}"
 ```
 
-**Use when:** You want to provide guidance without enforcing constraints. Developers can override defaults if needed.
+**Applies to:** Repositories that don't specify a different `configRef` or when the specified profile doesn't exist.
 
-### pci (PCI Compliance)
+**Behavior:** Development-friendly defaults with AWS-managed encryption.
 
-Strict enforcement for PCI-DSS compliance:
+### Production Profile (PCI Compliance)
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRConfig
 metadata:
-  name: pci
+  name: production
   namespace: kro-system
   labels:
-    aws.kropath.run/resource-name: pci
+    aws.kropath.run/resource-name: production
 spec:
   mandatory:
     imageTagMutability: "IMMUTABLE"
     encryptionType: "KMS"
-    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/mrk-pci-cmk"
+    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+    tags:
+      compliance: pci-dss
+      managed-by: platform
   defaults:
     namingTemplate: "{namespace}/{configRef}/{name}"
+    lifecyclePolicy: |
+      {
+        "rules": [
+          {
+            "rulePriority": 1,
+            "description": "Expire images older than 90 days",
+            "selection": {
+              "tagStatus": "untagged",
+              "countType": "sinceImagePushed",
+              "countUnit": "days",
+              "countNumber": 90
+            },
+            "action": {
+              "type": "expire"
+            }
+          },
+          {
+            "rulePriority": 2,
+            "description": "Keep tagged images for 1 year",
+            "selection": {
+              "tagStatus": "tagged",
+              "countType": "sinceImagePushed",
+              "countUnit": "days",
+              "countNumber": 365
+            },
+            "action": {
+              "type": "expire"
+            }
+          }
+        ]
+      }
 ```
 
-**Use when:** You need PCI-DSS compliance. All repositories will have immutable tags and customer-managed encryption. The mandatory tier cannot be overridden.
+**Applies to:** Production workloads requiring compliance.
 
-### immutable-only
+**Behavior:**
+- All repositories must have immutable tags
+- All repositories must use KMS encryption with the specified key
+- Automatic cleanup: untagged images after 90 days, tagged images after 1 year
+- Hierarchical naming: `namespace/prod/service-name`
 
-Enforce immutable tags with default encryption:
+### Immutable-Only Profile (Supply Chain Security)
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -128,156 +144,229 @@ spec:
     imageTagMutability: "IMMUTABLE"
   defaults:
     encryptionType: "AES256"
-    namingTemplate: "{namespace}/{name}"
 ```
 
-**Use when:** You want to enforce immutable tags for supply chain security but allow developers to choose their encryption approach.
+**Applies to:** Teams needing supply chain security without KMS overhead.
 
-## Creating Custom Profiles
+**Behavior:** Enforce immutable tags; use default encryption.
 
-Create new profiles by defining an `ECRConfig` in the `kro-system` namespace:
+## Using ECRConfig Profiles
 
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRConfig
-metadata:
-  name: production  # Profile name — used by repositories via configRef
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: production  # Required for label selector lookup
-spec:
-  mandatory:
-    encryptionType: "KMS"
-    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/mrk-prod"
-    tags:
-      environment: production
-      compliance: required
-  defaults:
-    imageTagMutability: "IMMUTABLE"
-    namingTemplate: "{namespace}/prod/{name}"
-    tags:
-      team: platform
-```
-
-## How Repositories Use Profiles
-
-Repositories select a governance profile using `spec.configRef`:
+Developers select a profile via `ECRRepository.spec.configRef`:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRRepository
 metadata:
-  name: my-app
+  name: my-service
   namespace: app-team
 spec:
-  configRef: production  # Uses the "production" profile
+  configRef: production  # Uses the 'production' ECRConfig profile
   tags:
-    app: my-app
+    team: backend
 ```
 
-**Resolution order:**
-1. If `configRef` is set and the profile exists, use that profile
-2. If `configRef` is empty or the profile doesn't exist, fall back to `general-policy`
-3. Mandatory tier settings override repository `spec`
-4. Repository `spec` overrides defaults tier
+If the specified profile doesn't exist, the system falls back to `general-policy`.
 
-## Key Behaviors
+## Encryption Configuration
 
-### Tier Mutual Exclusivity
+### AES256 (AWS-Managed)
 
-For scalar governance fields (imageTagMutability, encryptionType, kmsKeyID, lifecyclePolicy, namingTemplate), either the mandatory tier **or** the defaults tier may be set, but not both. If you try to set the same scalar field in both tiers, kropath rejects the profile.
-
-Map fields (tags, syncedLabels, syncedAnnotations) are exempt from this rule and can appear in both tiers — they merge additively (see Tag Merging below).
-
-### Tag Merging
-
-Tags are merged additively across all tiers:
-- Mandatory tags are always present
-- Developer-specified tags are added
-- Default tags fill in any gaps
-
-Example:
-```
-Mandatory: {environment: production, compliance: required}
-Developer:  {app: my-app}
-Defaults:   {team: platform, cost-center: engineering}
-
-Result: {environment: production, compliance: required, app: my-app, team: platform, cost-center: engineering}
+```yaml
+spec:
+  mandatory: {}
+  defaults:
+    encryptionType: "AES256"
 ```
 
-### Encryption Configuration Validation
+- No key management overhead
+- Suitable for non-regulated workloads
+- AWS manages key rotation
 
-kropath validates the combination of `encryptionType` and `kmsKeyID`:
-- If `encryptionType: "AES256"` and `kmsKeyID` is set, the profile is rejected (AES256 doesn't use a CMK)
-- If `encryptionType: "KMS"` and `kmsKeyID` is empty, AWS uses a default KMS key
+### KMS (Customer-Managed)
 
-## Common Patterns
+```yaml
+spec:
+  mandatory:
+    encryptionType: "KMS"
+    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+```
 
-### Compliance-Driven Governance
+- Fine-grained access control via IAM policies
+- Required for compliance (PCI, HIPAA, SOC 2)
+- You manage key rotation
+- Cannot be changed after repository creation
 
-Separate profiles by compliance requirement:
+**Important:** Setting both `encryptionType: KMS` AND `kmsKeyID` in the **same tier** (both in `mandatory` or both in `defaults`) is the correct PCI pattern. Never combine `encryptionType: AES256` with `kmsKeyID`—the controller rejects this because AES256 does not use a customer-managed key.
+
+## Lifecycle Policies
+
+Lifecycle policies automatically expire old images. Define them as JSON:
+
+```yaml
+spec:
+  defaults:
+    lifecyclePolicy: |
+      {
+        "rules": [
+          {
+            "rulePriority": 1,
+            "description": "Expire untagged images after 7 days",
+            "selection": {
+              "tagStatus": "untagged",
+              "countType": "sinceImagePushed",
+              "countUnit": "days",
+              "countNumber": 7
+            },
+            "action": {
+              "type": "expire"
+            }
+          },
+          {
+            "rulePriority": 2,
+            "description": "Keep only the last 5 builds",
+            "selection": {
+              "tagStatus": "tagged",
+              "tagPrefixList": ["build-"],
+              "countType": "imageCountMoreThan",
+              "countNumber": 5
+            },
+            "action": {
+              "type": "expire"
+            }
+          }
+        ]
+      }
+```
+
+### Common Patterns
+
+**Clean up untagged images:**
+```json
+{
+  "rules": [{
+    "rulePriority": 1,
+    "description": "Expire untagged after 30 days",
+    "selection": {
+      "tagStatus": "untagged",
+      "countType": "sinceImagePushed",
+      "countUnit": "days",
+      "countNumber": 30
+    },
+    "action": { "type": "expire" }
+  }]
+}
+```
+
+**Keep last N tagged images:**
+```json
+{
+  "rules": [{
+    "rulePriority": 1,
+    "description": "Keep last 10 release images",
+    "selection": {
+      "tagStatus": "tagged",
+      "tagPrefixList": ["v"],
+      "countType": "imageCountMoreThan",
+      "countNumber": 10
+    },
+    "action": { "type": "expire" }
+  }]
+}
+```
+
+## Naming Conventions
+
+ECRConfig can enforce naming patterns via `namingTemplate`:
+
+| Template | Example Result |
+|---|---|
+| `{namespace}/{name}` | `app-team/my-app` |
+| `{namespace}/{configRef}/{name}` | `app-team/prod/my-app` |
+| `prod/{namespace}/{name}` | `prod/app-team/my-app` |
+
+Tokens in templates:
+
+| Token | Resolves to |
+|---|---|
+| `{name}` | Resource `metadata.name` |
+| `{namespace}` | Resource `metadata.namespace` |
+| `{configRef}` | The ECRConfig profile name (e.g., `prod`) |
+| `{account_id}` | AWS account ID |
+| `{region}` | AWS region |
+| `{tag.KEY}` | Value of cloud tag with key `KEY` |
+
+## Setting Up Profiles
+
+1. Create ECRConfig resources in the `kro-system` namespace:
+
+   ```bash
+   kubectl apply -f ecrconfig-profiles.yaml
+   ```
+
+2. Label each profile so repositories can find it:
+
+   ```yaml
+   metadata:
+     labels:
+       aws.kropath.run/resource-name: general-policy  # REQUIRED
+   ```
+
+3. Developers reference profiles via `ECRRepository.spec.configRef`:
+
+   ```yaml
+   spec:
+     configRef: production
+   ```
+
+## Validation Rules
+
+ECRConfig has built-in validation:
+
+- **Cannot set the same field in both tiers** — If `spec.mandatory.imageTagMutability` is set, `spec.defaults.imageTagMutability` must be empty (and vice versa).
+- **Encryption configuration must be valid** — If `encryptionType: AES256` is set, `kmsKeyID` must be empty (AES256 doesn't use a customer-managed key).
+
+Example of invalid ECRConfig (will be rejected):
+
+```yaml
+spec:
+  mandatory:
+    imageTagMutability: "IMMUTABLE"
+  defaults:
+    imageTagMutability: "MUTABLE"  # ERROR: Cannot set in both tiers
+```
+
+## Status and Feedback
+
+After you apply an ECRConfig, the cluster validates it and computes `status.effectiveConfig` — the merged configuration that repositories read.
+
+```bash
+kubectl get ecrconfig production -o yaml
+```
+
+If the configuration is invalid, `status.conditions` will show an error.
+
+## Complete Example: Multi-Profile Setup
 
 ```yaml
 ---
+# Development profile (permissive)
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRConfig
 metadata:
-  name: pci
+  name: development
   namespace: kro-system
   labels:
-    aws.kropath.run/resource-name: pci
-spec:
-  mandatory:
-    imageTagMutability: "IMMUTABLE"
-    encryptionType: "KMS"
-    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/mrk-pci"
----
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRConfig
-metadata:
-  name: hipaa
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: hipaa
-spec:
-  mandatory:
-    imageTagMutability: "IMMUTABLE"
-    encryptionType: "KMS"
-    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/mrk-hipaa"
----
-apiVersion: aws.kropath.run/v1alpha1
-kind: ECRConfig
-metadata:
-  name: general-policy
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: general-policy
+    aws.kropath.run/resource-name: development
 spec:
   mandatory: {}
   defaults:
     imageTagMutability: "MUTABLE"
     encryptionType: "AES256"
-```
+    namingTemplate: "{namespace}/{name}"
 
-Teams select `spec.configRef: pci` for payment systems, `spec.configRef: hipaa` for healthcare, and `spec.configRef: general-policy` for everything else.
-
-### Namespace-Based Naming
-
-Use the naming template to automatically organize repositories by namespace:
-
-```yaml
-defaults:
-  namingTemplate: "{namespace}/{name}"
-```
-
-Repositories in `payments` namespace are named `payments/my-app`, repositories in `analytics` are named `analytics/my-app`.
-
-### Staging and Production Separation
-
-Use profile names in the naming template:
-
-```yaml
 ---
+# Staging profile (moderate)
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRConfig
 metadata:
@@ -286,9 +375,14 @@ metadata:
   labels:
     aws.kropath.run/resource-name: staging
 spec:
+  mandatory:
+    imageTagMutability: "IMMUTABLE"
   defaults:
-    namingTemplate: "{namespace}/staging/{name}"
+    encryptionType: "AES256"
+    namingTemplate: "{namespace}/{configRef}/{name}"
+
 ---
+# Production profile (strict)
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRConfig
 metadata:
@@ -298,22 +392,35 @@ metadata:
     aws.kropath.run/resource-name: production
 spec:
   mandatory:
-    encryptionType: "KMS"
     imageTagMutability: "IMMUTABLE"
+    encryptionType: "KMS"
+    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
   defaults:
-    namingTemplate: "{namespace}/prod/{name}"
+    namingTemplate: "{namespace}/{configRef}/{name}"
+    tags:
+      managed-by: kropath
+      environment: production
 ```
 
-## Troubleshooting
+Developers then choose the profile that matches their environment:
 
-### "Cannot set field in both mandatory and defaults"
+```yaml
+# Development deployment
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: api
+  namespace: team-a
+spec:
+  configRef: development
 
-Error: The same field is configured in both tiers. Fix: Remove the field from one tier.
-
-### Repositories Not Using Updated Profile
-
-Changes to mandatory and defaults tiers in `ECRConfig` propagate to existing repositories on the next reconciliation cycle, since repositories read the profile's `status.effectiveConfig` at every reconcile loop. However, ECR itself enforces immutability constraints on certain fields: encryption type and repository name cannot be changed after creation. Mutable settings (tag mutability, lifecycle policies, tags, and naming conventions applied at creation time) do propagate on profile updates. For fields locked by ECR's immutability constraints, update the repository's `spec` directly if you need to change them.
-
-### "Invalid encryption configuration"
-
-Error: `encryptionType: "AES256"` is set with a `kmsKeyID`. Fix: Remove the `kmsKeyID` when using AES256, or change to `encryptionType: "KMS"`.
+---
+# Production deployment
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: api
+  namespace: team-a
+spec:
+  configRef: production
+```

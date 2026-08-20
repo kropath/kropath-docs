@@ -1,19 +1,19 @@
 # AWS Elastic Container Registry (ECR)
 
-AWS Elastic Container Registry (ECR) resources in kropath enable you to create, manage, and govern container image repositories with encryption, image tag mutability enforcement, lifecycle policies, and platform-wide governance controls.
+Manage container image repositories, pull-through caching, and repository templates with kropath ECR resources.
 
 ## Resources
 
-- **[ECRConfig](./ecrconfig.md)** — Governance profiles that control encryption, tag immutability, naming, and lifecycle policies across your organization
-- **[ECRRepository](./ecrrepository.md)** — The primary resource for creating and managing private container image repositories
-- **[ECRPullThroughCacheRule](./ecrpullthroughcacherule.md)** — Rules that transparently cache images from upstream public registries (Docker Hub, ECR Public, GitHub Container Registry, Quay)
-- **[ECRRepositoryCreationTemplate](./ecrrepositorycreationtemplate.md)** — Templates that govern the configuration of repositories auto-created by pull-through cache rules or cross-region replication
+- **[ECRConfig](ecrconfig.md)** — Governance configuration for ECR repositories
+- **[ECRRepository](ecrrepository.md)** — Create and manage private container image repositories
+- **[ECRPullThroughCacheRule](ecrpullthroughcacherule.md)** — Configure pull-through cache rules
+- **[ECRRepositoryCreationTemplate](ecrrepositorycreationtemplate.md)** — Define templates for auto-created repositories
 
 ## Quick Start
 
-### 1. Define Governance Profiles
+### 1. Set Up Governance
 
-Create an `ECRConfig` profile to define your organization's encryption, tag mutability, and naming conventions:
+Define an ECR governance profile:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -21,6 +21,8 @@ kind: ECRConfig
 metadata:
   name: general-policy
   namespace: kro-system
+  labels:
+    aws.kropath.run/resource-name: general-policy
 spec:
   mandatory: {}
   defaults:
@@ -29,9 +31,9 @@ spec:
     namingTemplate: "{namespace}/{name}"
 ```
 
-### 2. Create Repositories
+### 2. Create a Repository
 
-Create repositories by selecting a governance profile:
+Create a private container image repository:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -42,63 +44,146 @@ metadata:
 spec:
   configRef: general-policy
   deletionPolicy: retain
+  tags:
+    team: platform
+    environment: production
 ```
 
-Result: Repository created as `app-team/my-app` with AWS-managed encryption and mutable image tags.
+After reconciliation, the repository URI is available in `status.repositoryURI`:
 
-### 3. (Optional) Add Pull-Through Cache
+```
+123456789012.dkr.ecr.us-east-1.amazonaws.com/app-team/my-app
+```
 
-Cache images from upstream registries automatically:
+### 3. Pull from Public Registries (Optional)
+
+Set up a pull-through cache to proxy images from Docker Hub:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: ECRPullThroughCacheRule
 metadata:
-  name: docker-hub
+  name: docker-hub-cache
   namespace: kro-system
 spec:
   ecrRepositoryPrefix: docker-hub
   upstreamRegistryURL: registry-1.docker.io
+  deletionPolicy: retain
 ```
 
-Users can now pull images like `123456789012.dkr.ecr.us-east-1.amazonaws.com/docker-hub/library/ubuntu`, and ECR automatically caches them.
+Users can now pull images as `ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/docker-hub/nginx:latest`.
 
 ## Key Concepts
 
-### Governance Cascade
-
-ECR resources follow a three-tier governance cascade:
-
-1. **Platform mandatory tier** — Organization-wide enforcement (encryption type, tag immutability, naming patterns)
-2. **Repository spec** — Developer overrides (when not overridden by mandatory tier)
-3. **Platform defaults tier** — Fallback values (applied when developer doesn't specify)
-
-Example: If your platform mandates `imageTagMutability: IMMUTABLE` for all repositories, a developer cannot create a repository with mutable tags.
-
 ### Repository Naming
 
-Repositories are named using a configurable template with placeholders like `{namespace}`, `{name}`, and `{tag.KEY}`. The default template is `{namespace}/{name}`, producing names like `app-team/my-app`. This hierarchical naming makes it easy to organize repositories by team or application.
+ECR repository names use the forward-slash (`/`) separator to create hierarchical namespaces. The default naming pattern is `{namespace}/{name}`, creating repositories like `app-team/my-app`.
+
+### Encryption
+
+ECR supports two encryption modes:
+
+- **AES256** (AWS-managed) — Default, no key management overhead
+- **KMS** (Customer-managed) — Required for compliance, specify a KMS key
 
 ### Image Tag Mutability
 
-- **IMMUTABLE** — Once an image is tagged, the tag cannot be reassigned to a different image (supply chain security)
-- **MUTABLE** — Tags can be reassigned to different images (faster iteration during development)
+Control whether image tags can be overwritten:
 
-You can exclude specific tags from immutability enforcement using `imageTagMutabilityExclusionFilters` (e.g., exclude the `latest` tag while keeping other tags immutable).
+- **MUTABLE** (default) — Tags can be overwritten (typical for `latest`)
+- **IMMUTABLE** — Tags are permanent (enforces supply chain security)
 
-### Encryption Options
+Use `imageTagMutabilityExclusionFilters` to exempt specific tags from the mutability setting.
 
-- **AES256** — AWS-managed encryption (free, no additional setup required)
-- **KMS** — Customer-managed encryption with AWS Key Management Service (for compliance requirements)
+### Governance Cascade
 
-### Lifecycle Policies
+ECRConfig profiles define mandatory and default settings:
 
-Define retention rules for images based on age or tag status. Example: "Expire untagged images after 7 days" or "Keep only the most recent 10 images per repository."
+- **Mandatory** — Platform team enforcement (e.g., immutable tags for production)
+- **Defaults** — Applied only if the developer doesn't specify a value
 
-## Learn More
+Developers can override defaults in their resource spec, but mandatory settings always apply.
 
-- See [ECRConfig](./ecrconfig.md) for setting up governance profiles with mandatory and default policies
-- See [ECRRepository](./ecrrepository.md) for creating and managing repositories with encryption, tag mutability, and lifecycle policies
-- See [ECRPullThroughCacheRule](./ecrpullthroughcacherule.md) for transparently caching images from upstream registries
-- See [ECRRepositoryCreationTemplate](./ecrrepositorycreationtemplate.md) for auto-configuring repositories created by cache rules or replication
-- For ADR context, see `kropath-core/docs/families/aws/ecr.md`
+## Common Use Cases
+
+### Production-Grade Repository
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRConfig
+metadata:
+  name: production
+  namespace: kro-system
+  labels:
+    aws.kropath.run/resource-name: production
+spec:
+  mandatory:
+    imageTagMutability: "IMMUTABLE"
+    encryptionType: "KMS"
+    kmsKeyID: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  defaults:
+    lifecyclePolicy: |
+      {
+        "rules": [
+          {
+            "rulePriority": 1,
+            "description": "Keep last 10 images",
+            "selection": {
+              "tagStatus": "tagged",
+              "tagPrefixList": ["v"],
+              "countType": "imageCountMoreThan",
+              "countNumber": 10
+            },
+            "action": {
+              "type": "expire"
+            }
+          }
+        ]
+      }
+    namingTemplate: "{namespace}/{configRef}/{name}"
+```
+
+This profile enforces:
+- Immutable tags (prevents overwriting released versions)
+- KMS encryption (compliance requirement)
+- Automatic cleanup of old images
+- Hierarchical naming: `team/prod/service-name`
+
+### Cross-Account Image Pull
+
+Grant another AWS account permission to pull images:
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: ECRRepository
+metadata:
+  name: shared-library
+  namespace: platform
+spec:
+  configRef: general-policy
+  policy: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "AllowCrossAccountPull",
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "arn:aws:iam::999888777666:root"
+          },
+          "Action": [
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage",
+            "ecr:DescribeImages"
+          ]
+        }
+      ]
+    }
+```
+
+## Next Steps
+
+- [Set up ECRConfig governance profiles](ecrconfig.md)
+- [Create your first ECRRepository](ecrrepository.md)
+- [Configure pull-through caching](ecrpullthroughcacherule.md)
+- [Define repository creation templates](ecrrepositorycreationtemplate.md)
