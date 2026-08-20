@@ -19,11 +19,6 @@ layer.
 | AWS | `aws.kropath.run/v1alpha1` |
 | GCP | `gcp.kropath.run/v1alpha1` |
 | Azure | `azure.kropath.run/v1alpha1` |
-
-> **Migration note:** The bare `kropath.run` API group is **deprecated**. Resources that previously
-> used `kropath.run/v1alpha1` must migrate to the provider-prefixed form. No new CRDs or RGDs may
-> use the bare `kropath.run` group.
-
 ---
 
 ## 2. Kind Naming Convention
