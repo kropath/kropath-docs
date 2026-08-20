@@ -4,7 +4,7 @@ EC2DHCPOptions represents a DHCP Options Set—a configuration that specifies ho
 
 ## Configuration
 
-*   `vpcId` (string, required): VPC ID to associate with this DHCP options set.
+*   `vpcIds` (array of strings, optional): VPC IDs to associate with this DHCP options set.
 *   `domainName` (string, optional): Domain name suffix for DNS queries.
 *   `domainNameServers` (array of strings, optional): DNS servers (e.g., `["8.8.8.8", "8.8.4.4"]`).
 *   `ntpServers` (array of strings, optional): NTP servers for time synchronization.
@@ -26,7 +26,8 @@ metadata:
   name: custom-dns-dhcp
   namespace: default
 spec:
-  vpcId: vpc-0123456789abcdef0
+  vpcIds:
+    - vpc-0123456789abcdef0
   domainName: "example.com"
   domainNameServers:
     - "10.0.0.2"     # On-premises DNS server
@@ -48,7 +49,8 @@ metadata:
   name: hybrid-dhcp
   namespace: default
 spec:
-  vpcId: vpc-hybrid
+  vpcIds:
+    - vpc-hybrid
   domainName: "corp.internal"
   domainNameServers:
     - "192.168.1.10"  # Corporate DNS

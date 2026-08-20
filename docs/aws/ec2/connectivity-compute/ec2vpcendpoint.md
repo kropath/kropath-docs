@@ -5,11 +5,11 @@ EC2VPCEndpoint represents a VPC Endpoint—a private connection between a VPC an
 ## Configuration
 
 *   `vpcId` (string, required): VPC ID for the endpoint.
-*   `serviceType` (string, required): Endpoint type (`"Gateway"` for S3/DynamoDB, `"Interface"` for other services, `"GatewayLoadBalancer"`).
+*   `vpcEndpointType` (string, required): Endpoint type (`"Gateway"` for S3/DynamoDB, `"Interface"` for other services, `"GatewayLoadBalancer"`).
 *   `serviceName` (string, required): AWS service name (e.g., `"com.amazonaws.us-east-1.s3"`).
 *   `subnetIds` (array of strings, for Interface endpoints): Subnets where ENIs are placed.
 *   `securityGroupIds` (array of strings, for Interface endpoints): Security groups for ENIs.
-*   `privateHostEnabled` (boolean, for Interface endpoints): Enable private hosted zone for the service name.
+*   `privateDnsEnabled` (boolean, for Interface endpoints): Enable private hosted zone for the service name.
 *   `policyDocument` (string, optional): VPC endpoint policy for restricting access.
 *   `routeTableIds` (array of strings, for Gateway endpoints): Route tables to add S3/DynamoDB routes to.
 *   `tags`, `syncedLabels`, `syncedAnnotations`: Metadata.
@@ -31,7 +31,7 @@ metadata:
   namespace: default
 spec:
   vpcId: vpc-0123456789abcdef0
-  serviceType: "Gateway"
+  vpcEndpointType: "Gateway"
   serviceName: "com.amazonaws.us-east-1.s3"
   routeTableIds:
     - rtb-0123456789abcdef0

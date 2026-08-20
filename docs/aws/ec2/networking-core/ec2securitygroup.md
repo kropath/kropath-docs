@@ -15,8 +15,8 @@ EC2SecurityGroup requires an existing VPC. Create an `EC2VPC` resource first. An
 *   `vpcId` (string, required): VPC ID where the security group is created.
 *   `description` (string, required): Human-readable description of the security group.
 *   `nameOverride` (string, optional): Override the generated security group name.
-*   `ingress` (array of rules, optional): Inbound traffic rules allowing specific CIDR blocks, security groups, or prefix lists.
-*   `egress` (array of rules, optional): Outbound traffic rules controlling outgoing traffic.
+*   `ingressRules` (array of rules, optional): Inbound traffic rules allowing specific CIDR blocks, security groups, or prefix lists.
+*   `egressRules` (array of rules, optional): Outbound traffic rules controlling outgoing traffic.
 
 ### Metadata and Tags
 
@@ -49,23 +49,26 @@ spec:
   configRef: general-policy
   vpcId: vpc-0123456789abcdef0
   description: "Security group for application servers"
-  ingress:
+  ingressRules:
     - ipProtocol: tcp
       fromPort: 80
       toPort: 80
-      cidrIp: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
     - ipProtocol: tcp
       fromPort: 443
       toPort: 443
-      cidrIp: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
     - ipProtocol: tcp
       fromPort: 8080
       toPort: 8080
-      referencedGroupInfo:
-        groupId: sg-internal-sg  # Internal security group
-  egress:
+      sourceSecurityGroupIds:
+        - sg-internal-sg  # Internal security group
+  egressRules:
     - ipProtocol: -1  # All traffic
-      cidrIp: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
   tags:
     environment: production
     tier: application
@@ -93,18 +96,21 @@ metadata:
 spec:
   vpcId: vpc-abc123
   description: "Security group for web servers"
-  ingress:
+  ingressRules:
     - ipProtocol: tcp
       fromPort: 80
       toPort: 80
-      cidrIp: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
     - ipProtocol: tcp
       fromPort: 443
       toPort: 443
-      cidrIp: "0.0.0.0/0"
-  egress:
+      cidrBlocks:
+        - "0.0.0.0/0"
+  egressRules:
     - ipProtocol: -1
-      cidrIp: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
 ```
 
 ### Database Security Group

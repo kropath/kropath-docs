@@ -10,8 +10,8 @@ EC2TransitGateway represents a Transit Gateway—a highly available AWS service 
 *   `autoAcceptSharedAttachments` (string): Auto-accept attachment requests (`"enable"` or `"disable"`).
 *   `defaultRouteTableAssociation` (string): Auto-associate attachments to default route table.
 *   `defaultRouteTablePropagation` (string): Auto-propagate routes to default route table.
-*   `enableDnsSupport` (boolean, default: true): Enable DNS support.
-*   `enableVpnEcmpSupport` (boolean, default: true): Enable VPN ECMP support.
+*   `dnsSupport` (string, default: `"enable"`): Enable DNS support (`"enable"` or `"disable"`).
+*   `vpnEcmpSupport` (string, default: `"enable"`): Enable VPN ECMP support (`"enable"` or `"disable"`).
 *   `multicastSupport` (string, default: `"disable"`): Enable multicast support.
 *   `transitGatewayCidrBlocks` (array of strings, optional): CIDR blocks for the transit gateway.
 *   `tags`, `syncedLabels`, `syncedAnnotations`: Metadata.
@@ -35,7 +35,8 @@ spec:
   autoAcceptSharedAttachments: "enable"
   defaultRouteTableAssociation: "enable"
   defaultRouteTablePropagation: "enable"
-  enableDnsSupport: true
+  dnsSupport: "enable"
+  vpnEcmpSupport: "enable"
   multicastSupport: "enable"
   transitGatewayCidrBlocks:
     - "10.0.0.0/8"

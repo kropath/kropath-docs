@@ -7,7 +7,7 @@ EC2TransitGatewayAttachment represents an attachment between a VPC and a Transit
 *   `transitGatewayId` (string, required): Transit gateway ID to attach to.
 *   `vpcId` (string, required): VPC ID to attach.
 *   `subnetIds` (array of strings, required): Subnets in which to place the attachment's ENIs.
-*   `applanceModeSupport` (string, optional): Enable appliance mode (`"enable"` or `"disable"`).
+*   `applianceModeSupport` (string, optional): Enable appliance mode (`"enable"` or `"disable"`).
 *   `ipv6Support` (string, optional): Enable IPv6 support (`"enable"` or `"disable"`).
 *   `dnsSupport` (string, optional): Enable DNS support (`"enable"` or `"disable"`).
 *   `tags`, `syncedLabels`, `syncedAnnotations`: Metadata.

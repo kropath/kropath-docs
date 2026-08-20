@@ -5,11 +5,11 @@ EC2FlowLog represents a VPC Flow Log—a managed AWS service that captures IP tr
 ## Configuration
 
 *   `resourceId` (string, required): VPC or subnet ID to capture traffic for.
+*   `resourceType` (string, required): Type of resource (`"VPC"` or `"Subnet"`).
 *   `trafficType` (string, required): Type of traffic to log (`"ACCEPT"` for accepted, `"REJECT"` for rejected, `"ALL"` for both).
-*   `logDestination` (string, required): Destination for logs (`"CloudWatch"`, `"S3"`, or `"Firehose"`).
-*   `logGroupName` (string, for CloudWatch): CloudWatch log group name.
-*   `s3BucketName` (string, for S3): S3 bucket name for storing logs.
-*   `deliveryStreamName` (string, for Firehose): Kinesis Data Firehose stream name.
+*   `logDestinationType` (string, required): Destination type for logs (`"cloud-watch-logs"`, `"s3"`, or `"kinesis-data-firehose"`).
+*   `logDestination` (string, required): ARN of the destination (CloudWatch log group ARN, S3 bucket ARN, or Firehose ARN).
+*   `deliverLogsPermissionArn` (string, required): IAM role ARN with permissions to deliver logs to the destination.
 *   `logFormat` (string, optional): Custom log format for flow log records.
 *   `maxAggregationInterval` (integer, default: 600): Time in seconds to aggregate traffic (60 or 600).
 *   `tags`, `syncedLabels`, `syncedAnnotations`: Metadata merged with governance settings.
@@ -33,9 +33,11 @@ metadata:
   namespace: default
 spec:
   resourceId: vpc-0123456789abcdef0
+  resourceType: "VPC"
   trafficType: "ALL"
-  logDestination: "CloudWatch"
-  logGroupName: "/aws/vpc/flowlogs/prod"
+  logDestinationType: "cloud-watch-logs"
+  logDestination: "arn:aws:logs:us-east-1:123456789012:log-group:/aws/vpc/flowlogs/prod"
+  deliverLogsPermissionArn: "arn:aws:iam::123456789012:role/vpc-flow-logs-role"
   maxAggregationInterval: 600
   tags:
     environment: production

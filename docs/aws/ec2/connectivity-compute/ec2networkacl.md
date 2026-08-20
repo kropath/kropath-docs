@@ -5,9 +5,8 @@ EC2NetworkACL represents a Network Access Control List (NACL)—a stateless fire
 ## Configuration
 
 *   `vpcId` (string, required): VPC ID for the NACL.
-*   `ingress` (array of rules): Inbound traffic rules with rule numbers and allow/deny actions.
-*   `egress` (array of rules): Outbound traffic rules.
-*   `subnetAssociations` (array of subnet IDs, optional): Subnets to associate with this NACL.
+*   `entries` (array of rules): Network ACL entries with rule numbers, direction (ingress/egress via `egress: boolean`), and allow/deny actions.
+*   `subnetIds` (array of subnet IDs, optional): Subnets to associate with this NACL.
 *   `tags`, `syncedLabels`, `syncedAnnotations`: Metadata.
 
 ## Status Outputs
@@ -25,30 +24,32 @@ metadata:
   namespace: default
 spec:
   vpcId: vpc-0123456789abcdef0
-  ingress:
+  entries:
     - ruleNumber: 100
-      protocol: "tcp"
+      protocol: "6"  # TCP
       portRange:
         from: 80
         to: 80
-      cidrBlock: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
       egress: false
-      action: "allow"
+      ruleAction: "allow"
     - ruleNumber: 110
-      protocol: "tcp"
+      protocol: "6"  # TCP
       portRange:
         from: 443
         to: 443
-      cidrBlock: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
       egress: false
-      action: "allow"
-  egress:
+      ruleAction: "allow"
     - ruleNumber: 100
       protocol: "-1"  # All protocols
-      cidrBlock: "0.0.0.0/0"
+      cidrBlocks:
+        - "0.0.0.0/0"
       egress: true
-      action: "allow"
-  subnetAssociations:
+      ruleAction: "allow"
+  subnetIds:
     - subnet-0123456789abcdef0
 ```
 

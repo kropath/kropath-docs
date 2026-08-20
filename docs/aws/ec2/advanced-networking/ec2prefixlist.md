@@ -41,11 +41,11 @@ spec:
   addressFamily: "IPv4"
   maxEntries: 50
   entries:
-    - cidrIp: "10.0.0.0/8"
+    - cidr: "10.0.0.0/8"
       description: "Corporate network"
-    - cidrIp: "172.16.0.0/12"
+    - cidr: "172.16.0.0/12"
       description: "VPN network"
-    - cidrIp: "203.0.113.0/24"
+    - cidr: "203.0.113.0/24"
       description: "Partner network"
   tags:
     environment: production
@@ -60,7 +60,6 @@ status:
   resourceName: "default-corporate-cidr-list"
   namingStatus: "valid"
   version: 1
-  arn: "arn:aws:ec2:us-east-1:123456789012:prefix-list/pl-0123456789abcdef0"
 ```
 
 ### IPv6 Prefix List
@@ -75,7 +74,7 @@ spec:
   addressFamily: "IPv6"
   maxEntries: 20
   entries:
-    - cidrIp: "2600:1f16::/32"
+    - cidr: "2600:1f16::/32"
       description: "Partner IPv6 network"
 ```
 
