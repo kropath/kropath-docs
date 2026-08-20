@@ -2,7 +2,7 @@
 
 **Shared engineering standards** (CRD/RGD schema, API groups, kind naming, label/annotation
 conventions, wiring, effectiveConfig cascade): see
-`kropath-core/docs/standards/engineering-standards.md`.
+[`docs/engineering-standards.md`](engineering-standards.md).
 
 ---
 
@@ -11,7 +11,7 @@ conventions, wiring, effectiveConfig cascade): see
 `kropath-docs` — Customer-facing documentation only; no runnable code.
 
 - Guides, API references, and tutorials for kropath platform users
-- References specs and ADRs from `kropath-core` as the authoritative design record
+- References the shared engineering standards in this repo as the authoritative design record
 - Link to implementation details; never copy them here
 - No CRDs, kro RGDs, or Go code
 
@@ -19,12 +19,14 @@ conventions, wiring, effectiveConfig cascade): see
 
 ## Documentation-Specific Rules
 
-- **Link, don't copy.** Reference ADRs and specs by path from `kropath-core`. Do not
+- **Link, don't copy.** Reference the shared engineering standards for cross-provider rules. Do not
   duplicate implementation content in this repo.
 - **API group in examples.** Use `<provider>.kropath.run` (e.g. `aws.kropath.run/v1alpha1`).
   The bare `kropath.run` group is deprecated and must not appear in new examples.
 - **ExternalRef in examples.** All code examples must use `selector.matchLabels` for
-  `externalRef` lookups — never `metadata.name` with a CEL expression. (Theme 28, KRO-221)
+  `externalRef` lookups — never `metadata.name` with a CEL expression. CEL is not evaluated
+  in `externalRef.metadata.name` — the expression is treated as a literal string and the
+  lookup silently fails.
 - **Kind names in examples.** No provider prefix in kind — `S3Config`, not
   `AWSS3BucketConfig`; `KropathConfig`, not `AWSKropathConfig`.
 
@@ -48,8 +50,8 @@ require justification.
 `blocked_by` contains one or more prerequisite issue UUIDs. For single blockers, write the UUID
 directly. For multiple blockers, comma-separate UUIDs with no spaces (e.g.
 `12345678-1234-1234-1234-123456789abc,87654321-4321-4321-4321-abcdef123456`). The ticket is
-unblocked only when every referenced blocker is `done`. Prefer UUIDs over `KRO-nnn` identifiers
-(though both parse correctly). Never write logs, prose, or descriptions into this key.
+unblocked only when every referenced blocker is `done`. Prefer UUIDs over short identifiers.
+Never write logs, prose, or descriptions into this key.
 
 ### Native table scaffolding (do not migrate)
 
