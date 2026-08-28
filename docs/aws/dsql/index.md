@@ -119,7 +119,7 @@ spec:
   kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
 ```
 
-### Customer-Managed Key (PolicyRef)
+### Customer-Managed Key (KMSKey Reference)
 
 Reference a managed `KMSKey` CR for portability:
 
@@ -280,7 +280,7 @@ Output includes:
 For detailed guidance, see:
 - [DSQLConfig Governance Model](./dsqlconfig.md) — Understanding mandatory vs. defaults tiers and profile management
 - [DSQLCluster Usage Guide](./dsqlcluster.md) — Field reference and configuration options
-- [Cross-Family Integration](./cross-family-integration.md) — How to reference KMS keys and Policy Documents in DSQL clusters
+- [Cross-Family Integration](../kms/cross-family-integration.md) — How to reference KMS keys and Policy Documents in DSQL clusters
 
 ## Out-of-Scope (Phase 2+)
 

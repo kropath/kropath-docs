@@ -115,7 +115,7 @@ spec:
     syncedAnnotations:
       tier: production-critical
   defaults:
-    deletionProtectionEnabled: true
+    deletionProtectionEnabled: false      # Overridden by mandatory tier
     kmsEncryptionKey: ""                  # Overridden by mandatory tier
     tags:
       managed-by: kropath
@@ -278,7 +278,7 @@ spec:
     syncedLabels:
       tier: critical
   defaults:
-    deletionProtectionEnabled: true
+    deletionProtectionEnabled: false
     kmsEncryptionKey: ""
 ---
 # Development: permissive, test-friendly

@@ -410,20 +410,17 @@ spec:
 
 **Cascade for `deletionProtectionEnabled`:**
 1. Is it set in `KropathConfig.mandatory.dsql`? → Use that value (mandatory wins)
-2. Is it set in the instance spec? → Use that value
-3. Is it set in `production` DSQLConfig mandatory tier? → Use that value
-4. Is it set in `KropathConfig.defaults.dsql`? → Use that value
-5. Is it set in `production` DSQLConfig defaults tier? → Use that value
+2. Is it set in `production` DSQLConfig mandatory tier? → Use that value
+3. Is it set in the instance spec? → Use that value
+4. Is it set in `production` DSQLConfig defaults tier? → Use that value
+5. Is it set in `KropathConfig.defaults.dsql`? → Use that value
 6. Otherwise → RGD built-in default: `true` (protection on)
 
 **Cascade for `kmsEncryptionKey`:**
-1. Is it set in `KropathConfig.mandatory.dsql`? → Use that value
+1. Is it set in `production` DSQLConfig mandatory tier? → Use that value
 2. Is it set via instance `kmsKeyRef` or `kmsKeyArn`? → Resolve and use that value
-3. Is it set in `production` DSQLConfig mandatory tier? → Use that value
-4. Is it set via instance `kmsKeyRef` or `kmsKeyArn`? → (already checked, skipped here)
-5. Is it set in `KropathConfig.defaults.dsql`? → Use that value
-6. Is it set in `production` DSQLConfig defaults tier? → Use that value
-7. Otherwise → Omit the field; AWS creates cluster with AWS-owned KMS key
+3. Is it set in `production` DSQLConfig defaults tier? → Use that value
+4. Otherwise → Omit the field; AWS creates cluster with AWS-owned KMS key
 
 ## Multiple Clusters in One Manifest
 
