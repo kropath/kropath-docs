@@ -61,7 +61,7 @@ An `AthenaConfig` CRD defines governance settings. Both `mandatory` and `default
 *   `tags` (map<string,string>, default: `{}`): Tags merged across governance tiers and applied to all workgroups and catalogs.
 *   `syncedLabels` (map<string,string>, default: `{}`): Kubernetes labels synced to cloud resource tags (prefixed `aws.kropath.run/`).
 *   `syncedAnnotations` (map<string,string>, default: `{}`): Kubernetes annotations synced to cloud resource tags (prefixed `aws.kropath.run/`).
-*   `namingTemplate` (string, default: `"{namespace}-{name}"` for WorkGroups/DataCatalogs; `"{namespace}_{name}"` for PreparedStatements): Template for deriving cloud resource names.
+*   `namingTemplate` (string, default: `"{namespace}-{name}"`): Template for deriving cloud resource names for WorkGroups and DataCatalogs. PreparedStatements use a resource-specific default of `"{namespace}_{name}"`; see [Naming Conventions](#naming-conventions) below for details.
 
 ### AthenaWorkGroup Core Fields
 
@@ -111,7 +111,9 @@ An `AthenaWorkGroup` instance represents the desired state of an Athena workgrou
 
 ### AthenaDataCatalog Core Fields
 
-An `AthenaDataCatalog` instance registers an external or AWS-managed metastore:
+An `AthenaDataCatalog` instance registers an external or AWS-managed metastore.
+
+**Governance Scope:** Only `namingTemplate`, `tags`, `syncedLabels`, and `syncedAnnotations` from `AthenaConfig` apply to DataCatalog. WorkGroup-specific governance fields (e.g., `enforceWorkGroupConfiguration`, `bytesScannedCutoffPerQuery`) are not consumed by DataCatalog.
 
 *   `configRef` (string, default: `"general-policy"`): Specifies which `AthenaConfig` profile to use.
 *   `nameOverride` (string, default: `""`): Bypasses the naming template to use a literal catalog name.
@@ -128,8 +130,8 @@ An `AthenaDataCatalog` instance registers an external or AWS-managed metastore:
 **Metadata and Tags:**
 
 *   `tags` (map<string,string>, default: `{}`): Custom AWS tags merged with governance tiers.
-*   `syncedLabels` (map<string,string>, default: `{}`): Kubernetes labels synced to cloud tags.
-*   `syncedAnnotations` (map<string,string>, default: `{}`): Kubernetes annotations synced to cloud tags.
+*   `syncedLabels` (map<string,string>, default: `{}`): Kubernetes labels synced to cloud tags (prefixed `aws.kropath.run/`).
+*   `syncedAnnotations` (map<string,string>, default: `{}`): Kubernetes annotations synced to cloud tags (prefixed `aws.kropath.run/`).
 
 **FEDERATED Catalogs:** Catalog names are limited to 41 characters due to derived CloudFormation stack and Lambda function naming constraints.
 
