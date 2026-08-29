@@ -25,7 +25,7 @@ A `GlueJob` instance represents the desired state of an AWS Glue job. Here are i
 #### Metadata and Tags
 
 * `tags` (map<string,string>, default: `{}`): Custom AWS tags applied to the Glue job. These are merged with mandatory and default tags from `KropathConfig` and `GlueConfig`.
-* `syncedLabels` (map<string,string>, default: `{}`): Kubernetes labels that are mirrored as AWS tags and prefixed with `aws.kropath.run/`.
+* `syncedLabels` (map<string,string>, default: `{}`): Kubernetes labels that are mirrored to both K8s labels and AWS tags (prefixed with `aws.kropath.run/`), per ADR-015 §6.1.
 * `syncedAnnotations` (map<string,string>, default: `{}`): Kubernetes annotations that are mirrored to the job resource metadata and prefixed with `aws.kropath.run/`.
 
 #### Command Definition (Required)
@@ -118,7 +118,7 @@ Both `mandatory` and `defaults` tiers support the following fields:
 
 * `general-policy`: Conservative baseline profile (e.g., `defaults.glueVersion: "4.0"`, `defaults.workerType: "G.1X"`, `defaults.numberOfWorkers: 2`).
 * `etl-standard`: Hardened profile for standard ETL workloads (e.g., `mandatory.glueVersion: "4.0"`, `mandatory.workerType: "G.2X"`, `mandatory.executionClass: "STANDARD"`).
-* `streaming`: Profile for streaming jobs (e.g., `defaults.executionClass: "FLEX"`, `maintenanceWindow: "Sun:02"`).
+* `streaming`: Profile for streaming jobs (e.g., `defaults.executionClass: "FLEX"`, `defaults.maxConcurrentRuns: 2`).
 
 ### Zero-Value Sentinel Semantics
 
@@ -134,9 +134,9 @@ To enforce an explicit zero value at the mandatory tier (e.g., disable retries),
 
 `GlueConfig` CRs prevent conflicting governance by validating that scalar fields cannot be set in both `mandatory` and `defaults` tiers simultaneously. For example, you cannot set both `mandatory.timeout: 120` and `defaults.timeout: 60` — one tier must be used for each field.
 
-### Ten-tier Governance Cascade
+### Glue Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Glue jobs. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `GlueConfig`) into `status.effectiveConfig` on the namespaced `GlueConfig` CR. `GlueJob` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Glue jobs. The following six tiers are applicable to Glue resources. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `GlueConfig`) into `status.effectiveConfig` on the namespaced `GlueConfig` CR. `GlueJob` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **Cascade order (highest to lowest priority):**
 1. `KropathConfig.spec.mandatory.glue.*` (organization-wide enforcement)
