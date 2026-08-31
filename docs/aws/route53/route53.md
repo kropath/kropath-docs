@@ -129,6 +129,7 @@ A DNS record set within a Route53 hosted zone. Supports all routing policies: si
 *   `recordName` (string, required, immutable): The fully-qualified domain name for the record, e.g., `"www.example.com."`.
 *   `recordType` (string, required, immutable): DNS record type: `"A"`, `"AAAA"`, `"CNAME"`, `"MX"`, `"TXT"`, `"SRV"`, `"NS"`, `"CAA"`, etc.
 *   `hostedZoneRef` (string, required): The name of the `Route53HostedZone` CR in the same namespace.
+*   `configRef` (string, default: `"general-policy"`): Reference to the `Route53Config` profile for governance.
 
 **For standard records:**
 
@@ -489,6 +490,22 @@ Resolver rules follow the standard naming convention with a default template of 
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
+kind: Route53ResolverEndpoint
+metadata:
+  name: hybrid-outbound-endpoint
+  namespace: network-prod
+spec:
+  configRef: general-policy
+  direction: OUTBOUND
+  resolverEndpointType: IPV4
+  ipAddresses:
+    - subnetID: "subnet-12345678"
+    - subnetID: "subnet-87654321"
+  securityGroupIDs:
+    - "sg-dns-outbound"
+
+---
+apiVersion: aws.kropath.run/v1alpha1
 kind: Route53ResolverRule
 metadata:
   name: corp-forwarding-rule
@@ -497,7 +514,7 @@ spec:
   configRef: general-policy
   ruleType: FORWARD
   domainName: "corp.example.com"
-  resolverEndpointRef: hybrid-inbound-endpoint
+  resolverEndpointRef: hybrid-outbound-endpoint
   targetIPs:
     - ip: "10.0.0.1"
       port: 53
@@ -670,8 +687,6 @@ spec:
     healthCheckFailureThreshold: 1
   defaults:
     defaultTTL: 60
-    healthCheckRequestInterval: 30
-    healthCheckFailureThreshold: 3
 
 ---
 # Public hosted zone
