@@ -23,10 +23,10 @@ Mandatory values **always apply** and override developer choices:
 | `deletionProtection` | string | Deletion protection: `ACTIVE` or `INACTIVE`. Empty = not enforced. |
 | `advancedSecurityMode` | string | Advanced security mode: `OFF`, `AUDIT`, or `ENFORCED`. Empty = not enforced. |
 | `passwordPolicy.minimumLength` | integer | Minimum password length (6–99). 0 = not enforced. |
-| `passwordPolicy.requireLowercase` | boolean | Require lowercase characters. Pointer: `nil` = not set. |
-| `passwordPolicy.requireNumbers` | boolean | Require numeric characters. Pointer: `nil` = not set. |
-| `passwordPolicy.requireSymbols` | boolean | Require special characters. Pointer: `nil` = not set. |
-| `passwordPolicy.requireUppercase` | boolean | Require uppercase characters. Pointer: `nil` = not set. |
+| `passwordPolicy.requireLowercase` | boolean | Require lowercase characters. Omit to inherit governance default. |
+| `passwordPolicy.requireNumbers` | boolean | Require numeric characters. Omit to inherit governance default. |
+| `passwordPolicy.requireSymbols` | boolean | Require special characters. Omit to inherit governance default. |
+| `passwordPolicy.requireUppercase` | boolean | Require uppercase characters. Omit to inherit governance default. |
 | `passwordPolicy.temporaryPasswordValidityDays` | integer | Temp password expiry (1–365 days). 0 = not enforced. |
 | `namingTemplate` | string | Naming pattern for pool names (e.g. `{namespace}-{name}`). Empty = no mandatory template. |
 | `tags` | map | Cloud tags applied to all pools. Cannot be removed by developers. |
@@ -83,8 +83,7 @@ spec:
       requireUppercase: true
       temporaryPasswordValidityDays: 7
     namingTemplate: "{namespace}-{name}"
-    tags:
-      managed-by: kropath
+    tags: {}
     syncedLabels: {}
     syncedAnnotations: {}
 ```
@@ -152,9 +151,6 @@ spec:
       requireUppercase: true
     tags:
       compliance: pci-dss
-      data-classification: restricted
-    syncedLabels:
-      compliance: pci
   defaults:
     passwordPolicy:
       temporaryPasswordValidityDays: 1
@@ -191,8 +187,7 @@ spec:
       requireUppercase: true
       temporaryPasswordValidityDays: 7
     namingTemplate: "{namespace}-{name}"
-    tags:
-      managed-by: kropath
+    tags: {}
     syncedLabels: {}
     syncedAnnotations: {}
 EOF
@@ -213,20 +208,17 @@ spec:
 EOF
 ```
 
-## Effective Configuration
+## How Governance Is Resolved
 
-When a user pool is created, kropath-controller reads the selected `CognitoConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
+When you create a user pool, the selected `CognitoConfig` profile merges with any org-wide settings to determine the final governance configuration. Platform teams set mandatory fields that developers cannot override, and defaults that apply when developers don't specify a value.
 
-Developers and platform teams can inspect the effective configuration:
+To audit which governance settings apply to a profile:
 
 ```bash
-kubectl get cognitoconfig general-policy -n kro-system -o yaml
+kubectl describe cognitoconfig general-policy -n kro-system
 ```
 
-The `status.effectiveConfig` shows:
-- All mandatory fields (platform enforcement)
-- All default fields (developer overrides possible)
-- AWS account and region information
+This shows you the complete merged governance: all mandatory fields (platform enforcement), all defaults (developer overrides possible), and AWS account/region information.
 
 This single config CR ensures consistent, auditable governance across all user pools that reference it.
 

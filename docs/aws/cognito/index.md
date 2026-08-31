@@ -71,12 +71,4 @@ spec:
 
 2. **Create a pool**: Developers apply a `CognitoUserPool` CR that selects a profile and specifies pool-specific settings.
 
-3. **Monitor compliance**: Inspect `status.effectiveConfig` on the selected `CognitoConfig` CR to audit governance cascade and active policies.
-
-## Deferred Features
-
-The following features are planned for future releases:
-
-- **User Pool Clients** (G-1) — OAuth 2.0 / OIDC client applications
-- **User Pool Domains** (G-2) — Custom domain for hosted UI
-- **Resource Servers** (G-3) — API authorization for scope-based access
+3. **Monitor compliance**: Review the `CognitoConfig` CR to audit governance cascade and active policies for a profile.

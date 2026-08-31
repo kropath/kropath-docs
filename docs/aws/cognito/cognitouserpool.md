@@ -35,10 +35,10 @@ Password policy fields are **independently governed** — each sub-field resolve
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `passwordPolicy.minimumLength` | integer | `0` | Minimum password length (6–99). 0 = use governance default. |
-| `passwordPolicy.requireLowercase` | boolean | (nil) | Require lowercase. `nil` = use governance default. |
-| `passwordPolicy.requireNumbers` | boolean | (nil) | Require numbers. `nil` = use governance default. |
-| `passwordPolicy.requireSymbols` | boolean | (nil) | Require symbols. `nil` = use governance default. |
-| `passwordPolicy.requireUppercase` | boolean | (nil) | Require uppercase. `nil` = use governance default. |
+| `passwordPolicy.requireLowercase` | boolean | (omit) | Require lowercase. Omit to inherit governance default. |
+| `passwordPolicy.requireNumbers` | boolean | (omit) | Require numbers. Omit to inherit governance default. |
+| `passwordPolicy.requireSymbols` | boolean | (omit) | Require symbols. Omit to inherit governance default. |
+| `passwordPolicy.requireUppercase` | boolean | (omit) | Require uppercase. Omit to inherit governance default. |
 | `passwordPolicy.temporaryPasswordValidityDays` | integer | `0` | Temp password expiry (1–365 days). 0 = use governance default. |
 
 ### Sign-In Configuration (Immutable After Creation)
@@ -48,13 +48,13 @@ Password policy fields are **independently governed** — each sub-field resolve
 | `usernameAttributes` | array | `[]` | Enable email or phone sign-in: `[email]`, `[phone_number]`, or `[email, phone_number]`. **Immutable**; mutually exclusive with `aliasAttributes`. |
 | `aliasAttributes` | array | `[]` | Enable username aliases: subset of `[phone_number, email, preferred_username]`. **Immutable**; mutually exclusive with `usernameAttributes`. |
 | `autoVerifiedAttributes` | array | `[]` | Attributes auto-verified on sign-up: `[email]`, `[phone_number]`, or `[email, phone_number]`. |
-| `usernameConfiguration.caseSensitive` | boolean | (nil) | Case sensitivity for usernames. **Immutable after creation**. |
+| `usernameConfiguration.caseSensitive` | boolean | (omit) | Case sensitivity for usernames. **Immutable after creation**. Omit to use default. |
 
 ### Admin User Creation
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `adminCreateUserConfig.allowAdminCreateUserOnly` | boolean | (nil) | Restrict user creation to admins only. `nil` = allow self-registration (default). |
+| `adminCreateUserConfig.allowAdminCreateUserOnly` | boolean | (omit) | Restrict user creation to admins only. Omit to allow self-registration (default). |
 | `adminCreateUserConfig.inviteMessageTemplate.emailMessage` | string | `""` | Email message template for admin-created users. Must use `{username}` and `{####}` placeholders. |
 | `adminCreateUserConfig.inviteMessageTemplate.emailSubject` | string | `""` | Email subject for invite messages. |
 | `adminCreateUserConfig.inviteMessageTemplate.smsMessage` | string | `""` | SMS message template for invites. Must use `{username}` and `{####}` placeholders. |
@@ -96,8 +96,11 @@ Lambda triggers enable custom authentication flows and user lifecycle hooks:
 | `lambdaConfig.userMigration` | string | `""` | Lambda ARN for migrating users from legacy system. |
 | `lambdaConfig.preTokenGeneration` | string | `""` | Lambda ARN for modifying ID and access tokens. |
 | `lambdaConfig.customEmailSender.lambdaARN` | string | `""` | Lambda ARN for sending custom emails. |
+| `lambdaConfig.customEmailSender.lambdaVersion` | string | `""` | Lambda version: `V1_0`. |
 | `lambdaConfig.customSMSSender.lambdaARN` | string | `""` | Lambda ARN for sending custom SMS. |
+| `lambdaConfig.customSMSSender.lambdaVersion` | string | `""` | Lambda version: `V1_0`. |
 | `lambdaConfig.preTokenGenerationConfig.lambdaARN` | string | `""` | Lambda ARN for advanced token customization. |
+| `lambdaConfig.preTokenGenerationConfig.lambdaVersion` | string | `""` | Lambda version: `V1_0`, `V2_0`, or `V3_0`. |
 | `lambdaConfig.kmsKeyID` | string | `""` | KMS key ID for encrypting Lambda context. |
 
 ### Custom Attributes
@@ -127,8 +130,8 @@ Lambda triggers enable custom authentication flows and user lifecycle hooks:
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `deviceConfiguration.challengeRequiredOnNewDevice` | boolean | (nil) | Require MFA when signing in from a new device. `nil` = default (false). |
-| `deviceConfiguration.deviceOnlyRememberedOnUserPrompt` | boolean | (nil) | Only remember device if user explicitly opts in. `nil` = default (false). |
+| `deviceConfiguration.challengeRequiredOnNewDevice` | boolean | (omit) | Require MFA when signing in from a new device. Omit to use default (false). |
+| `deviceConfiguration.deviceOnlyRememberedOnUserPrompt` | boolean | (omit) | Only remember device if user explicitly opts in. Omit to use default (false). |
 
 ### Verification Messages
 
