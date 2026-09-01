@@ -363,10 +363,7 @@ After creation:
 status:
   resourceName: "ops-fleet-inventory-sync"
   namingStatus: "valid"
-  # Note: No predictedArn for ResourceDataSync (no ARN available)
-  ackResourceMetadata:
-    # No arn field for this resource type
-    arn: ""  # Empty for ResourceDataSync
+  # Note: No predictedArn or ackResourceMetadata for ResourceDataSync (no ARN available)
 ```
 
 ## Governance Cascade

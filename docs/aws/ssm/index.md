@@ -8,7 +8,6 @@ SSM resources can be created independently, but several integrate with other kro
 
 *   **KMS Family:** For encrypting SecureString parameters (required for SSMParameter encryption)
 *   **S3 Family:** For storing inventory data from SSMResourceDataSync
-*   **IAM Family:** For defining permissions on SSM documents and configurations
 
 ## Quick Start
 

@@ -89,7 +89,7 @@ spec:
 
 Result:
 - Automation document with automatic versioning
-- Accessible via `alias/ops-backup-automation`
+- Accessible by document name: `ops-backup-automation`
 - Tags synced to AWS
 - Immutable `versionName` prevents accidental overwrites
 
@@ -231,8 +231,7 @@ status:
 
 After creation, these fields cannot be changed:
 
-- **`versionName`** — Once set, cannot be updated
-- **`documentType`** — Document type is locked at creation
+- **`versionName`** — Once set, cannot be updated (ACK CEL rule: `self == oldSelf`)
 
 Example of immutable field:
 

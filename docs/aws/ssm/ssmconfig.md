@@ -68,7 +68,7 @@ spec:
     allowedDocumentTypes: []             # No restriction (all types allowed)
     operatingSystem: WINDOWS             # Default OS for patch baselines
     approvedPatchesComplianceLevel: MEDIUM
-    approvedPatchesEnableNonSecurity: false
+    approvedPatchesEnableNonSecurity: false  # Explicit false: recommend security-only patches; omit field for no default
     rejectedPatchesAction: ALLOW_AS_DEPENDENCY
     tags:
       Environment: Development
@@ -130,7 +130,7 @@ spec:
     allowedDocumentTypes:
       - Command
       - Automation
-    approvedPatchesEnableNonSecurity: false
+    approvedPatchesEnableNonSecurity: false  # Enforce: security-only patches
   defaults:
     documentType: Automation
     operatingSystem: AMAZON_LINUX_2
@@ -156,7 +156,7 @@ spec:
     approvedPatchesComplianceLevel: HIGH
     rejectedPatchesAction: BLOCK
   defaults:
-    approvedPatchesEnableNonSecurity: false
+    approvedPatchesEnableNonSecurity: false  # Recommend: security-only patches
     tags:
       Purpose: Patching
       Compliance: Required
