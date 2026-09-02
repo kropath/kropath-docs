@@ -120,10 +120,9 @@ metadata:
 spec:
   configRef: general-policy
   s3BucketName: org-audit-logs
-  region: us-east-1
 ```
 
-This trail uses the `general-policy` profile, delivers logs to the `org-audit-logs` S3 bucket, and operates in a single region (us-east-1).
+This trail uses the `general-policy` profile and delivers logs to the `org-audit-logs` S3 bucket.
 
 ### CloudTrailTrail Core Fields
 
@@ -132,7 +131,6 @@ This trail uses the `general-policy` profile, delivers logs to the `org-audit-lo
 *   `deletionPolicy` (string, default: `"retain"`): Behavior when the CR is deleted. Options:
     *   `"retain"`: The AWS trail continues to exist and deliver logs.
     *   `"delete"`: The AWS trail is deleted. Logs already in S3 remain.
-*   `region` (string): AWS region where the trail is created. Required for single-region trails. Omit for multi-region trails.
 
 #### S3 Log Delivery
 
@@ -216,7 +214,6 @@ spec:
   isMultiRegionTrail: false
   enableLogFileValidation: true
   includeGlobalServiceEvents: true
-  region: us-east-1
   tags:
     team: platform
     compliance: sox
@@ -522,7 +519,7 @@ The following features are not available in this phase and are tracked for futur
 If using org-wide CloudTrail governance, define the `cloudtrail` section in your `KropathConfig`:
 
 ```yaml
-apiVersion: kropath.run/v1
+apiVersion: aws.kropath.run/v1alpha1
 kind: KropathConfig
 metadata:
   name: config
