@@ -242,7 +242,7 @@ Here:
 ## Profile selection rules
 
 - **Default fallthrough** — if you omit `spec.configRef` or reference a profile that doesn't exist, kropath automatically uses the `general-policy` profile
-- **Same namespace** — instances and profiles must be in the same namespace
+- **Profile deployment** — all profiles are deployed to the `kro-system` namespace and referenced from any application namespace via `spec.configRef`
 - **Profile lookup by label** — profiles are found via the `aws.kropath.run/resource-name` label, not by `metadata.name`, so you can rename the CR safely without breaking references
 
 ## Best practices
