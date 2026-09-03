@@ -94,8 +94,8 @@ CREATE TABLE IF NOT EXISTS events (
 **PROVISIONED**:
 - You reserve read and write capacity upfront
 - Lower cost for predictable, sustained workloads
-- Requires `spec.readCapacityUnits` and `spec.writeCapacityUnits`
-- Capacity units are provisioned in increments of 100 (minimum 100)
+- Requires `spec.readCapacityUnits` and `spec.writeCapacityUnits` (both must be > 0)
+- For predictable workloads, AWS typically recommends reserving capacity in increments of 100 units
 
 ### Encryption options
 
@@ -287,8 +287,8 @@ You'll see:
 | `clusteringKeys` | `[]ClusteringKey` | No | `[]` | Clustering keys (sort within partition). Each: `{name: string, orderBy: ASC/DESC}`. |
 | `staticColumns` | `[]StaticColumn` | No | `[]` | Static columns (shared per partition). Each: `{name: string}`. |
 | `throughputMode` | `PAY_PER_REQUEST` \| `PROVISIONED` | No | From profile | Capacity mode. Empty = inherit from profile. |
-| `readCapacityUnits` | integer | No | 0 | Required if `throughputMode` is `PROVISIONED`. Min 100. |
-| `writeCapacityUnits` | integer | No | 0 | Required if `throughputMode` is `PROVISIONED`. Min 100. |
+| `readCapacityUnits` | integer | No | 0 | Required if `throughputMode` is `PROVISIONED`. Must be > 0. |
+| `writeCapacityUnits` | integer | No | 0 | Required if `throughputMode` is `PROVISIONED`. Must be > 0. |
 | `encryptionType` | `AWS_OWNED_KMS_KEY` \| `CUSTOMER_MANAGED_KMS_KEY` | No | From profile | Encryption type. Empty = inherit from profile. |
 | `kmsKeyArn` | string | No | (empty) | Direct ARN of customer-managed KMS key. Mutually exclusive with `kmsKeyRef`. |
 | `kmsKeyRef` | string | No | (empty) | Name of `KMSKey` CR in same namespace. Mutually exclusive with `kmsKeyArn`. |
