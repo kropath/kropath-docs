@@ -11,6 +11,18 @@ Each `PipesConfig` CR has two sections:
 
 This two-tier structure ensures compliance while preserving operational flexibility.
 
+## Scalar Field Mutual-Exclusion Constraint
+
+For **scalar fields only** (`desiredState` and `namingTemplate`), you must choose **one or the other** — never both:
+
+- **Set in `mandatory`:** The field has a non-empty value in mandatory, and an **empty** string (`""`) in defaults
+- **Set in `defaults`:** The field has an **empty** value in mandatory, and a non-empty value in defaults
+- **Unset:** The field has empty values in **both** mandatory and defaults (no enforcement, no default)
+
+Map fields (`tags`, `syncedLabels`, `syncedAnnotations`) are **additive across tiers** — you can set them in both mandatory and defaults, and they will be merged with mandatory taking precedence on key conflict. The mutual-exclusion constraint applies only to scalar fields.
+
+The admission webhook rejects any `PipesConfig` that violates this constraint by setting non-empty values in both sections for the same scalar field.
+
 ## General Policy (Default)
 
 The `general-policy` profile is the built-in fallback and ships with kropath. It provides conservative defaults suitable for most workloads:
@@ -60,13 +72,10 @@ spec:
     syncedLabels:
       environment: production
   defaults:
-    desiredState: "running"
-    namingTemplate: "prod-{namespace}-{name}"
-    tags:
-      environment: production
-      managed-by: kropath
-    syncedLabels:
-      environment: production
+    desiredState: ""                          # Governed by mandatory
+    namingTemplate: ""                        # Governed by mandatory
+    tags: {}                                  # Merged with mandatory tags
+    syncedLabels: {}                          # Merged with mandatory labels
 ```
 
 ## Staging Profile with Controlled State
@@ -84,18 +93,16 @@ metadata:
 spec:
   mandatory:
     desiredState: ""                          # Allow teams to control state
-    namingTemplate: "staging-{namespace}-{name}"
+    namingTemplate: ""                        # Allow team flexibility
     tags:
       environment: staging
     syncedLabels:
       environment: staging
   defaults:
     desiredState: "running"                   # Default to running
-    namingTemplate: "staging-{namespace}-{name}"
-    tags:
-      environment: staging
-    syncedLabels:
-      environment: staging
+    namingTemplate: "staging-{namespace}-{name}" # Default naming pattern
+    tags: {}                                  # Merged with mandatory tags
+    syncedLabels: {}                          # Merged with mandatory labels
 ```
 
 ## Development Profile
@@ -143,20 +150,17 @@ metadata:
 spec:
   mandatory:
     desiredState: "running"                    # Always running
-    namingTemplate: "realtime-{namespace}-{name}"
+    namingTemplate: "realtime-{namespace}-{name}" # Enforce naming
     tags:
       workload-type: real-time
       sla: critical
     syncedLabels:
       workload-type: real-time
   defaults:
-    desiredState: "running"
-    namingTemplate: "realtime-{namespace}-{name}"
-    tags:
-      workload-type: real-time
-      sla: critical
-    syncedLabels:
-      workload-type: real-time
+    desiredState: ""                           # Governed by mandatory
+    namingTemplate: ""                         # Governed by mandatory
+    tags: {}                                   # Merged with mandatory tags
+    syncedLabels: {}                           # Merged with mandatory labels
 ```
 
 ## Governance Cascade
