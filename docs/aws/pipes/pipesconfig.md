@@ -11,6 +11,18 @@ Each `PipesConfig` CR has two sections:
 
 This two-tier structure ensures compliance while preserving operational flexibility.
 
+### Mutual-Exclusion Rule
+
+For each field, you must choose **either** `mandatory` **or** `defaults`, but **not both**:
+
+- If you set `desiredState: "running"` in `mandatory`, leave it empty (`""`) in `defaults`
+- If you set `namingTemplate: "prod-{name}"` in `mandatory`, leave it empty (`""`) in `defaults`
+- If you want a field to default but not be enforced, set it in `defaults` only and leave `mandatory` empty
+
+**Example:** For the production profile, if you enforce `desiredState: "running"` via mandatory, set `defaults.desiredState: ""` (empty). The mandatory value is already guaranteed, so the default is unnecessary.
+
+The admission webhook rejects any `PipesConfig` that violates this constraint.
+
 ## General Policy (Default)
 
 The `general-policy` profile is the built-in fallback and ships with kropath. It provides conservative defaults suitable for most workloads:
@@ -60,13 +72,10 @@ spec:
     syncedLabels:
       environment: production
   defaults:
-    desiredState: "running"
-    namingTemplate: "prod-{namespace}-{name}"
-    tags:
-      environment: production
-      managed-by: kropath
-    syncedLabels:
-      environment: production
+    desiredState: ""                          # Already enforced in mandatory
+    namingTemplate: ""                        # Already enforced in mandatory
+    tags: {}
+    syncedLabels: {}
 ```
 
 ## Staging Profile with Controlled State
@@ -84,14 +93,14 @@ metadata:
 spec:
   mandatory:
     desiredState: ""                          # Allow teams to control state
-    namingTemplate: "staging-{namespace}-{name}"
+    namingTemplate: ""                        # Allow teams to choose
     tags:
       environment: staging
     syncedLabels:
       environment: staging
   defaults:
     desiredState: "running"                   # Default to running
-    namingTemplate: "staging-{namespace}-{name}"
+    namingTemplate: "staging-{namespace}-{name}" # Default naming pattern
     tags:
       environment: staging
     syncedLabels:
@@ -143,20 +152,17 @@ metadata:
 spec:
   mandatory:
     desiredState: "running"                    # Always running
-    namingTemplate: "realtime-{namespace}-{name}"
+    namingTemplate: "realtime-{namespace}-{name}" # Enforce naming convention
     tags:
       workload-type: real-time
       sla: critical
     syncedLabels:
       workload-type: real-time
   defaults:
-    desiredState: "running"
-    namingTemplate: "realtime-{namespace}-{name}"
-    tags:
-      workload-type: real-time
-      sla: critical
-    syncedLabels:
-      workload-type: real-time
+    desiredState: ""                           # Already enforced in mandatory
+    namingTemplate: ""                         # Already enforced in mandatory
+    tags: {}
+    syncedLabels: {}
 ```
 
 ## Governance Cascade
