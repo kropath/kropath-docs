@@ -52,14 +52,14 @@ The kropath-controller pre-merges all governance sources (from `KropathConfig` a
 
 ## Resource Overview
 
-The SageMaker family includes 21 resources organized into two priority tiers:
+The SageMaker family includes 21 resources (20 RGDs + 1 governance CRD) organized into two priority tiers:
 
 ### Priority 0 (P0) — Core Resources
 
 **Studio Environment:**
 *   **SageMakerDomain:** A SageMaker Studio domain — the top-level organizational container for user profiles, shared spaces, and apps. Controls authentication mode (IAM or SSO), VPC networking, default user settings, and EFS/EBS encryption.
 *   **SageMakerUserProfile:** A user profile within a SageMaker Studio domain — represents an individual user's identity, permissions, and workspace configuration.
-*   **SageMakerSpace:** A collaborative shared space within a SageMaker Studio domain — provides shared compute, storage, and configuration for multiple users (Priority 1).
+*   **SageMakerSpace:** A collaborative shared space within a SageMaker Studio domain — provides shared compute, storage, and configuration for multiple users.
 
 **Compute & Development:**
 *   **SageMakerNotebookInstance:** An EC2-backed managed Jupyter environment for interactive ML development. Optionally includes lifecycle configuration scripts for automated setup.
@@ -361,22 +361,29 @@ While kropath aims for a consistent experience across cloud providers, SageMaker
 
 For detailed field reference for each individual resource, see:
 
-*   [SageMakerDomain](../../resources/sagemaker/sagemaker-domain.md)
-*   [SageMakerUserProfile](../../resources/sagemaker/sagemaker-user-profile.md)
-*   [SageMakerNotebookInstance](../../resources/sagemaker/sagemaker-notebook-instance.md)
-*   [SageMakerModel](../../resources/sagemaker/sagemaker-model.md)
-*   [SageMakerEndpointConfig](../../resources/sagemaker/sagemaker-endpoint-config.md)
-*   [SageMakerEndpoint](../../resources/sagemaker/sagemaker-endpoint.md)
-*   [SageMakerTrainingJob](../../resources/sagemaker/sagemaker-training-job.md)
-*   [SageMakerProcessingJob](../../resources/sagemaker/sagemaker-processing-job.md)
-*   [SageMakerTransformJob](../../resources/sagemaker/sagemaker-transform-job.md)
-*   [SageMakerHyperParameterTuningJob](../../resources/sagemaker/sagemaker-hyperparameter-tuning-job.md)
-*   [SageMakerPipeline](../../resources/sagemaker/sagemaker-pipeline.md)
-*   [SageMakerModelPackageGroup](../../resources/sagemaker/sagemaker-model-package-group.md)
-*   [SageMakerModelPackage](../../resources/sagemaker/sagemaker-model-package.md)
-*   [SageMakerFeatureGroup](../../resources/sagemaker/sagemaker-feature-group.md)
-*   [SageMakerMonitoringSchedule](../../resources/sagemaker/sagemaker-monitoring-schedule.md)
-*   [SageMakerDataQualityJobDefinition](../../resources/sagemaker/sagemaker-data-quality-job-definition.md)
-*   [SageMakerModelQualityJobDefinition](../../resources/sagemaker/sagemaker-model-quality-job-definition.md)
-*   [SageMakerModelBiasJobDefinition](../../resources/sagemaker/sagemaker-model-bias-job-definition.md)
-*   [SageMakerModelExplainabilityJobDefinition](../../resources/sagemaker/sagemaker-model-explainability-job-definition.md)
+**Governance:**
+*   [SageMakerConfig](sagemakerconfig.md) — Governance profiles and control policies
+
+**P0 Resources:**
+*   [SageMakerDomain](sagemakerdomain.md)
+*   [SageMakerUserProfile](sagemakeruserprofile.md)
+*   [SageMakerSpace](sagemakerspace.md)
+*   [SageMakerNotebookInstance](sagemakernotebookinstance.md)
+*   [SageMakerModel](sagemakermodel.md)
+*   [SageMakerEndpointConfig](sagemakerendpointconfig.md)
+*   [SageMakerEndpoint](sagemakerendpoint.md)
+*   [SageMakerTrainingJob](sagemakertrainingjob.md)
+
+**P1 Resources:**
+*   [SageMakerProcessingJob](sagemakerprocessingjob.md)
+*   [SageMakerTransformJob](sagemakertransformjob.md)
+*   [SageMakerHyperParameterTuningJob](sagemakerhyperparametertuningjob.md)
+*   [SageMakerPipeline](sagemakerpipeline.md)
+*   [SageMakerModelPackageGroup](sagemakermodelpackagegroup.md)
+*   [SageMakerModelPackage](sagemakermodelpackage.md)
+*   [SageMakerFeatureGroup](sagemakerfeaturegroup.md)
+*   [SageMakerMonitoringSchedule](sagemakermonitoringschedule.md)
+*   [SageMakerDataQualityJobDefinition](sagemakerdataqualityjobdefinition.md)
+*   [SageMakerModelQualityJobDefinition](sagemakermodelqualityjobdefinition.md)
+*   [SageMakerModelBiasJobDefinition](sagemakermodelbiasjobdefinition.md)
+*   [SageMakerModelExplainabilityJobDefinition](sagemakermodelexplainabilityjobdefinition.md)
