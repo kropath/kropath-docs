@@ -223,7 +223,7 @@ When you apply a `SESConfigurationSet`, the effective configuration is resolved 
 9. Global KropathConfig defaults
 10. RGD built-in default (e.g., `retain` for deletion policy)
 
-Higher levels override lower levels. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `SESConfig` CR, and the RGD reads a single `effectiveConfig` value.
+Priority runs top to bottom — level 1 (Global KropathConfig mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `SESConfig` CR, and the RGD reads a single `effectiveConfig` value.
 
 ### Example Cascade Resolution
 

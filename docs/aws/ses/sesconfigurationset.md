@@ -105,7 +105,7 @@ Be careful with `delete` — existing emails rules (event destinations, delivery
 
 ### `spec.tags` (optional)
 
-Custom tags applied to the AWS configuration set resource.
+Custom tags for Kubernetes governance and cost tracking. Tags are used for naming tokens and Kubernetes labels only; they are **not** forwarded to AWS cloud tags.
 
 Merged with governance profile tags. Mandatory tags from the profile cannot be overridden.
 
@@ -171,7 +171,7 @@ By default, configuration set names follow the pattern `{namespace}-{name}` deri
 AWS requires configuration set names to:
 - Use characters `[a-zA-Z0-9_-]`
 - Be 1–64 characters long
-- Not contain spaces or uppercase letters (no case restriction, but lowercase is recommended)
+- Not contain whitespace (uppercase is allowed but lowercase is recommended)
 
 If you need a custom naming pattern (for example, environment-specific prefixes or tag-based tokens), update the `SESConfig` profile's `spec.defaults.namingTemplate` or `spec.mandatory.namingTemplate`.
 
@@ -179,7 +179,7 @@ If you need a custom naming pattern (for example, environment-specific prefixes 
 
 Once the configuration set is created, your application can reference it in SES API calls:
 
-### Via X-SES-CONFIGURATION-SET Header
+### Via ConfigurationSetName API Parameter
 
 In transactional email libraries (for example, when sending verification emails):
 
@@ -198,9 +198,7 @@ client.send_email(
 )
 ```
 
-### Via SendRawEmail Parameter
-
-For more complex email formats:
+For more complex email formats using raw message delivery:
 
 ```python
 import email.mime.text
@@ -209,12 +207,13 @@ msg = email.mime.text.MIMEText('Hello!')
 msg['Subject'] = 'Welcome'
 msg['From'] = 'noreply@example.com'
 msg['To'] = 'user@example.com'
+# Add SMTP-level configuration set header
+msg['X-SES-CONFIGURATION-SET'] = 'email-prod-transactional-emails'
 
 client.send_raw_email(
     RawMessage={'Data': msg.as_string()},
     Source='noreply@example.com',
-    Destinations=['user@example.com'],
-    ConfigurationSetName='email-prod-transactional-emails'
+    Destinations=['user@example.com']
 )
 ```
 
