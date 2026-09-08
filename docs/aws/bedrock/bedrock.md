@@ -306,6 +306,8 @@ A managed code-interpreter sandbox available as an agent tool. Executes code in 
 
 **Naming:** Default template `{namespace}-{name}`.
 
+### Phase 4 (P3) Resources
+
 #### BedrockPolicyEngine
 
 A Cedar policy engine that evaluates authorization decisions for Gateways. Supports LOG_ONLY and ACTIVE enforcement modes.
