@@ -160,7 +160,7 @@ spec:
       compliance: required
   defaults:
     minWorkers: 5
-    minWebservers: 2
+    maxWebservers: 3
     minWebservers: 2
     schedulers: 2
     weeklyMaintenanceWindowStart: "SUN:03:00"  # Off-hours maintenance
@@ -391,7 +391,7 @@ You create and manage your own VPC interface endpoints. The environment waits fo
 
 When `endpointManagement: CUSTOMER` is set, the RGD enforces a **readiness gate**:
 
-1. A ConfigMap named `mwaa-vpc-endpoint-gate-<environment-name>` must exist in the same namespace
+1. A ConfigMap named `mwaa-vpc-endpoint-gate-<environment-name>` must exist in the same namespace (where `<environment-name>` = the CR's `metadata.name`, not the effective MWAA name from the naming template)
 2. The ConfigMap must contain `data.ready: "true"` to unblock environment creation
 3. Once endpoints are ready, update the ConfigMap and environment creation proceeds
 
@@ -415,15 +415,23 @@ Use `CUSTOMER` mode only if you require custom VPC endpoint configuration or iso
 
 Each governance field can be set to a non-default value in either the `mandatory` tier or the `defaults` tier, but not both. The CRD validates this at admission time.
 
-**Valid:**
+**Valid (mandatory only):**
 ```yaml
 mandatory:
-  environmentClass: mw1.large  # Enforcement
+  environmentClass: mw1.large  # Enforcement in mandatory tier
 defaults:
-  environmentClass: mw1.small  # Or left empty (default)
+  environmentClass: ""         # Leave empty or omit when set in mandatory
 ```
 
-**Invalid:**
+**Valid (defaults only):**
+```yaml
+mandatory:
+  environmentClass: ""         # Leave empty when set in defaults
+defaults:
+  environmentClass: mw1.small  # Recommendation developers can override
+```
+
+**Invalid (both tiers set):**
 ```yaml
 mandatory:
   environmentClass: mw1.large
