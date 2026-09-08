@@ -57,7 +57,6 @@ spec:
       compliance: required
   
   defaults:
-    deletionPolicy: "retain"
     tags:
       cost-center: platform-security
 ```

@@ -80,7 +80,7 @@ Use `spec.nameOverride` to bypass the template and set a custom name.
 
 ## Complete Example
 
-See [`networkfirewall-example.yaml`](networkfirewall-example.yaml) for a production-ready deployment with:
+See [`example-complete-deployment.md`](example-complete-deployment.md) for a production-ready deployment with:
 - Governance profile (general-policy)
 - Stateless rule group (allow-https)
 - Stateful rule group (block-ssh)
@@ -97,6 +97,6 @@ See [`networkfirewall-example.yaml`](networkfirewall-example.yaml) for a product
 
 ## Further Reading
 
-- [AWS Network Firewall User Guide](https://docs.aws.amazon.com/waf/latest/developerguide/fis.html)
+- [AWS Network Firewall User Guide](https://docs.aws.amazon.com/network-firewall/latest/userguide/)
 - [Network Firewall Pricing](https://aws.amazon.com/network-firewall/pricing/)
 - [ADR-010: Governance Cascade](https://github.com/kropath/kropath-core/blob/main/docs/adrs/010-governance-cascade.md)

@@ -28,6 +28,7 @@ A `NetworkFirewallRuleGroup`:
 | `type` | string | yes | Rule group type: `STATELESS` or `STATEFUL` |
 | `capacity` | integer | yes | Maximum capacity in Capacity Units (immutable after creation) |
 | `description` | string | no | Human-readable description |
+| `analyzeRuleGroup` | boolean | no | (Stateless only) Run asymmetric-routing analysis on the rule group; default `false` |
 
 ### Rule Definitions
 
@@ -203,8 +204,6 @@ After creation, the rule group exposes status fields:
 | `status.resourceName` | string | The resolved rule group name (from naming template or override) |
 | `status.namingStatus` | string | `"valid"` if all naming tokens resolved, `"invalid-unresolved-tokens"` otherwise |
 | `status.predictedArn` | string | The predicted AWS ARN (available before creation) |
-| `status.ruleGroupId` | string | AWS-generated rule group ID (available after creation) |
-| `status.ruleGroupArn` | string | AWS-assigned rule group ARN (available after creation) |
 
 ## Governance Fields
 
@@ -216,6 +215,46 @@ The following fields are governance-driven via `NetworkFirewallConfig`:
 | `tags`, `syncedLabels`, `syncedAnnotations` | Merges governance + spec values |
 
 If `encryptionType` is set in the mandatory tier of `NetworkFirewallConfig`, all rule groups use that encryption type regardless of their `spec.encryptionType`.
+
+## Advanced: Reference Sets (External IP Lists)
+
+For stateless rules that reference external IP lists, use `referenceSets.ipSetReferences`:
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
+kind: NetworkFirewallRuleGroup
+metadata:
+  name: allow-trusted-ips
+  namespace: security-prod
+spec:
+  type: STATELESS
+  capacity: 100
+  
+  ruleGroup:
+    referenceSets:
+      ipSetReferences:
+        TRUSTED_PARTNERS:
+          referenceArn: "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0"
+    ruleVariables:
+      ipSets:
+        INTERNAL_NETS:
+          definition:
+            - "10.0.0.0/8"
+    rulesSource:
+      statelessRulesAndCustomActions:
+        statelessRules:
+          - priority: 100
+            ruleDefinition:
+              actions:
+                - "aws:pass"
+              matchAttributes:
+                protocols:
+                  - 6
+                sources:
+                  - addressDefinition: "$TRUSTED_PARTNERS"
+```
+
+Reference sets allow dynamic IP list lookups without hardcoding addresses in the rule group.
 
 ## Advanced: Suricata Flat-Format Rules
 

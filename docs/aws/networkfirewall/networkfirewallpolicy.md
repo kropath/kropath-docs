@@ -170,9 +170,9 @@ The following fields are governance-driven via `NetworkFirewallConfig`:
 
 | Field | Governance Behavior |
 |---|---|
-| `statefulRuleOrder` | Falls through: mandatory → spec → defaults |
+| `spec.statefulEngineOptions.ruleOrder` | Falls through: mandatory → spec → defaults |
 | `statefulDefaultActions` | Falls through: mandatory → spec → defaults |
-| `streamExceptionPolicy` | Falls through: mandatory → spec → defaults |
+| `spec.statefulEngineOptions.streamExceptionPolicy` | Falls through: mandatory → spec → defaults |
 | `encryptionType` | Falls through: mandatory → spec → defaults |
 | `tags`, `syncedLabels`, `syncedAnnotations` | Merges governance + spec values |
 
