@@ -217,4 +217,4 @@ spec:
 ## Related Resources
 
 - [MQBroker](mqbroker.md) — Create and manage individual message brokers
-- [KropathConfig](../../resources/controller-label-operator.md#krop-system-kropathconfig-org-wide-defaults) — Organization-wide configuration defaults for all resource types
+- [KropathConfig](../../resources/controller-label-operator.md) — Organization-wide configuration defaults for all resource types

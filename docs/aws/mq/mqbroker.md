@@ -316,7 +316,7 @@ Broker configurations follow a governance cascade that merges organization-wide 
 - **Label sync:** `syncedLabels` appear as both Kubernetes labels (prefixed `aws.kropath.run/`) and AWS cloud tags, enabling consistent metadata across platforms.
 - **Password security:** Broker user passwords are stored in Kubernetes Secrets and referenced via `passwordSecretRef`, never embedded as plaintext in the CR.
 - **User limits:** RabbitMQ requires exactly one admin user at creation. ActiveMQ supports multiple admin users.
-- **LDAP limitation:** ActiveMQ LDAP authentication is available via `authenticationStrategy: LDAP`, but LDAP server metadata configuration is not exposed in this version. Configure LDAP details directly on the underlying AWS broker if needed.
+- **LDAP limitation:** ActiveMQ LDAP authentication is available via `authenticationStrategy: LDAP`. LDAP server metadata (server URL, directory structure, service account credentials) must be configured directly on the underlying AWS broker — it is not part of the MQBroker spec.
 - **Immutable fields after creation:** `engineType`, `deploymentMode`, and `publiclyAccessible` cannot be changed after the broker is created. Amazon MQ rejects updates to these fields.
 
 ## Related Resources
