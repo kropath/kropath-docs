@@ -40,7 +40,7 @@ The `MQBroker` resource creates and manages Amazon MQ brokers (ActiveMQ or Rabbi
 **Subnet constraints:**
 - `SINGLE_INSTANCE`: exactly 1 subnet
 - `ACTIVE_STANDBY_MULTI_AZ` (ActiveMQ): exactly 2 subnets in different AZs
-- `CLUSTER_MULTI_AZ` (RabbitMQ): at least 1 subnet (publicly accessible) or none required (if using security groups)
+- `CLUSTER_MULTI_AZ` (RabbitMQ): no subnets required when publicly accessible; at least 1 subnet required when NOT publicly accessible
 
 ### Encryption and Keys
 
@@ -154,7 +154,7 @@ spec:
   engineType: ACTIVEMQ
   engineVersion: "5.17.6"
   deploymentMode: SINGLE_INSTANCE
-  hostInstanceType: mq.t3.micro
+  hostInstanceType: mq.t2.micro
   publiclyAccessible: false
   authenticationStrategy: SIMPLE
   logsGeneral: true
@@ -316,7 +316,7 @@ Broker configurations follow a governance cascade that merges organization-wide 
 - **Label sync:** `syncedLabels` appear as both Kubernetes labels (prefixed `aws.kropath.run/`) and AWS cloud tags, enabling consistent metadata across platforms.
 - **Password security:** Broker user passwords are stored in Kubernetes Secrets and referenced via `passwordSecretRef`, never embedded as plaintext in the CR.
 - **User limits:** RabbitMQ requires exactly one admin user at creation. ActiveMQ supports multiple admin users.
-- **LDAP limitation (Phase 1):** ActiveMQ LDAP authentication is available via `authenticationStrategy: LDAP`, but LDAP server metadata configuration is not exposed in this version. Configure LDAP details directly on the underlying AWS broker if needed.
+- **LDAP limitation:** ActiveMQ LDAP authentication is available via `authenticationStrategy: LDAP`, but LDAP server metadata configuration is not exposed in this version. Configure LDAP details directly on the underlying AWS broker if needed.
 - **Immutable fields after creation:** `engineType`, `deploymentMode`, and `publiclyAccessible` cannot be changed after the broker is created. Amazon MQ rejects updates to these fields.
 
 ## Related Resources

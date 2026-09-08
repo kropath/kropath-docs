@@ -53,17 +53,6 @@ Defaults apply only when an instance specification is empty — providing baseli
 | `spec.defaults.syncedLabels` | map | `{}` | Baseline synced labels |
 | `spec.defaults.syncedAnnotations` | map | `{}` | Baseline synced annotations |
 
-## Status Outputs
-
-| Field | Type | Purpose |
-|---|---|---|
-| `status.effectiveConfig.mandatory` | object | Pre-merged mandatory tier (from KropathConfig + MQConfig) |
-| `status.effectiveConfig.defaults` | object | Pre-merged defaults tier |
-| `status.effectiveConfig.aws.region` | string | AWS region for this cluster |
-| `status.effectiveConfig.aws.accountId` | string | AWS account ID |
-
-The controller writes `status.effectiveConfig` by merging `KropathConfig` (organization-wide) with this `MQConfig` (profile-specific). Brokers read `status.effectiveConfig` to resolve governance.
-
 ## Governance Cascade
 
 Broker resources use a ten-level cascade to resolve fields:
@@ -81,6 +70,8 @@ A broker in namespace `messaging-prod` with no `spec.engineType` set:
 4. Check `MQConfig/production.spec.defaults.engineType` — if set, use it (profile default)
 5. Check `KropathConfig.defaults.mq.engineType` — if set, use it (organization default)
 6. Use RGD built-in: either a hard error (required field) or a provider default
+
+**Note:** The fields `hostInstanceType` and `namingTemplate` are governed exclusively by `MQConfig` — they do not appear in `KropathConfig` and cannot be overridden in individual broker instances. Use `MQConfig` profiles to define instance types and naming conventions across your brokers.
 
 ## Naming Convention
 
@@ -114,7 +105,7 @@ spec:
   defaults:
     engineType: ACTIVEMQ
     deploymentMode: SINGLE_INSTANCE
-    hostInstanceType: mq.t3.micro
+    hostInstanceType: mq.t2.micro
     authenticationStrategy: SIMPLE
     publiclyAccessible: false
     autoMinorVersionUpgrade: true
@@ -212,6 +203,8 @@ spec:
 - High-performance storage (io1) for transaction volume
 - Multi-AZ for availability
 - Audit logging and encryption required
+
+**Note:** LDAP server metadata (server URL, directory structure, service account credentials) must be configured directly on the AWS broker after creation, as it is not exposed in the Kubernetes resource specification.
 
 ## Key Behaviors
 

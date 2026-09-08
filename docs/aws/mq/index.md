@@ -28,7 +28,7 @@ spec:
   defaults:
     engineType: ACTIVEMQ
     deploymentMode: SINGLE_INSTANCE
-    hostInstanceType: mq.t3.micro
+    hostInstanceType: mq.t2.micro
     namingTemplate: "{namespace}-{name}"
 
 ---
