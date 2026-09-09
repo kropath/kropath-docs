@@ -84,23 +84,13 @@ Enforces a naming convention for all QuickSight resources. Templates use token s
 
 - `{name}` — The resource's `metadata.name`
 - `{namespace}` — The resource's Kubernetes namespace
-- `{account_id}` — AWS account ID
-- `{region}` — AWS region
-- `{configRef}` — The profile name (e.g., `general-policy`)
-- `{tag.<key>}` — Merge tag values into the name
 
-**Examples:**
+**Example:**
 ```yaml
 spec:
   defaults:
     # Simple namespace-based naming
     namingTemplate: "{namespace}-{name}"
-
-    # Environment-aware naming
-    namingTemplate: "{tag.env}-{namespace}-{name}"
-
-    # Account and region aware
-    namingTemplate: "{account_id}-{region}-{name}"
 ```
 
 AWS QuickSight requires resource names to:
@@ -108,7 +98,7 @@ AWS QuickSight requires resource names to:
 - Be 1–128 characters long
 - Not contain whitespace
 
-If a template resolves to an invalid name (unresolved tokens, too long, invalid characters), the resource will be rejected and marked with `status.namingStatus: "invalid-unresolved-tokens"`.
+If a template resolves to an invalid name (unresolved tokens, too long, invalid characters), the resource will be rejected by the admission webhook.
 
 **Note:** Like `importMode`, you cannot set `namingTemplate` in both `mandatory` and `defaults` tiers simultaneously.
 
@@ -393,10 +383,10 @@ spec:
 
 The admission webhook enforces mutual-exclusion rules on scalar governance fields:
 
-- **importMode conflict:** Cannot set `importMode` in both `mandatory` and `defaults` tiers.
-  - Error: "importMode cannot be set in both mandatory and defaults tiers"
-- **namingTemplate conflict:** Cannot set `namingTemplate` in both `mandatory` and `defaults` tiers.
-  - Error: "namingTemplate cannot be set in both mandatory and defaults tiers"
+- **importMode conflict:** Cannot set `importMode` in both `mandatory` and `defaults`.
+  - Error: "importMode cannot be set in both mandatory and defaults."
+- **namingTemplate conflict:** Cannot set `namingTemplate` in both `mandatory` and `defaults`.
+  - Error: "namingTemplate cannot be set in both mandatory and defaults."
 
 Map fields (tags, syncedLabels, syncedAnnotations) have no mutual-exclusion rule — both tiers can be set and will be merged.
 
@@ -420,9 +410,8 @@ Map fields (tags, syncedLabels, syncedAnnotations) have no mutual-exclusion rule
 - Check global `KropathConfig.spec.mandatory.tags` — those override all profile mandatory tags
 
 **"My naming template isn't resolving correctly"**
-- Verify all tokens in the template are available (`{namespace}`, `{name}`, `{account_id}`, `{region}`, `{tag.<key>}`)
+- Verify all tokens in the template are available (`{namespace}`, `{name}`)
 - Check that the resolved name is valid (matches `[a-zA-Z0-9_-]` and is 1–128 characters)
-- Inspect `status.namingStatus` on your QuickSight resource for error details
 
 **"The profile fallback isn't working"**
 - Ensure `general-policy` profile exists and has the `aws.kropath.run/resource-name: general-policy` label
