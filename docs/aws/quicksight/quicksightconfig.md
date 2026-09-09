@@ -110,9 +110,9 @@ Policies control which tags, labels, and Kubernetes annotations are applied to a
 
 **Default entries** (`spec.defaults.tags`, `spec.defaults.syncedLabels`, `spec.defaults.syncedAnnotations`) are applied unless the application team specifies their own values.
 
-**Tags** are used for naming token resolution (`{tag.<key>}`) and Kubernetes label merging.
+**Tags** are forwarded to AWS cloud resources (QuickSight data sets, dashboards, and analyses).
 
-**Synced labels** appear in Kubernetes resource labels (prefixed with `aws.kropath.run/`).
+**Synced labels** appear in both Kubernetes resource labels (prefixed with `aws.kropath.run/`) AND as cloud tags (ADR-015 §6.1).
 
 **Annotations** are mirrored to Kubernetes resource metadata (prefixed with `aws.kropath.run/`).
 
@@ -214,7 +214,7 @@ spec:
 
 ## Fallthrough Behavior
 
-If an application team references a profile that doesn't exist, the system falls back to `general-policy` automatically. Always ensure `general-policy` exists in the cluster:
+If an application team references a profile that doesn't exist, the system falls back to `general-policy` automatically (ADR-015 §3.4). Always ensure `general-policy` exists in the cluster:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -237,18 +237,20 @@ spec:
 
 ## Governance Cascade
 
-When you apply a `QuickSightDataSet`, `QuickSightDashboard`, or `QuickSightAnalysis`, the effective configuration is resolved from multiple governance levels (ADR-010):
+When you apply a `QuickSightDataSet`, `QuickSightDashboard`, or `QuickSightAnalysis`, the effective configuration is resolved through Kropath's ten-tier governance cascade (ADR-010, ADR-015 §5.3):
 
-1. Global KropathConfig mandatory (highest priority)
-2. Namespace KropathConfig mandatory
-3. QuickSightConfig profile mandatory
-4. Instance override (`spec.importMode`, `spec.tags`, `spec.syncedLabels`, `spec.syncedAnnotations`)
-5. QuickSightConfig profile defaults
-6. Namespace KropathConfig defaults
-7. Global KropathConfig defaults
-8. RGD built-in default (lowest priority)
+1. Global `KropathConfig` mandatory (highest priority)
+2. Namespace `KropathConfig` mandatory
+3. Global `QuickSightConfig` profile mandatory
+4. Namespace `QuickSightConfig` profile mandatory
+5. Instance override (`spec.importMode`, `spec.tags`, `spec.syncedLabels`, `spec.syncedAnnotations`) — active only when mandatory tiers 1–4 are unset
+6. Namespace `QuickSightConfig` profile defaults
+7. Global `QuickSightConfig` profile defaults
+8. Namespace `KropathConfig` defaults
+9. Global `KropathConfig` defaults
+10. RGD built-in default (lowest priority — `SPICE` for `importMode`)
 
-Priority runs top to bottom — level 1 (Global KropathConfig mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `QuickSightConfig` CR, and the RGDs read a single `effectiveConfig` value.
+Priority runs top to bottom — level 1 (global `KropathConfig` mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `QuickSightConfig` CR, and the RGDs read a single `effectiveConfig` value.
 
 **Note on `importMode` specifically:** Global `KropathConfig.spec.mandatory.quicksight.importMode` takes absolute priority and cannot be overridden by any profile or instance.
 
@@ -289,7 +291,7 @@ spec:
   # ... other family sections
 ```
 
-This mandatory tier (level 1) overrides all `QuickSightConfig` mandatory tiers (level 3).
+This mandatory tier (level 1) overrides all `QuickSightConfig` mandatory tiers (levels 3–4).
 
 ## Deployment
 
@@ -419,8 +421,8 @@ Map fields (tags, syncedLabels, syncedAnnotations) have no mutual-exclusion rule
 
 ## See Also
 
-- [QuickSightDataSet User Guide](./quicksightdataset.md)
-- [QuickSightDashboard User Guide](./quicksightdashboard.md)
-- [QuickSightAnalysis User Guide](./quicksightanalysis.md)
+- [QuickSight Resource Family Overview](./README.md)
 - [AWS QuickSight User Guide](https://docs.aws.amazon.com/quicksight/latest/user/what-is.html)
-- [Engineering Standards](../engineering-standards.md) — shared governance rules across all families
+- [Engineering Standards](../../engineering-standards.md) — shared governance rules across all families
+
+User guides for `QuickSightDataSet`, `QuickSightDashboard`, and `QuickSightAnalysis` are not published yet; they will be linked here when those resource docs land.
