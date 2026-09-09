@@ -145,9 +145,9 @@ Policies control which tags, labels, and Kubernetes annotations are applied to a
 
 **Default entries** (`spec.defaults.tags`, `spec.defaults.syncedLabels`, `spec.defaults.syncedAnnotations`) are applied unless the application team specifies their own values.
 
-**Tags** are applied to both Kubernetes labels (via `syncedLabels` merge) and used for naming token resolution (`{tag.<key>}`). Tags are forwarded to AWS cloud resources (shares and permissions).
+**Tags** are forwarded to AWS cloud resources (shares and permissions) and used for naming token resolution (`{tag.<key>}`).
 
-**Synced labels** appear in Kubernetes resource labels (prefixed with `aws.kropath.run/`).
+**Synced labels** appear in both Kubernetes resource labels (prefixed with `aws.kropath.run/`) AND as cloud tags (ADR-015 §6.1).
 
 **Annotations** are mirrored to Kubernetes resource metadata (prefixed with `aws.kropath.run/`).
 
