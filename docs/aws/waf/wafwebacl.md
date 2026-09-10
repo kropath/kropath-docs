@@ -57,9 +57,9 @@ All statement types from AWS WAFv2 are available. Non-recursive types are availa
 | `sqliMatchStatement` | ✓ | SQL injection detection |
 | `xssMatchStatement` | ✓ | Cross-site scripting detection |
 | `managedRuleGroupStatement` | ✓ | AWS Managed Rules; includes `vendorName`, `name`, excluded rules, overrides, and `scopeDownStatement` (opaque) |
-| `andStatement` | string | Opaque JSON/YAML — nested statements with AND logic |
-| `notStatement` | string | Opaque JSON/YAML — negation of a nested statement |
-| `orStatement` | string | Opaque JSON/YAML — nested statements with OR logic |
+| `andStatement` | ✗ (opaque string, Phase 1) | Nested statements with AND logic |
+| `notStatement` | ✗ (opaque string, Phase 1) | Negation of a nested statement |
+| `orStatement` | ✗ (opaque string, Phase 1) | Nested statements with OR logic |
 | `ruleGroupReferenceStatement` | ✓ | Reference a rule group by ARN |
 
 ### Metadata and Tags

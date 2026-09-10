@@ -325,8 +325,24 @@ spec:
           fieldToMatch:
             singleHeader:
               name: authorization
-          positionalConstraint: EXACTLY
-          searchString: ""
+          positionalConstraint: STARTS_WITH
+          searchString: "Bearer "
+      action:
+        allow: {}
+      visibilityConfig:
+        cloudWatchMetricsEnabled: true
+        sampledRequestsEnabled: true
+    - name: reject-no-auth
+      priority: 2
+      statement:
+        notStatement:
+          statement:
+            byteMatchStatement:
+              fieldToMatch:
+                singleHeader:
+                  name: authorization
+              positionalConstraint: STARTS_WITH
+              searchString: "Bearer "
       action:
         block:
           customResponse:
@@ -336,7 +352,7 @@ spec:
         cloudWatchMetricsEnabled: true
         sampledRequestsEnabled: true
     - name: content-type-validation
-      priority: 2
+      priority: 3
       statement:
         byteMatchStatement:
           fieldToMatch:

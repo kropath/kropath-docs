@@ -226,4 +226,4 @@ spec:
 - [WAFWebACL](wafwebacl.md) — Web ACL resource reference and examples
 - [WAFRuleGroup](wafrulegroup.md) — Rule group reference
 - [WAFIPSet](wafipset.md) — IP set reference
-- [kropath Engineering Standards](../engineering-standards.md) — Shared platform conventions
+- [kropath Engineering Standards](../../engineering-standards.md) — Shared platform conventions

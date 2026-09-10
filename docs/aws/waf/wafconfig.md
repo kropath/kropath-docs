@@ -46,7 +46,7 @@ Defaults apply only when an instance specification is empty — providing baseli
 WAF resources use a **ten-level cascade** to resolve fields:
 
 ```
-KropathConfig.mandatory → WAFConfig.mandatory → Instance spec → WAFConfig.defaults → KropathConfig.defaults
+KropathConfig.mandatory → WAFConfig.mandatory → Instance spec → WAFConfig.defaults → KropathConfig.defaults → RGD built-in default
 ```
 
 **Example:**
