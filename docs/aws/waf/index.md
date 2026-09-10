@@ -190,7 +190,7 @@ spec:
 
 ### Manage IP Allowlists/Blocklists
 
-Create an `WAFIPSet` to manage allowed or blocked IP ranges, then reference it in rules:
+Create a `WAFIPSet` to manage allowed or blocked IP ranges, then reference it in rules:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
