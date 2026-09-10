@@ -332,27 +332,8 @@ spec:
       visibilityConfig:
         cloudWatchMetricsEnabled: true
         sampledRequestsEnabled: true
-    - name: reject-no-auth
-      priority: 2
-      statement:
-        notStatement:
-          statement:
-            byteMatchStatement:
-              fieldToMatch:
-                singleHeader:
-                  name: authorization
-              positionalConstraint: STARTS_WITH
-              searchString: "Bearer "
-      action:
-        block:
-          customResponse:
-            responseCode: 401
-            customResponseBodyKey: auth-required
-      visibilityConfig:
-        cloudWatchMetricsEnabled: true
-        sampledRequestsEnabled: true
     - name: content-type-validation
-      priority: 3
+      priority: 2
       statement:
         byteMatchStatement:
           fieldToMatch:
@@ -369,9 +350,11 @@ spec:
     rate-limited:
       content: '{"error": "Too many requests. Please try again later."}'
       contentType: APPLICATION_JSON
-    auth-required:
-      content: '{"error": "Authorization header required"}'
-      contentType: APPLICATION_JSON
+  
+  # Note: Full "absent header" blocking (rejecting requests without the Authorization header)
+  # requires the notStatement recursive statement type, available in Phase 2. In Phase 1, use
+  # this byteMatchStatement pattern to allow Bearer-authenticated requests; other requests
+  # will match a default action rule.
   tags:
     team: api-platform
     component: protection
