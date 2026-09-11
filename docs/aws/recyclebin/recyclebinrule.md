@@ -121,12 +121,11 @@ Once locked, a rule transitions through a **one-way lifecycle**:
 To unlock a locked rule, use the AWS console or CLI:
 
 ```bash
-aws ec2 unlock-snapshot-copy-state \
-  --source-region us-east-1 \
-  --snapshot-id snap-12345678
+aws rbin unlock-rule \
+  --identifier <rule-identifier>
 ```
 
-(Note: The exact command varies by resource type and AWS API — check AWS documentation for your resource.)
+(Replace `<rule-identifier>` with your rule's 11-character ID from `status.ruleIdentifier`.)
 
 **Important:** The declarative Kubernetes spec does not support reverting a rule from locked to unlocked via a spec change. Unlock operations must be performed through the AWS console or CLI. The `status.lockState` field reflects the current lock state.
 
@@ -141,13 +140,14 @@ metadata:
   name: simple-rule
 spec:
   configRef: compliance
-  # Note: No retentionPeriodValue, lockRule, or other governance fields specified
   resourceType: EBS_SNAPSHOT
+  retentionPeriodValue: 30
+  retentionPeriodUnit: "DAYS"
 ```
 
 The controller looks up the `compliance` profile's `effectiveConfig` and applies:
 - Mandatory fields from `RecycleBinConfig.mandatory` (overrides any instance value)
-- Defaults from `RecycleBinConfig.defaults` (used if instance omits the field)
+- Defaults from `RecycleBinConfig.defaults` (used only if a governance field is not set)
 
 ### Governance Cascade
 
@@ -214,7 +214,8 @@ metadata:
 spec:
   configRef: dev-policy
   resourceType: EBS_SNAPSHOT
-  # Inherits retention period and locking from dev-policy defaults
+  retentionPeriodValue: 3
+  retentionPeriodUnit: "DAYS"
   tags:
     environment: "dev"
 ```
@@ -305,7 +306,7 @@ status:
 |---|---|---|---|---|
 | `configRef` | string | No | `"general-policy"` | Name of the RecycleBinConfig profile to use |
 | `resourceType` | string | Yes | — | `EBS_SNAPSHOT` or `EC2_IMAGE` |
-| `retentionPeriodValue` | integer | No | — | Number of days (1–3650); omit to inherit from profile |
+| `retentionPeriodValue` | integer | Yes | — | Number of days (1–3650) |
 | `retentionPeriodUnit` | string | No | `"DAYS"` | Always `"DAYS"` (only unit currently supported) |
 | `description` | string | No | — | Human-readable description (max 255 chars) |
 | `resourceTags` | array | No | — | Tag filters for tag-level rules (omit for region-level) |
@@ -319,10 +320,9 @@ status:
 
 ### Retention Period Range
 
-Valid values: **0–3650 days**
+Valid values: **1–3650 days**
 
-- `0` = not enforced (omitted from cascade; uses profile defaults)
-- `1–3650` = valid retention period
+- `1–3650` = required retention period in days
 
 ### Unlock Delay Range
 

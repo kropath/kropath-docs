@@ -157,7 +157,7 @@ Rules resolve field values through a multi-level cascade:
 3. `RecycleBinConfig` mandatory tier (per-profile enforcement)
 4. `RecycleBinConfig` local mandatory tier (namespace-local enforcement)
 5. Instance `spec` value
-6. `RecycleBinConfig` defaults tier (per-profile default)
+6. `RecycleBinConfig` local defaults tier (per-profile default)
 7. `RecycleBinConfig` global defaults tier
 8. `KropathConfig` local defaults tier
 9. `KropathConfig` global defaults tier
