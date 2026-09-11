@@ -147,14 +147,14 @@ Cold storage is cheaper but slower to restore — it can take 12 hours to retrie
 apiVersion: aws.kropath.run/v1alpha1
 kind: BackupConfig
 metadata:
-  name: high-availability
+  name: compliance
 spec:
-  defaults:
-    defaultLifecycleDeleteAfterDays: 180     # Keep for 6 months
-    defaultLifecycleMoveToColdStorageAfterDays: 90   # Cold storage after 3 months
+  mandatory:
+    defaultLifecycleDeleteAfterDays: 90     # Keep for 90 days minimum
+    defaultLifecycleMoveToColdStorageAfterDays: 30  # Cold storage after 30 days
 ```
 
-Vaults using this profile keep recovery points for 180 days, moving to cold storage after 90 days.
+Vaults using the `compliance` profile enforce a minimum 90-day retention, with recovery points transitioning to cold storage after 30 days.
 
 ## Deletion policy
 

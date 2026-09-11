@@ -38,7 +38,7 @@ Managing AWS Backup resources at scale creates several operational challenges:
 - Applied only when the user leaves the field empty
 - Useful for convenience: "35-day retention by default, but let power users override for critical workloads"
 
-Mandatory wins over defaults: if both are set for the same field, the default is ignored.
+**Important:** Setting the same field in both mandatory and defaults tiers is an API validation error. The BackupConfig CRD uses `x-kubernetes-validations` to reject any CR where a field is set to a non-zero/non-empty value in both tiers simultaneously. You must choose one tier per field.
 
 ### Governance cascade
 
@@ -220,26 +220,6 @@ spec:
     namingTemplate: "compliance-backup-{namespace}-{name}"
     tags:
       environment: production
-
----
-# High-availability profile: multi-day retention for critical workloads
-apiVersion: aws.kropath.run/v1alpha1
-kind: BackupConfig
-metadata:
-  name: high-availability
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: high-availability
-spec:
-  mandatory:
-    enableContinuousBackup: true
-  defaults:
-    defaultLifecycleDeleteAfterDays: 180
-    defaultLifecycleMoveToColdStorageAfterDays: 90
-    namingTemplate: "ha-backup-{namespace}-{name}"
-    tags:
-      environment: production
-      tier: mission-critical
 
 ---
 # Development profile: minimal overhead and retention

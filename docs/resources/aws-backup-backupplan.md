@@ -30,8 +30,8 @@ A backup plan can have multiple rules targeting different resources with differe
 
 ```yaml
 spec:
-  configRef: high-availability      # Profile name; defaults to "general-policy" if doesn't exist
-  nameOverride: ""                  # Custom plan name (optional; bypasses naming template)
+  configRef: compliance      # Profile name; defaults to "general-policy" if doesn't exist
+  displayName: ""                   # Human-readable display name (optional; derived from metadata.name if empty)
   deletionPolicy: retain            # "retain" | "delete"
   
   rules:
@@ -68,11 +68,12 @@ spec:
 
 ```yaml
 status:
-  resourceName: critical-databases-plan   # Effective name after template substitution
   planId: 00000000-0000-0000-0000-000000000000  # AWS-assigned plan ID (UUID)
   planARN: arn:aws:backup:us-east-1:123456789012:backup-plan:00000000-0000-0000-0000-000000000000
-  creationDate: "2026-01-15T10:30:00Z"
   versionId: 1
+  creationDate: "2026-01-15T10:30:00Z"
+  lastExecutionDate: "2026-01-16T10:45:00Z"
+  namingStatus: valid
   conditions:
     - type: Ready
       status: "True"
@@ -140,15 +141,15 @@ Point-in-time recovery (PITR) lets you restore data to any moment, not just to b
 apiVersion: aws.kropath.run/v1alpha1
 kind: BackupConfig
 metadata:
-  name: high-availability
+  name: compliance
   labels:
-    aws.kropath.run/resource-name: high-availability
+    aws.kropath.run/resource-name: compliance
 spec:
   mandatory:
-    enableContinuousBackup: true    # Required for all HA resources
+    enableContinuousBackup: true    # Required for all backup rules
 ```
 
-Backup plans using the `high-availability` profile enforce PITR on all rules.
+Backup plans using the `compliance` profile enforce PITR on all rules.
 
 ## Malware scanning
 
@@ -211,7 +212,7 @@ metadata:
   name: critical-databases
   namespace: production
 spec:
-  configRef: high-availability
+  configRef: compliance
   deletionPolicy: retain
   
   rules:
@@ -243,7 +244,7 @@ spec:
 ```
 
 This plan:
-- Uses the `high-availability` profile, inheriting PITR enablement
+- Uses the `compliance` profile, inheriting PITR enablement and malware scanning
 - Has two rules: an hourly incremental backup and a weekly full backup with scanning
 - Keeps recovery points for 35 days (hourly) or 180 days (weekly)
 - Will not be deleted when the CR is deleted

@@ -46,30 +46,39 @@ Refer to selections by their system-assigned `status.id` (the `selectionId`).
 
 ```yaml
 spec:
-  configRef: general-policy    # Profile name; defaults to "general-policy"
-  deletionPolicy: retain       # "retain" | "delete"
-  backupPlanName: critical-plan  # Name of the parent BackupPlan CR
+  configRef: general-policy              # Profile name; defaults to "general-policy"
+  deletionPolicy: retain                 # "retain" | "delete"
   
-  # Resource selection (at least one must be specified)
+  # Plan reference (at least one required: backupPlanRef OR backupPlanID)
+  backupPlanRef: critical-plan           # Local BackupPlan CR name
+  backupPlanID: ""                       # Direct backup plan ID (UUID string)
+  
+  # IAM role (at least one required: iamRoleRef OR iamRoleARN)
+  iamRoleRef: backup-service-role        # Local IAMRole CR name
+  iamRoleARN: ""                         # Direct IAM role ARN for backup operations
+  
+  # Resource selection (at least one of resources, listOfTags, or conditions required)
   resources:
-    - type: "RDS"
-      tagCondition:
-        key: backup-enabled
-        value: "true"
-    - type: "EC2"
+    - "arn:aws:rds:us-east-1:123456789012:db:prod-db-1"
+    - "arn:aws:rds:us-east-1:123456789012:db:prod-db-2"
   
-  # List-based resource selection (alternative to tag conditions)
+  # Tag-based selection (OR logic - match any tag)
   listOfTags:
-    - type: "STRINGEQUALS"
-      key: "Environment"
-      values: ["Production"]
-    - type: "STRINGLIKE"
-      key: "Team"
-      values: ["*-platform"]
+    - conditionType: "STRINGEQUALS"
+      conditionKey: "Environment"
+      conditionValue: "Production"
   
-  # Selection behavior
-  selectionTag:
-    type: ASSIGN  # "ASSIGN" | "USE_VAULT_IAM_ROLE"
+  # Tag-based filtering (AND logic - all conditions must match)
+  conditions:
+    stringEquals:
+      - conditionKey: "Environment"
+        conditionValue: "Production"
+    stringLike:
+      - conditionKey: "ServiceName"
+        conditionValue: "payment-*"
+  
+  # Display name
+  displayName: prod-selection
   
   # Tags for the selection (K8s metadata only)
   tags:
@@ -147,13 +156,6 @@ Common resource types for backup:
 
 See AWS documentation for the full list of supported resource types.
 
-## Selection behavior
-
-The `selectionTag` field controls how tags are handled:
-
-- `ASSIGN` — apply resource tags to recovery points (for tracking and filtering)
-- `USE_VAULT_IAM_ROLE` — use the backup vault's IAM role for backup operations
-
 ## Deletion policy
 
 The `deletionPolicy` annotation controls what happens when the `BackupSelection` CR is deleted:
@@ -171,44 +173,39 @@ metadata:
   namespace: development
 spec:
   configRef: dev
-  backupPlanName: dev-plan
+  backupPlanRef: dev-plan
+  iamRoleRef: backup-service-role
   deletionPolicy: delete
+  resources:
+    - "arn:aws:ec2:us-east-1:123456789012:instance/i-*"
 ```
 
 ## Complete example
 
 ```yaml
 ---
-# Select all production RDS databases and DynamoDB tables
+# Select production databases by ARN
 apiVersion: aws.kropath.run/v1alpha1
 kind: BackupSelection
 metadata:
   name: prod-databases
   namespace: production
 spec:
-  configRef: high-availability
-  backupPlanName: critical-databases
+  configRef: compliance
+  backupPlanRef: critical-databases
+  iamRoleRef: backup-service-role
   deletionPolicy: retain
   
   resources:
-    - type: "RDS"
-      tagCondition:
-        key: environment
-        value: "production"
-    
-    - type: "DynamoDB"
-      tagCondition:
-        key: team
-        value: "data-platform"
-  
-  selectionTag: ASSIGN
+    - "arn:aws:rds:us-east-1:123456789012:db:prod-db-1"
+    - "arn:aws:rds:us-east-1:123456789012:db:prod-db-2"
   
   tags:
     managed-by: kropath
     data-class: sensitive
 
 ---
-# Select resources matching complex patterns
+# Select resources matching tag conditions (OR logic)
 apiVersion: aws.kropath.run/v1alpha1
 kind: BackupSelection
 metadata:
@@ -216,19 +213,21 @@ metadata:
   namespace: production
 spec:
   configRef: compliance
-  backupPlanName: compliance-plan
+  backupPlanRef: compliance-plan
+  iamRoleRef: backup-service-role
   deletionPolicy: retain
   
   listOfTags:
-    - type: "STRINGEQUALS"
-      key: Environment
-      values: ["Production"]
-    
-    - type: "STRINGLIKE"
-      key: Service
-      values: ["payment-*", "billing-*"]
+    - conditionType: "STRINGEQUALS"
+      conditionKey: Environment
+      conditionValue: Production
   
-  selectionTag: ASSIGN
+  conditions:
+    stringLike:
+      - conditionKey: Service
+        conditionValue: "payment-*"
+      - conditionKey: Service
+        conditionValue: "billing-*"
   
   tags:
     compliance-tier: pci
