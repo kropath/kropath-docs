@@ -104,36 +104,35 @@ status:
 
 Backup selections use tag-based and list-based conditions to match resources:
 
-### Tag-based matching
-
-```yaml
-resources:
-  - type: "RDS"
-    tagCondition:
-      key: backup-enabled
-      value: "true"
-  
-  - type: "DynamoDB"
-    tagCondition:
-      key: team
-      value: "data-platform"
-```
-
-Matches:
-- All RDS resources with `backup-enabled=true`
-- All DynamoDB tables with `team=data-platform`
-
-### List-based matching
+### Tag-based matching (OR logic)
 
 ```yaml
 listOfTags:
-  - type: "STRINGEQUALS"
-    key: Environment
-    values: ["Production"]
+  - conditionType: "STRINGEQUALS"
+    conditionKey: "backup-enabled"
+    conditionValue: "true"
   
-  - type: "STRINGLIKE"
-    key: Service
-    values: ["payment-*", "billing-*"]
+  - conditionType: "STRINGEQUALS"
+    conditionKey: "team"
+    conditionValue: "data-platform"
+```
+
+Matches resources where:
+- `backup-enabled` exactly equals `true` OR
+- `team` exactly equals `data-platform`
+
+### Conditions-based matching (AND logic)
+
+```yaml
+conditions:
+  stringEquals:
+    - conditionKey: Environment
+      conditionValue: Production
+  stringLike:
+    - conditionKey: Service
+      conditionValue: "payment-*"
+    - conditionKey: Service
+      conditionValue: "billing-*"
 ```
 
 Matches resources where:
@@ -259,7 +258,7 @@ metadata:
     managed-by: kropath
 ```
 
-But they are NOT applied to AWS backup recovery points (selections don't support that). Resource tags on the selected AWS resources themselves are preserved and can be applied to recovery points via `selectionTag: ASSIGN`.
+But they are NOT applied to AWS backup recovery points (selections don't support that). Resource tags on the selected AWS resources themselves are preserved during backup operations.
 
 ## Best practices
 

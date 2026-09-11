@@ -47,12 +47,10 @@ spec:
         deleteAfterDays: 35
         moveToColdStorageAfterDays: 0
       
-      # Malware scanning
-      scanSettings:
-        ebs:
-          enabled: false
-        s3:
-          enabled: false
+      # Malware scanning per rule
+      scanActions:
+        - malwareScanner: STANDARD
+          scanMode: FULL_SCAN
       
       # Recovery options
       recoveryPointTags:
@@ -108,9 +106,9 @@ rules:
     enableContinuousBackup: true
     lifecycle:
       deleteAfterDays: 90
-    scanSettings:
-      ebs:
-        enabled: true
+    scanActions:
+      - malwareScanner: STANDARD
+        scanMode: FULL_SCAN
 ```
 
 **Rule fields:**
@@ -177,11 +175,9 @@ Backup plans using the `compliance` profile enforce malware scanning on all rule
 ```yaml
 rules:
   - ruleName: scan-ebs-volumes
-    scanSettings:
-      ebs:
-        enabled: true
-      s3:
-        enabled: false
+    scanActions:
+      - malwareScanner: STANDARD
+        scanMode: FULL_SCAN
 ```
 
 ## Deletion policy
@@ -219,7 +215,7 @@ spec:
     - ruleName: hourly-incremental
       targetBackupVaultName: prod-vault
       scheduleExpression: cron(0 * * * ? *)  # Every hour
-      enableContinuousBackup: ""  # Inherit from HA profile (true)
+      enableContinuousBackup: ""  # Inherit from compliance profile (PITR enforced via mandatory)
       lifecycle:
         deleteAfterDays: 35
         moveToColdStorageAfterDays: 0
@@ -234,9 +230,9 @@ spec:
       lifecycle:
         deleteAfterDays: 180
         moveToColdStorageAfterDays: 90
-      scanSettings:
-        ebs:
-          enabled: true
+      scanActions:
+        - malwareScanner: STANDARD
+          scanMode: FULL_SCAN
   
   tags:
     cost-center: "data-platform"

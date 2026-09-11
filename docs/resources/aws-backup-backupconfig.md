@@ -280,7 +280,7 @@ metadata:
   name: critical-workload-plan
   namespace: production
 spec:
-  configRef: high-availability  # Use the HA profile
+  configRef: compliance  # Use the compliance profile
   rules:
     - ruleName: daily-backup
       targetBackupVaultName: prod-vault
@@ -305,12 +305,11 @@ metadata:
   namespace: development
 spec:
   configRef: dev  # Use the dev profile
-  backupPlanName: critical-workload-plan
-  resources:
-    - type: "RDS"
-      tagCondition:
-        key: backup-enabled
-        value: "true"
+  backupPlanRef: critical-workload-plan
+  listOfTags:
+    - conditionType: STRINGEQUALS
+      conditionKey: backup-enabled
+      conditionValue: "true"
 ```
 
 Here:
@@ -334,8 +333,9 @@ Consequently, `BackupConfig` has no `namingTemplate` for BackupSelection — it 
 `BackupPlan` uses a display name that you choose (`spec.name`), but AWS assigns it an opaque UUID (`planId`) internally. The ARN format is `arn:aws:backup:{region}:{account_id}:backup-plan:{planId}`, not based on the display name. `status.planARN` is available only after the AWS API returns `planId`, which happens post-creation.
 
 Consequently:
-- `status.predictedArn` is not available pre-creation (the UUID is unknown until the plan is created)
-- `status.resourceName` reflects your chosen display name
+- `status.planARN` is not available pre-creation (the UUID is unknown until the plan is created)
+- `status.planId` contains the AWS-assigned UUID once the plan is created
+- `status.namingStatus` tracks the naming state (reconciling, succeeded, failed)
 - The naming template applies to the display name, not to the ARN
 
 ## Vault Lock lifecycle
