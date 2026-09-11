@@ -76,11 +76,11 @@ spec:
     architecture: "X86_64"
     autoStopIdleTimeoutMinutes: 30
     namingTemplate: "{namespace}-{name}"
+    tags:
+      Environment: general
+    syncedLabels:
+      governance-profile: general-policy
   mandatory: {}
-  tags:
-    Environment: general
-  syncedLabels:
-    governance-profile: general-policy
 ```
 
 **Spark-Production EMRConfig Example:**
@@ -107,8 +107,8 @@ spec:
     tags:
       Environment: production
       CostCenter: data-team
-  syncedLabels:
-    governance-profile: spark-production
+    syncedLabels:
+      governance-profile: spark-production
 ```
 
 #### Ten-Tier Governance Cascade
@@ -358,7 +358,7 @@ Resource names follow the naming convention. `effectiveName` is the resolved clo
 *   `status.namingStatus`: `"valid"` or `"invalid-unresolved-tokens"`.
 *   `status.predictedArn`: `arn:aws:emr-containers:{region}:{accountId}:/virtualclusters/{virtualClusterId}/jobruns/{jobRunId}` (fully resolved after creation).
 *   `status.id`: The AWS-assigned job run ID.
-*   `status.state`: The job run state (e.g., `SUBMITTED`, `PENDING`, `RUNNING`, `SUCCESS`, `FAILED`, `CANCELLED`), polled every 15 seconds.
+*   `status.state`: The job run state (e.g., `PENDING`, `SUBMITTED`, `RUNNING`, `FAILED`, `CANCELLED`, `CANCEL_PENDING`, `COMPLETED`), polled every 15 seconds.
 
 **Example EMRJobRun:**
 
