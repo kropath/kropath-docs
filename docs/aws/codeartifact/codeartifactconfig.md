@@ -199,9 +199,13 @@ spec:
 | `effectiveConfig.mandatory.encryptionKey` | string | Final mandatory encryption key (from mandatory tier or `KropathConfig`). |
 | `effectiveConfig.mandatory.namingTemplate` | string | Final mandatory naming template. |
 | `effectiveConfig.mandatory.tags` | map | Merged mandatory tags from profile and `KropathConfig`. |
+| `effectiveConfig.mandatory.syncedLabels` | map | Merged mandatory labels to sync to K8s and cloud tags. |
+| `effectiveConfig.mandatory.syncedAnnotations` | map | Merged mandatory annotations to sync to K8s. |
 | `effectiveConfig.defaults.encryptionKey` | string | Final default encryption key. |
 | `effectiveConfig.defaults.namingTemplate` | string | Final default naming template. |
 | `effectiveConfig.defaults.tags` | map | Merged default tags from profile and `KropathConfig`. |
+| `effectiveConfig.defaults.syncedLabels` | map | Default labels to sync when domain does not set them. |
+| `effectiveConfig.defaults.syncedAnnotations` | map | Default annotations to sync when domain does not set them. |
 | `effectiveConfig.aws.region` | string | AWS region for this cluster. |
 | `effectiveConfig.aws.accountId` | string | AWS account ID for this cluster. |
 

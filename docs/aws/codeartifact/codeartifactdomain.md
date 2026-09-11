@@ -204,7 +204,7 @@ spec:
 |---|---|---|---|---|
 | `configRef` | string | No | `general-policy` | Profile name for governance (encryption, naming, tags). |
 | `encryptionKey` | string | No | empty | KMS key ARN for domain encryption. Empty = AWS-managed key. Immutable after creation. Mutually exclusive with `encryptionKeyRef`. |
-| `encryptionKeyRef` | string | No | empty | Name of a `KMSKey` CR in the same namespace. Resolved to ARN at composition time. Mutually exclusive with `encryptionKey`. |
+| `encryptionKeyRef` | string | No | empty | Name of a `KMSKey` CR in the same namespace. Resolved to ARN at composition time. Immutable after creation. Mutually exclusive with `encryptionKey`. |
 | `nameOverride` | string | No | empty | Override cloud domain name entirely. Bypasses naming template. |
 | `deletionPolicy` | `retain` \| `delete` | No | `retain` | Delete AWS domain when CR is deleted? |
 | `tags` | map[string]string | No | `{}` | Cloud tags. Merged with profile (mandatory profile tags override). |
@@ -271,7 +271,7 @@ When using a `CodeArtifactConfig` profile, the domain inherits:
 - **Tagging** — Org-wide and profile tags
 - **Synced labels** — Labels to apply to K8s metadata and cloud tags
 
-If a profile mandates customer-managed encryption, you must provide either `encryptionKey` or `encryptionKeyRef`; otherwise the domain creation fails.
+If a profile mandates a specific encryption key via `mandatory.encryptionKey`, the governance cascade applies it automatically to the domain. The developer does not supply anything — the mandatory key is enforced by the controller at reconciliation time.
 
 ## Best Practices
 
@@ -304,6 +304,12 @@ Error: encryptionKey is immutable after creation
 ```
 
 You tried to change the encryption key on an existing domain. Encryption is set at creation time and cannot be changed. Create a new domain with the desired key.
+
+```
+Error: encryptionKeyRef is immutable after creation
+```
+
+You tried to change the referenced `KMSKey` on an existing domain. Key references are immutable. Create a new domain with the desired key reference.
 
 ### Key reference not found
 
