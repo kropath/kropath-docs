@@ -212,7 +212,7 @@ spec:
 
 - **`iamUserAccessToBilling`** — Account-only; OUs ignore this field
 - **`roleName`** — Account-only; OUs ignore this field
-- **`parentID`** — OU-only; Accounts ignore this field for placement (accounts are placed via `email` uniqueness)
+- **`parentID`** — OU-only; Accounts ignore this field entirely.
 
 Both account and OU resources use the same `tags`, `syncedLabels`, `syncedAnnotations`, and `namingTemplate` fields.
 

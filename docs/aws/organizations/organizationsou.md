@@ -284,7 +284,7 @@ metadata:
   name: dev
   namespace: platform
 spec:
-  parentID: "${workloads.status.ouID}"  # ou-xx12-yy345678
+  parentID: "ou-xx12-yy345678"  # Replace with parent OU's status.ouID
 ```
 
 In practice, use `kubectl` to patch the child OU after the parent is created:
