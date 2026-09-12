@@ -120,7 +120,7 @@ rules:
 - `completionWindowMinutes` — deadline for backup completion
 - `enableContinuousBackup` — whether PITR is enabled (empty: inherit from config)
 - `lifecycle` — retention and cold-storage settings
-- `scanSettings` — malware scanning configuration
+- `scanActions` — per-rule malware scanning configuration
 - `recoveryPointTags` — tags to apply to recovery points (for organization and filtering)
 
 ## PITR (Continuous Backup)
@@ -219,9 +219,6 @@ spec:
       lifecycle:
         deleteAfterDays: 35
         moveToColdStorageAfterDays: 0
-      scanSettings:
-        ebs:
-          enabled: false
     
     - ruleName: weekly-full-with-scan
       targetBackupVaultName: prod-vault
