@@ -9,7 +9,7 @@ If upgrading from earlier versions, note the following breaking changes to field
 | Old field | Change | New field | Action Required |
 |---|---|---|---|
 | `dnsPrevalidationEnabled` | Dropped | — | Removed. DNS prevalidation is now enabled automatically when `hostedZoneID` is non-empty. Delete any references to this field. |
-| `dnsPrevalidationExactDomain` | Renamed | `domainScopeExactDomain` | Update field name. Type unchanged (string). Use `"ENABLED"` or `"DISABLED"` values. |
+| `dnsPrevalidationExactDomain` | Renamed | `domainScopeExactDomain` | Rename field. Value unchanged — was already `"ENABLED"` or `"DISABLED"`. |
 | `dnsPrevalidationSubdomains` | Renamed + type change | `domainScopeSubdomains` | Update field name and change from `boolean` to `string`. Use `"ENABLED"` or `"DISABLED"` instead of `true`/`false`. |
 | `dnsPrevalidationWildcards` | Renamed + type change | `domainScopeWildcards` | Update field name and change from `boolean` to `string`. Use `"ENABLED"` or `"DISABLED"` instead of `true`/`false`. |
 
@@ -19,7 +19,7 @@ If upgrading from earlier versions, note the following breaking changes to field
 # OLD (no longer works)
 spec:
   dnsPrevalidationEnabled: true
-  dnsPrevalidationExactDomain: "www.example.com"
+  dnsPrevalidationExactDomain: "ENABLED"
   dnsPrevalidationSubdomains: true
   dnsPrevalidationWildcards: false
 
