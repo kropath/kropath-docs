@@ -1,148 +1,108 @@
-# QuickSightConfig — Governance Reference
+# QuickSightConfig
 
-`QuickSightConfig` is a Kubernetes CRD that platform teams use to enforce policies across all QuickSight resources (data sources, datasets, dashboards, and analyses) in a namespace or cluster.
+`QuickSightConfig` is a governance configuration resource that lets you define mandatory and default settings for AWS QuickSight resources across your cluster. Instead of requiring every QuickSight dashboard, dataset, and analysis to specify naming, tags, and import modes independently, you can create named configuration profiles and let kropath apply them consistently.
 
-## Overview
+## Scope
 
-Platform teams create named `QuickSightConfig` profiles (for example: `general-policy`, `compliance`, `analytics`) that specify:
+This resource is AWS-only. QuickSightConfig governs AWS QuickSight resources (via `QuickSightDataSource`, `QuickSightDataSet`, `QuickSightDashboard`, and `QuickSightAnalysis` RGDs). There is no GCP or Azure equivalent yet.
 
-- **Import mode governance** — control whether datasets use SPICE (cached) or DIRECT_QUERY (live) to manage costs
-- **Naming conventions** — required naming templates for all QuickSight resources
-- **Tag and label policies** — mandatory and default tags applied to all resources
-- **Synced labels and annotations** — Kubernetes labels and annotations propagated to child resources
+## What it solves
 
-Application teams select a profile via `spec.configRef` on their `QuickSightDataSet`, `QuickSightDashboard`, and `QuickSightAnalysis` resources. If the named profile doesn't exist, the system falls back to `general-policy`.
+Managing QuickSight resources at scale creates several operational challenges:
 
-## Prerequisites
+- **Inconsistent governance** — different teams use different data import modes (SPICE vs DIRECT_QUERY), naming conventions, and tagging strategies, making compliance audits difficult
+- **Compliance drift** — once resources are created, enforcing new compliance requirements (e.g., "all datasets must use SPICE for performance") requires manual updates
+- **Manual defaults** — every resource spec must list sensible defaults for optional fields, creating noise and inconsistency
+- **No central policy** — when a new compliance requirement arrives, you must update every resource individually
 
-- A Kubernetes cluster running kropath-aws
-- `kropath-controller` deployed in the cluster (provides the governance cascade logic)
-- A namespace where resources will be provisioned
-- AWS account and region configured via `KropathConfig`
+`QuickSightConfig` solves this by providing:
 
-## Basic Structure
+- **Governance profiles** — define reusable profiles like `general-policy`, `compliance`, or `high-performance` that encode your organization's requirements
+- **Mandatory enforcement** — platform teams set fields that override user input (e.g., "all datasets must use SPICE import mode for cost predictability")
+- **Sensible defaults** — declare defaults for optional fields so user specs are cleaner and every resource has a consistent baseline
+- **Scalable compliance** — update one profile to enforce a new requirement across all resources using that profile
 
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: QuickSightConfig
-metadata:
-  name: general-policy
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: general-policy
-spec:
-  mandatory:
-    # These fields are enforced — application teams cannot override them
-    importMode: ""            # "" | "SPICE" | "DIRECT_QUERY" (empty = not enforced)
-    namingTemplate: ""        # "" | "{namespace}-{name}" pattern (empty = not enforced)
-    tags:
-      cost-centre: platform
-      managed-by: kropath
-    syncedLabels: {}
-    syncedAnnotations: {}
+## Core concepts
 
-  defaults:
-    # These fields are applied when not overridden by application teams
-    importMode: "SPICE"       # Default import mode (SPICE prevents unexpected per-query costs)
-    namingTemplate: "{namespace}-{name}"
-    tags:
-      managed-by: kropath
-    syncedLabels: {}
-    syncedAnnotations: {}
-```
+### Mandatory vs. defaults tiers
 
-## Governance Fields
+`QuickSightConfig` has two independent tiers of settings:
 
-### Import Mode (`importMode`)
+**Mandatory fields** (enforced):
+- Override any user specification for that field
+- Useful for compliance: "all datasets must import via SPICE"
+- If mandatory is empty, it is not enforced (user can override)
 
-Controls how datasets load data. Prevents unexpected AWS costs by enforcing a default caching strategy.
+**Defaults fields** (applied when user doesn't specify):
+- Provide sensible fallback values
+- Applied only when the user leaves the field empty
+- Useful for convenience: "SPICE import by default, but let power users choose DIRECT_QUERY"
 
-- **SPICE** — In-memory cached model. Data is imported once, then queried from cache. Charges based on SPICE capacity used.
-- **DIRECT_QUERY** — Live query mode. Data is queried directly from the source each time. Charges per query (can be expensive at scale).
+Mandatory and defaults interaction:
+- **Scalar fields** (`importMode`, `namingTemplate`): The resource rejects the CR with a validation error if both mandatory and instance-level values are set (mutual-exclusion rule); this ensures no ambiguity.
+- **Map fields** (`tags`, `syncedLabels`, `syncedAnnotations`): Mandatory values merge with defaults and instance values, with mandatory winning on key conflict.
 
-The `general-policy` profile ships with `defaults.importMode: "SPICE"` to prevent teams from accidentally using DIRECT_QUERY and incurring per-query costs.
+### Governance cascade
 
-**Mandatory mode** enforces a single import mode for all datasets:
-```yaml
-spec:
-  mandatory:
-    importMode: "SPICE"  # All datasets MUST use SPICE
-```
+The kropath controller pre-merges settings from two sources and writes them to the resource's status:
 
-**Default mode** provides a fallback when the application team doesn't specify:
-```yaml
-spec:
-  defaults:
-    importMode: "SPICE"  # Use SPICE unless overridden at the instance level
-```
+1. **Organization-wide** (KropathConfig settings) — applies to all QuickSight resources across the cluster
+2. **Per-profile** (QuickSightConfig settings) — applies to resources using this profile
 
-**Note:** You cannot set `importMode` in both `mandatory` and `defaults` tiers simultaneously. The system will reject the profile with an admission webhook error.
+Resources read the merged result, ensuring a single source of truth.
 
-### Naming Template (`namingTemplate`)
+### Profile patterns
 
-Enforces a naming convention for all QuickSight resources. Templates use token substitution:
+Common profiles codify organizational postures:
 
-- `{name}` — The resource's `metadata.name`
-- `{namespace}` — The resource's Kubernetes namespace
+**general-policy** — the default, sensible baseline:
+- Data import mode: SPICE (default, can be overridden)
+- Standard naming template: `{namespace}-{name}`
+- Standard cloud tags and synced labels applied to all resources
 
-**Example:**
-```yaml
-spec:
-  defaults:
-    # Simple namespace-based naming
-    namingTemplate: "{namespace}-{name}"
-```
+**high-performance** — optimized for query speed:
+- Data import mode: DIRECT_QUERY (required, bypasses SPICE caching)
+- Standard naming template includes performance tier
+- Performance-related tags applied automatically
 
-AWS QuickSight requires resource names to:
-- Use characters `[a-zA-Z0-9_-]` (letters, digits, hyphens, underscores)
-- Be 1–128 characters long
-- Not contain whitespace
+**compliance** — stricter, suitable for regulated workloads:
+- Data import mode: SPICE (required, for cost and audit predictability)
+- Naming templates enforce namespace context
+- Compliance tags and data classification labels applied automatically
 
-If a template resolves to an invalid name (unresolved tokens, too long, invalid characters), the resource will be rejected by the admission webhook.
+## Configuration fields
 
-**Note:** Like `importMode`, you cannot set `namingTemplate` in both `mandatory` and `defaults` tiers simultaneously.
+### Mandatory tier
 
-### Tags, Labels, and Annotations
+Fields in this tier override any instance `spec` setting:
 
-Policies control which tags, labels, and Kubernetes annotations are applied to all QuickSight resources.
+| Field | Type | Meaning |
+|---|---|---|
+| `importMode` | `SPICE` \| `DIRECT_QUERY` | Dataset data import mode (SPICE = cached, DIRECT_QUERY = real-time). Empty = not enforced. |
+| `namingTemplate` | string | Cloud resource name template (e.g., `"corp-{namespace}-{name}"`). Empty = not enforced. |
+| `tags` | map | Cloud resource tags. Merged with defaults and instance tags. |
+| `syncedLabels` | map | Labels to sync to both Kubernetes and cloud tags. |
+| `syncedAnnotations` | map | Annotations to sync to Kubernetes metadata. |
 
-**Mandatory entries** (`spec.mandatory.tags`, `spec.mandatory.syncedLabels`, `spec.mandatory.syncedAnnotations`) are enforced — application teams cannot override or remove them.
+### Defaults tier
 
-**Default entries** (`spec.defaults.tags`, `spec.defaults.syncedLabels`, `spec.defaults.syncedAnnotations`) are applied unless the application team specifies their own values.
+Fields here apply when an instance leaves the field empty:
 
-**Tags** are forwarded to AWS cloud resources (QuickSight data sets, dashboards, and analyses).
+| Field | Type | Default value | Meaning |
+|---|---|---|---|
+| `importMode` | string | `"SPICE"` | Fallback data import mode (SPICE = cached, for cost control). |
+| `namingTemplate` | string | `"{namespace}-{name}"` | Default cloud resource naming template. |
+| `tags` | map | `{}` | Merged with mandatory and instance tags. |
+| `syncedLabels` | map | `{}` | Merged with mandatory and instance labels. |
+| `syncedAnnotations` | map | `{}` | Merged with mandatory and instance annotations. |
 
-**Synced labels** appear in both Kubernetes resource labels (prefixed with `aws.kropath.run/`) AND as cloud tags (ADR-015 §6.1).
+## Complete example
 
-**Annotations** are mirrored to Kubernetes resource metadata (prefixed with `aws.kropath.run/`).
-
-**Unlike `importMode` and `namingTemplate`, tags, synced labels, and synced annotations can be set in both tiers simultaneously** — they are merged by the controller (mandatory entries win on key conflicts).
-
-**Example — Multi-tier tagging policy:**
-```yaml
-spec:
-  mandatory:
-    tags:
-      cost-centre: platform
-      compliance: required
-    syncedLabels:
-      team: analytics-platform
-  defaults:
-    tags:
-      managed-by: kropath
-    syncedLabels:
-      data-class: internal
-    syncedAnnotations:
-      provisioner: kropath
-```
-
-## Profile-Based Governance
-
-Create multiple profiles for different requirements:
+Here's a multi-profile setup:
 
 ```yaml
 ---
-# General governance profile — default for all teams
+# Default profile: sensible baseline
 apiVersion: aws.kropath.run/v1alpha1
 kind: QuickSightConfig
 metadata:
@@ -156,10 +116,30 @@ spec:
     importMode: "SPICE"
     namingTemplate: "{namespace}-{name}"
     tags:
-      managed-by: kropath
+      environment: production
+      cost-center: analytics
 
 ---
-# Compliance profile — strict enforcement
+# High-performance profile: prioritize query speed
+apiVersion: aws.kropath.run/v1alpha1
+kind: QuickSightConfig
+metadata:
+  name: high-performance
+  namespace: kro-system
+  labels:
+    aws.kropath.run/resource-name: high-performance
+spec:
+  mandatory:
+    importMode: "DIRECT_QUERY"
+    tags:
+      performance-tier: critical
+  defaults:
+    namingTemplate: "{namespace}-realtime-{name}"
+    tags:
+      environment: production
+
+---
+# Compliance profile: enforce cost-predictable import mode
 apiVersion: aws.kropath.run/v1alpha1
 kind: QuickSightConfig
 metadata:
@@ -169,260 +149,78 @@ metadata:
     aws.kropath.run/resource-name: compliance
 spec:
   mandatory:
-    importMode: "SPICE"  # Enforce SPICE (no per-query costs)
-    namingTemplate: "compliance-{namespace}-{name}"
-    tags:
-      compliance: required
-      audit-trail: yes
-  defaults:
-    tags:
-      managed-by: kropath
-
----
-# Analytics profile — flexible with cost tracking
-apiVersion: aws.kropath.run/v1alpha1
-kind: QuickSightConfig
-metadata:
-  name: analytics
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: analytics
-spec:
-  mandatory: {}
-  defaults:
     importMode: "SPICE"
-    namingTemplate: "analytics-{namespace}-{name}"
     tags:
-      team: analytics
-      cost-tracking: enabled
-    syncedLabels:
-      workload-type: analytics
+      compliance-tier: pci
+      data-classification: internal
+  defaults:
+    namingTemplate: "{namespace}-compliant-{name}"
+    tags:
+      environment: production
 ```
 
-Application teams select a profile when creating QuickSight resources:
+## Using profiles with instances
+
+Once your profiles are deployed, QuickSight resources select them via `spec.configRef`:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: QuickSightDataSet
 metadata:
-  name: orders-dataset
+  name: sales-metrics
   namespace: analytics
 spec:
-  configRef: analytics  # Use the analytics profile
-  # ... rest of spec
+  configRef: high-performance
+  resourceId: sales-metrics-ds
+  importMode: ""  # Empty: let the config decide (forced to DIRECT_QUERY)
+  physicalTableMap:
+    sales:
+      relationalTable:
+        dataSourceARN: arn:aws:quicksight:us-east-1:123456789012:datasource/sales-db
+        name: orders
+        schema: public
 ```
 
-## Fallthrough Behavior
+In this example:
+- Import mode is forced to `DIRECT_QUERY` (mandatory from high-performance profile)
+- Developer cannot override import mode
+- Naming automatically includes performance tier context
+- Performance-related tags are automatically applied
 
-If an application team references a profile that doesn't exist, the system falls back to `general-policy` automatically (ADR-015 §3.4). Always ensure `general-policy` exists in the cluster:
+## Profile selection rules
 
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: QuickSightConfig
-metadata:
-  name: general-policy
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: general-policy
-spec:
-  mandatory: {}
-  defaults:
-    importMode: "SPICE"
-    namingTemplate: "{namespace}-{name}"
-    tags:
-      managed-by: kropath
-    syncedLabels: {}
-    syncedAnnotations: {}
-```
+- **Default fallthrough** — if you omit `spec.configRef` or reference a profile that doesn't exist, kropath automatically uses the `general-policy` profile
+- **Profiles in kro-system** — all profiles are deployed to the `kro-system` namespace. Instances in any application namespace can reference them via `spec.configRef`
+- **Profile lookup by label** — profiles are found via the `aws.kropath.run/resource-name` label, not by `metadata.name`, so you can rename the CR safely without breaking references
 
-## Governance Cascade
+## Import mode guidance
 
-When you apply a `QuickSightDataSet`, `QuickSightDashboard`, or `QuickSightAnalysis`, the effective configuration is resolved through Kropath's ten-tier governance cascade (ADR-010, ADR-015 §5.3):
+QuickSight supports two data import modes:
 
-1. Global `KropathConfig` mandatory (highest priority)
-2. Namespace `KropathConfig` mandatory
-3. Global `QuickSightConfig` profile mandatory
-4. Namespace `QuickSightConfig` profile mandatory
-5. Instance override (`spec.importMode`, `spec.tags`, `spec.syncedLabels`, `spec.syncedAnnotations`) — active only when mandatory tiers 1–4 are unset
-6. Namespace `QuickSightConfig` profile defaults
-7. Global `QuickSightConfig` profile defaults
-8. Namespace `KropathConfig` defaults
-9. Global `KropathConfig` defaults
-10. RGD built-in default (lowest priority — `SPICE` for `importMode`)
+- **SPICE** (Super-fast, Parallel, In-memory Calculation Engine): QuickSight caches data in its high-performance store. Queries are fast, predictable. Best for dashboards, pre-defined analyses, cost-predictable BI.
+- **DIRECT_QUERY**: Queries execute against the source database in real-time. Lower latency for updates, higher database load. Best for ad-hoc analysis, live data feeds, databases that can handle the query volume.
 
-Priority runs top to bottom — level 1 (global `KropathConfig` mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `QuickSightConfig` CR, and the RGDs read a single `effectiveConfig` value.
+Most organizations default to SPICE and allow exceptions for high-performance or real-time use cases.
 
-**Note on `importMode` specifically:** Global `KropathConfig.spec.mandatory.quicksight.importMode` takes absolute priority and cannot be overridden by any profile or instance.
+## Best practices
 
-### Example Cascade Resolution — Import Mode
+1. **Create profiles for organizational postures, not per-resource.** One `compliance` profile serves all regulated workloads; don't create individual profiles for each resource.
 
-Given:
-- Global KropathConfig `spec.mandatory.quicksight.importMode: "SPICE"`
-- Compliance profile `spec.defaults.importMode: "DIRECT_QUERY"`
-- Instance `spec.importMode: ""` (not specified)
+2. **Use mandatory fields sparingly.** Reserve mandatory for hard requirements (import mode for cost control, tags for compliance). Use defaults for convenience.
 
-**Result:** The instance uses `SPICE` (global mandatory wins). The profile default is ignored.
+3. **Document why mandatory fields exist.** Add annotations to profiles explaining why certain settings are enforced.
 
-### Example Cascade Resolution — Tags
+4. **Tag at the profile level.** Add environment and cost-center tags to profiles so every resource inheriting that profile carries the tags automatically, reducing manual overhead.
 
-Given:
-- Global KropathConfig `spec.mandatory.tags: {cost-centre: org}`
-- Profile mandatory `tags: {compliance: required}`
-- Instance `spec.tags: {team: analytics}`
+5. **Test profile changes in non-production first.** Profile updates apply to all resources using that profile; validate in a staging namespace before production.
 
-**Result:** The merged mandatory tags are `{cost-centre: org, compliance: required}`. The instance `team: analytics` tag is added on top. The resource gets all three tags.
+6. **Use consistent naming templates.** The `{namespace}-{name}` template is recommended. It ensures cloud resource names include namespace context, reducing confusion in production.
 
-## Org-Wide Governance via KropathConfig
+7. **Plan for profile evolution.** When operational requirements change, update the profile rather than updating every resource individually — that's the power of centralized governance.
 
-For requirements that apply to all profiles and all resources (for example, "all QuickSight datasets must have a cost-centre tag"), use `KropathConfig`:
+## API reference
 
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: KropathConfig
-metadata:
-  name: global-governance
-  namespace: kro-system
-spec:
-  mandatory:
-    quicksight:
-      importMode: "SPICE"  # Org-wide: all datasets must use SPICE
-    tags:
-      cost-centre: shared-platform  # Org-wide mandatory tag
-  # ... other family sections
-```
-
-This mandatory tier (level 1) overrides all `QuickSightConfig` mandatory tiers (levels 3–4).
-
-## Deployment
-
-Deploy `QuickSightConfig` CRs to your cluster:
-
-```bash
-kubectl apply -f quicksightconfig.yaml
-```
-
-Then application teams reference the profile when creating resources:
-
-```bash
-kubectl apply -f my-dataset.yaml
-```
-
-The `spec.configRef: analytics` selects the analytics profile; if it doesn't exist, `general-policy` is used.
-
-## Common Patterns
-
-### Cost-Conscious Environment
-
-Enforce SPICE and cost tracking tags:
-
-```yaml
-spec:
-  mandatory:
-    importMode: "SPICE"
-    tags:
-      cost-tracking: enabled
-  defaults:
-    namingTemplate: "cost-tracked-{namespace}-{name}"
-    syncedLabels:
-      cost-optimization: enabled
-```
-
-### Compliance Environment
-
-Strict naming and audit enforcement:
-
-```yaml
-spec:
-  mandatory:
-    importMode: "SPICE"
-    namingTemplate: "compliance-{namespace}-{name}"
-    tags:
-      compliance: required
-      audit-trail: yes
-    syncedLabels:
-      data-class: sensitive
-```
-
-### Multi-Environment with Profiles
-
-Create `dev`, `staging`, `prod` profiles in the same namespace, each with different import modes and naming templates. Application teams select the appropriate profile for their workload environment:
-
-```yaml
----
-apiVersion: aws.kropath.run/v1alpha1
-kind: QuickSightConfig
-metadata:
-  name: prod
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: prod
-spec:
-  mandatory:
-    importMode: "SPICE"  # Prod always uses SPICE
-  defaults:
-    namingTemplate: "prod-{namespace}-{name}"
-    tags:
-      environment: production
-
----
-apiVersion: aws.kropath.run/v1alpha1
-kind: QuickSightConfig
-metadata:
-  name: dev
-  namespace: kro-system
-  labels:
-    aws.kropath.run/resource-name: dev
-spec:
-  mandatory: {}
-  defaults:
-    importMode: "SPICE"
-    namingTemplate: "dev-{namespace}-{name}"
-    tags:
-      environment: development
-```
-
-## Validation Rules
-
-The admission webhook enforces mutual-exclusion rules on scalar governance fields:
-
-- **importMode conflict:** Cannot set `importMode` in both `mandatory` and `defaults`.
-  - Error: "importMode cannot be set in both mandatory and defaults."
-- **namingTemplate conflict:** Cannot set `namingTemplate` in both `mandatory` and `defaults`.
-  - Error: "namingTemplate cannot be set in both mandatory and defaults."
-
-Map fields (tags, syncedLabels, syncedAnnotations) have no mutual-exclusion rule — both tiers can be set and will be merged.
-
-## Troubleshooting
-
-**"My dataset is using the wrong import mode"**
-- Check the `configRef` you specified on the dataset
-- Verify the named profile exists in the cluster
-- If the profile doesn't exist, `general-policy` is used
-- Check `status.effectiveConfig.defaults.importMode` on the QuickSightConfig to see what was resolved
-- If global KropathConfig has `mandatory.quicksight.importMode` set, that always wins
-
-**"I'm getting 'cannot be set in both mandatory and defaults' error"**
-- Check that you haven't set the same field in both `spec.mandatory` and `spec.defaults` for `importMode` or `namingTemplate`
-- Scalar fields (importMode, namingTemplate) have a mutual-exclusion rule; map fields (tags, syncedLabels, syncedAnnotations) do not
-
-**"My mandatory tags aren't being enforced"**
-- Ensure the `QuickSightConfig` CR has `status.effectiveConfig` populated (the controller writes this)
-- Verify `spec.mandatory.tags` are defined (not empty `{}`)
-- Check that application team didn't specify a profile that doesn't exist (fallback to `general-policy`)
-- Check global `KropathConfig.spec.mandatory.tags` — those override all profile mandatory tags
-
-**"My naming template isn't resolving correctly"**
-- Verify all tokens in the template are available (`{namespace}`, `{name}`)
-- Check that the resolved name is valid (matches `[a-zA-Z0-9_-]` and is 1–128 characters)
-
-**"The profile fallback isn't working"**
-- Ensure `general-policy` profile exists and has the `aws.kropath.run/resource-name: general-policy` label
-- Check the cluster logs for controller errors: `kubectl logs -n kro-system -l app=kropath-controller`
-
-## See Also
-
-- [QuickSight Resource Family Overview](./README.md)
-- [AWS QuickSight User Guide](https://docs.aws.amazon.com/quicksight/latest/user/what-is.html)
-- [Engineering Standards](../../engineering-standards.md) — shared governance rules across all families
-
-User guides for `QuickSightDataSet`, `QuickSightDashboard`, and `QuickSightAnalysis` are not published yet; they will be linked here when those resource docs land.
+- **Group**: `aws.kropath.run`
+- **Version**: `v1alpha1`
+- **Kind**: `QuickSightConfig`
+- **Scope**: Namespaced
