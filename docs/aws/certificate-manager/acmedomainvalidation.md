@@ -2,35 +2,6 @@
 
 The `ACMEDomainValidation` resource prevalidates domain ownership against an ACME endpoint using DNS (Route 53). Domain prevalidation is optional but recommended — it proves domain ownership to the ACME endpoint before ACME clients request certificates, reducing validation latency during certificate issuance.
 
-## Breaking Changes (KRO-1054)
-
-If upgrading from earlier versions, note the following breaking changes to field names and types:
-
-| Old field | Change | New field | Action Required |
-|---|---|---|---|
-| `dnsPrevalidationEnabled` | Dropped | — | Removed. DNS prevalidation is now enabled automatically when `hostedZoneID` is non-empty. Delete any references to this field. |
-| `dnsPrevalidationExactDomain` | Renamed | `domainScopeExactDomain` | Rename field. Value unchanged — was already `"ENABLED"` or `"DISABLED"`. |
-| `dnsPrevalidationSubdomains` | Renamed + type change | `domainScopeSubdomains` | Update field name and change from `boolean` to `string`. Use `"ENABLED"` or `"DISABLED"` instead of `true`/`false`. |
-| `dnsPrevalidationWildcards` | Renamed + type change | `domainScopeWildcards` | Update field name and change from `boolean` to `string`. Use `"ENABLED"` or `"DISABLED"` instead of `true`/`false`. |
-
-**Migration example:**
-
-```yaml
-# OLD (no longer works)
-spec:
-  dnsPrevalidationEnabled: true
-  dnsPrevalidationExactDomain: "ENABLED"
-  dnsPrevalidationSubdomains: true
-  dnsPrevalidationWildcards: false
-
-# NEW (required)
-spec:
-  hostedZoneID: "Z1234567890ABC"  # Enables DNS prevalidation
-  domainScopeExactDomain: "ENABLED"
-  domainScopeSubdomains: "ENABLED"
-  domainScopeWildcards: "DISABLED"
-```
-
 ## Use Cases
 
 - **Reduce issuance latency:** Pre-validate domains so certificate requests complete faster
