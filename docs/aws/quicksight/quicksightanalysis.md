@@ -4,7 +4,7 @@
 
 ## Scope
 
-This resource is AWS-only. QuickSightAnalysis wraps the AWS Cassandra Controller (ACK) QuickSight Analysis resource, managing analysis creation and lifecycle.
+This resource is AWS-only. QuickSightAnalysis manages QuickSight Analysis resources, handling analysis creation and lifecycle.
 
 ## What it solves
 
@@ -68,7 +68,7 @@ Analyses can apply a QuickSight theme (custom branding, colors, typography) by A
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `parameters` | object | nil | Parameter override values for dashboard creation |
+| `parameters` | object | nil | Parameter override values for analysis creation |
 | `validationStrategy` | object | nil | Relaxes definition validation for minor schema differences |
 
 ### Governance and lifecycle

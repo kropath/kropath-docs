@@ -44,7 +44,7 @@ Provision interactive analysis workspaces for data exploration and visualization
 
 QuickSight supports two data loading strategies:
 
-- **SPICE** (Spire Powered In-Cloud Engine): Cached, high-performance, cost-predictable. Default for dashboards and published analyses.
+- **SPICE** (Super-fast, Parallel, In-memory Calculation Engine): Cached, high-performance, cost-predictable. Default for dashboards and published analyses.
 - **DIRECT_QUERY**: Real-time queries against source databases. Best for ad-hoc analysis and real-time data.
 
 Import mode can be governed via QuickSightConfig profiles so your organization can enforce consistent strategies.

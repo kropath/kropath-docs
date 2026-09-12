@@ -38,7 +38,9 @@ Managing QuickSight resources at scale creates several operational challenges:
 - Applied only when the user leaves the field empty
 - Useful for convenience: "SPICE import by default, but let power users choose DIRECT_QUERY"
 
-Mandatory wins over defaults: if both are set for the same field, the default is ignored.
+Mandatory and defaults interaction:
+- **Scalar fields** (`importMode`, `namingTemplate`): The resource rejects the CR with a validation error if both mandatory and instance-level values are set (mutual-exclusion rule); this ensures no ambiguity.
+- **Map fields** (`tags`, `syncedLabels`, `syncedAnnotations`): Mandatory values merge with defaults and instance values, with mandatory winning on key conflict.
 
 ### Governance cascade
 
@@ -195,7 +197,7 @@ In this example:
 
 QuickSight supports two data import modes:
 
-- **SPICE** (Spire Powered In-Cloud Engine): QuickSight caches data in its high-performance store. Queries are fast, predictable. Best for dashboards, pre-defined analyses, cost-predictable BI.
+- **SPICE** (Super-fast, Parallel, In-memory Calculation Engine): QuickSight caches data in its high-performance store. Queries are fast, predictable. Best for dashboards, pre-defined analyses, cost-predictable BI.
 - **DIRECT_QUERY**: Queries execute against the source database in real-time. Lower latency for updates, higher database load. Best for ad-hoc analysis, live data feeds, databases that can handle the query volume.
 
 Most organizations default to SPICE and allow exceptions for high-performance or real-time use cases.

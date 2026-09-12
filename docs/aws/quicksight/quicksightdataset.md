@@ -4,7 +4,7 @@
 
 ## Scope
 
-This resource is AWS-only. QuickSightDataSet wraps the AWS Cassandra Controller (ACK) QuickSight DataSet resource, managing data models and lifecycle.
+This resource is AWS-only. QuickSightDataSet manages QuickSight DataSet resources, handling data models and lifecycle.
 
 ## What it solves
 
@@ -25,7 +25,7 @@ Creating QuickSight datasets requires managing:
 
 QuickSight supports two data loading strategies:
 
-- **SPICE** (Spire Powered In-Cloud Engine): QuickSight imports and caches data in its high-performance store. Queries are fast, SPICE capacity is consumed, costs are predictable. Best for dashboards, published analyses, and most BI use cases.
+- **SPICE** (Super-fast, Parallel, In-memory Calculation Engine): QuickSight imports and caches data in its high-performance store. Queries are fast, SPICE capacity is consumed, costs are predictable. Best for dashboards, published analyses, and most BI use cases.
 - **DIRECT_QUERY**: Queries execute directly against the source database. No caching, lower latency for data updates, higher database load. Best for ad-hoc analysis, datasets accessed infrequently, or when real-time data is essential.
 
 Most organizations default to SPICE and allow exceptions for specific use cases.

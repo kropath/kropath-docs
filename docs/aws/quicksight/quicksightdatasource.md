@@ -4,7 +4,7 @@
 
 ## Scope
 
-This resource is AWS-only. QuickSightDataSource wraps the AWS Cassandra Controller (ACK) QuickSight DataSource resource, managing connection details and lifecycle.
+This resource is AWS-only. QuickSightDataSource manages QuickSight DataSource resources, handling connection details and lifecycle.
 
 ## What it solves
 
@@ -38,7 +38,6 @@ QuickSight data sources can use several credential types:
 
 - **Secret ARN**: Reference an AWS Secrets Manager secret directly
 - **Credential pair**: Username and password (stored in the secret referenced by the DataSource)
-- **VPC connection**: For private database access, pair with a VPC Connection resource
 
 ### Naming and resource identity
 

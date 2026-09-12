@@ -4,7 +4,7 @@
 
 ## Scope
 
-This resource is AWS-only. QuickSightDashboard wraps the AWS Cassandra Controller (ACK) QuickSight Dashboard resource, managing dashboard creation and lifecycle.
+This resource is AWS-only. QuickSightDashboard manages QuickSight Dashboard resources, handling dashboard creation and lifecycle.
 
 ## What it solves
 
@@ -85,7 +85,7 @@ Dashboards support 13 feature toggles controlling end-user capabilities:
 | `nameOverride` | string | `""` | Overrides naming template when set |
 | `deletionPolicy` | string | `retain` | `retain` = keep dashboard; `delete` = remove on CR deletion |
 | `permissions` | []object | `[]` | IAM resource permissions |
-| `folderARNs` | []string | `[]` | QuickSight folders to organize dashboards |
+| `folderARNs` | []string | `[]` | QuickSight folders to organize dashboards. **Immutable after dashboard creation.** |
 
 ## Complete example
 
