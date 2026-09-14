@@ -101,7 +101,7 @@ After applying this, you can inspect the namespace status:
 kubectl describe s3tablesnamespace events -n analytics-prod
 ```
 
-The namespace ARN appears in `status.predictedArn` once the resource is ready.
+Once the resource is ready, check the ACK-provided status fields for the namespace ARN and other details. The ARN is available in the status once the namespace is successfully created in S3 Tables.
 
 ## Using namespaces with tables
 

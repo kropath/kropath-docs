@@ -186,22 +186,17 @@ After creating this table, you can query it via Athena, EMR, or other Iceberg-co
 
 ## Schema evolution
 
-Iceberg supports schema evolution — you can add new columns without rewriting existing data:
+Iceberg supports schema evolution — you can add new columns without rewriting existing data. However, the `spec.metadata.iceberg.schema` is **immutable after table creation** (enforced by the ACK CRD). To evolve your table schema, use the Iceberg-compatible service API:
 
-```yaml
-# Later: add a new column to track session_id
-metadata:
-  iceberg:
-    schema:
-      fields:
-        # ... existing fields ...
-        - id: 6
-          name: session_id
-          type: string
-          required: false  # New columns should be optional
+**Option 1: Athena**
+```sql
+ALTER TABLE database.table_name ADD COLUMNS (session_id string);
 ```
 
-Iceberg tracks column IDs internally; renaming columns is supported by updating the schema.
+**Option 2: AWS SDK or another Iceberg tool**
+Refer to the AWS S3 Tables API documentation for schema evolution operations.
+
+The table will reflect schema changes automatically in subsequent queries and analytics workloads. Iceberg tracks column IDs internally, so renaming and reordering columns are also supported through the service API.
 
 ## Storage and partitioning
 
