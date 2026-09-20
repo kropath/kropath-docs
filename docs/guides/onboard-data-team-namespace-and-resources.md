@@ -7,16 +7,25 @@ title: Onboard a Data Team Namespace and Resources
 
 **Document Type:** Task
 
-This task describes how to onboard a new data team namespace in kropath, including creating the namespace, configuring governance policies, and provisioning the resources needed for a data pipeline that processes S3 events.
+## The Business Case
+
+Your data team needs an **observable, event-driven pipeline** to automate data processing when files land in S3. This task walks you through building one on kropath's shared namespace foundation ([KRO-1176](https://github.com/kropath/kropath/issues/KRO-1176)). Here's the flow:
+
+1. A file arrives in S3
+2. EventBridge detects the event and routes it to a Lambda function
+3. Lambda processes the file and writes messages to **SQS** — a durable queue for your team's downstream systems to consume
+4. Lambda also publishes to **SNS** — so other teams can subscribe to the same events without being tightly coupled to your Lambda
+
+This architecture decouples your processing logic (Lambda) from consumption (SQS/SNS), making the pipeline observable, scalable, and shareable.
 
 ## What you'll accomplish
 
 By following this task, you will:
 
-- Create a new Kubernetes namespace with appropriate governance configurations and cross-account IAM annotations
-- Provision AWS resources for a data pipeline: an S3 bucket, SNS topic, SQS queue, EventBridge rule, Lambda function, and IAM roles
-- Establish an event-driven trigger chain: S3 object creation → EventBridge rule → Lambda invocation → SQS message + SNS notification
-- Verify that all resources are correctly configured and the end-to-end pipeline works
+- Create a new Kubernetes namespace with kropath governance and IAM configuration
+- Provision AWS resources that form the observable pipeline: S3 bucket (ingestion), Lambda (processor), SQS (internal queue), SNS (broadcast notifications), and EventBridge (trigger)
+- Establish the event-driven trigger chain: S3 object creation → EventBridge rule → Lambda invocation → SQS message + SNS notification
+- Verify that the complete pipeline works end-to-end
 
 ## Before you begin
 
@@ -115,7 +124,7 @@ Verify the namespace was created:
 
 ```bash
 kubectl get ns data-team
-kubectl get kropath data-team-config -n data-team
+kubectl get KropathConfig baseline -n data-team
 ```
 
 ### Step 2: Create the S3 bucket with access logging
