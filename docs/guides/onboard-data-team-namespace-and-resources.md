@@ -59,7 +59,7 @@ metadata:
 apiVersion: kropath.run/v1alpha1
 kind: KropathConfig
 metadata:
-  name: data-team-config
+  name: baseline
   namespace: data-team
 spec:
   # Mandatory governance for the data team
@@ -83,6 +83,8 @@ kind: S3AdvancedConfig
 metadata:
   name: data-team-policy
   namespace: data-team
+  labels:
+    aws.kropath.run/resource-name: data-team-policy
 spec:
   mandatory:
     # Enforce encryption for all data team S3 buckets
@@ -224,7 +226,7 @@ spec:
     detail:
       bucket:
         name:
-          - data-input  # Will be resolved to the actual bucket name by effectiveName
+          - data-team-data-input-123456789012  # Effective bucket name from naming template
       object:
         key:
           - prefix: "ingestion/"
@@ -370,7 +372,7 @@ spec:
   functionName: data-team-processor
   action: lambda:InvokeFunction
   principal: events.amazonaws.com
-  sourceArn: "arn:aws:events:us-east-1:123456789012:rule/data-team/s3-to-lambda"
+  sourceArn: "arn:aws:events:us-east-1:123456789012:rule/s3-to-lambda"
 ```
 
 ## Verification
