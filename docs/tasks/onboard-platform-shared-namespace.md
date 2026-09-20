@@ -11,92 +11,44 @@ This task walks you through onboarding a Kubernetes namespace for platform-share
 - You have a working kropath cluster in AWS with the kropath-controller and ACK (AWS Controllers for Kubernetes) installed
 - You have `kubectl` configured to access the cluster
 - You have AWS credentials configured with permissions to create S3 buckets and IAM resources in the target account(s)
-- The namespace onboarding template has been merged into kropath-core (related: [KRO-1175](https://kropath.atlassian.net/browse/KRO-1175))
+- Platform teams have created one or more `AWSS3Config` governance profiles in the `kro-system` namespace (e.g., `general-policy`, `strict`)
+- The namespace onboarding template has been merged into kropath-core (see [KRO-1178](https://github.com/kropath/kropath-core/issues) for details)
 
 ## Goal
 
 You will:
 
 1. Create the `platform-shared` Kubernetes namespace
-2. Configure it with `KropathConfig` and `S3Config` (AWS S3 resource family configuration)
-3. Set up ACK cross-account annotations so ACK can manage resources in multiple AWS accounts
-4. Create shared platform resources: a central logging bucket and artifact storage buckets
-5. Verify that resources are ready in Kubernetes and exist in AWS
+2. Apply the namespace onboarding template (KropathConfig and local resource-family configuration)
+3. Create shared platform resources: a central logging bucket and artifact storage buckets
+4. Verify that resources are ready in Kubernetes and exist in AWS
 
-## Step 1: Create the namespace and local configurations
+## Step 1: Create the namespace with the onboarding template
 
-The namespace onboarding template from kropath-core provides the baseline for KropathConfig and ResourceFamily-specific configurations. Follow the template from [KRO-1178](https://kropath.atlassian.net/browse/KRO-1178) to:
-
-1. **Create the Kubernetes namespace** with ACK cross-account role annotations (required by [ADR-019](https://kropath.atlassian.net/browse/ADR-019))
-
-   ```yaml
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: platform-shared
-     annotations:
-       # ACK cross-account role (allows ACK to manage resources in different AWS accounts)
-       "ack.aws.com/cross-account-role-arn": "arn:aws:iam::<account-id>:role/ack-cross-account-role"
-   ```
-
-2. **Create the `KropathConfig`** — cluster-wide settings for the namespace
-
-   ```yaml
-   apiVersion: kropath.run/v1alpha1
-   kind: KropathConfig
-   metadata:
-     name: platform-shared-config
-     namespace: platform-shared
-   spec:
-     # Inherit tags from a central policy
-     tags:
-       team: platform
-       environment: shared
-       managed-by: kropath
-   ```
-
-3. **Create the `S3Config`** — AWS S3-specific configuration for the namespace
-
-   ```yaml
-   apiVersion: aws.kropath.run/v1alpha1
-   kind: S3Config
-   metadata:
-     name: platform-config
-     namespace: platform-shared
-   spec:
-     # Common S3 settings for all S3 resources in this namespace
-     encryption:
-       enabled: true
-       algorithm: "aws:kms"
-     versioning: enabled
-     publicAccessBlock:
-       blockPublicAcls: true
-       blockPublicPolicy: true
-       ignorePublicAcls: true
-       restrictPublicBuckets: true
-     tags:
-       inherit-from: platform-shared-config
-   ```
-
-Apply these configurations:
+The namespace onboarding template from kropath-core (task [KRO-1178](https://github.com/kropath/kropath-core/issues)) provides baseline configurations. Apply the template manifest to create the `platform-shared` namespace with all required local configurations:
 
 ```bash
-kubectl apply -f namespace.yaml
-kubectl apply -f kropathconfig.yaml
-kubectl apply -f s3config.yaml
+kubectl apply -f platform-shared-namespace-template.yaml
 ```
 
-Verify the namespace is ready:
+The template includes:
+
+1. **Kubernetes Namespace** with annotations that enable ACK to manage cross-account resources (per ADR-019)
+2. **KropathConfig** (a cluster-wide singleton in `kro-system` that governs organization-wide settings)
+3. **Local resource-family configuration** (e.g., labels or namespace-scoped defaults as needed)
+
+Verify the namespace was created:
 
 ```bash
 kubectl get namespace platform-shared
-kubectl get kropathconfig -n platform-shared
-kubectl get s3config -n platform-shared
+kubectl describe namespace platform-shared
 ```
+
+Expected: The namespace exists with ACK cross-account annotations visible in the output.
 
 ## Step 2: Create the shared platform resources
 
-Once the namespace and configurations are in place, create the S3 resources that platform services depend on.
+Once the namespace is ready, create the S3 resources that platform services depend on. Reference an existing `AWSS3Config` governance profile (e.g., `general-policy` or `strict`) via `configRef`.
 
 ### Central Logging Bucket
 
@@ -109,33 +61,26 @@ metadata:
   name: central-logging
   namespace: platform-shared
 spec:
-  configRef: platform-config
+  # Reference a governance profile created by platform teams
+  configRef: general-policy
   
-  # Explicit naming template for the bucket
-  # This ensures the bucket name is consistent across accounts/regions
-  nameOverride: "central-logging-{account-id}-{region}"
+  # Override bucket naming to ensure global uniqueness across accounts/regions
+  nameOverride: "central-logging-{account_id}-{region}"
   
-  # Bucket settings
-  versioningEnabled: true
+  # Configure versioning
+  versioning: "Enabled"
   
-  # Server-side encryption
-  serverSideEncryption:
-    enabled: true
+  # Configure encryption (subject to governance cascade with AWSS3Config)
+  encryption:
     algorithm: "aws:kms"
+    kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/your-kms-key-id"
+    bucketKeyEnabled: true
   
-  # Public access blocking
-  publicAccessBlock:
-    blockPublicAcls: true
-    blockPublicPolicy: true
-    ignorePublicAcls: true
-    restrictPublicBuckets: true
+  # Control public access (subject to governance cascade)
+  blockPublicAccess: true
   
-  # Lifecycle policy to manage old logs
-  lifecycleConfiguration:
-    - id: delete-old-logs
-      status: Enabled
-      expirationInDays: 90
-      prefix: "logs/"
+  # Retention and management
+  deletionPolicy: retain
   
   # Resource tags
   tags:
@@ -145,7 +90,7 @@ spec:
 
 ### Artifact Storage Buckets
 
-Create buckets for build artifacts, data pipelines, and other shared data:
+Create buckets for build artifacts and shared data:
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -154,32 +99,26 @@ metadata:
   name: artifacts
   namespace: platform-shared
 spec:
-  configRef: platform-config
+  # Reference the governance profile
+  configRef: general-policy
   
-  # Explicit naming template — ensures consistency across accounts/regions
-  nameOverride: "artifacts-{account-id}-{region}"
+  # Override bucket naming for consistency across accounts/regions
+  nameOverride: "artifacts-{account_id}-{region}"
   
-  # Versioning for artifact history
-  versioningEnabled: true
+  # Enable versioning for artifact history
+  versioning: "Enabled"
   
-  # Encryption
-  serverSideEncryption:
-    enabled: true
+  # Configure encryption
+  encryption:
     algorithm: "aws:kms"
+    kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/your-kms-key-id"
+    bucketKeyEnabled: true
   
-  # Public access blocking
-  publicAccessBlock:
-    blockPublicAcls: true
-    blockPublicPolicy: true
-    ignorePublicAcls: true
-    restrictPublicBuckets: true
+  # Block public access
+  blockPublicAccess: true
   
-  # Lifecycle to clean up old artifacts
-  lifecycleConfiguration:
-    - id: transition-old-artifacts
-      status: Enabled
-      noncurrentVersionTransitionInDays: 30
-      noncurrentVersionExpirationInDays: 90
+  # Retention and management
+  deletionPolicy: retain
   
   # Tags
   tags:
@@ -200,7 +139,7 @@ Monitor the resource creation:
 kubectl get s3bucket -n platform-shared -w
 ```
 
-Wait until both buckets show `Ready` status.
+Wait until both buckets show `Ready` or `Synced` status.
 
 ## Step 3: Verify resources in Kubernetes
 
@@ -299,7 +238,7 @@ If the cluster manages resources across multiple AWS accounts, verify that ACK's
 
 ```bash
 # List the cross-account role ARN from the namespace annotation
-kubectl get namespace platform-shared -o jsonpath='{.metadata.annotations.ack\.aws\.com/cross-account-role-arn}'
+kubectl get namespace platform-shared -o jsonpath='{.metadata.annotations.aws\.kropath\.run/cross-account-role-arn}'
 
 # Verify the role exists in the target account
 aws iam get-role \
@@ -331,15 +270,15 @@ Common causes:
 
 ### Bucket names do not match the naming template
 
-The naming template uses `{account-id}` and `{region}` tokens, which are interpolated by ACK at creation time. Verify:
+The naming template uses `{account_id}` and `{region}` tokens, which are interpolated at creation time. Verify:
 
 ```bash
 # Check the actual bucket name created
 kubectl get s3bucket -n platform-shared -o jsonpath='{.items[*].status.bucketName}'
 
 # Confirm it matches the expected template
-# central-logging-<account-id>-<region>
-# artifacts-<account-id>-<region>
+# central-logging-<account_id>-<region>
+# artifacts-<account_id>-<region>
 ```
 
 ## Next steps
@@ -352,15 +291,19 @@ Once the namespace and platform resources are onboarded and verified:
 
 ## Related documentation
 
-- [S3Bucket resource documentation](../resources/aws-s3-bucket.md)
-- [S3Config resource documentation](../resources/aws-s3-config.md)
-- [KropathConfig reference](../resources/kropath-config.md)
-- [ADR-019: Cross-account resource management](https://kropath.atlassian.net/browse/ADR-019)
+- [AWS S3 Buckets resource documentation](../aws/s3/s3.md)
+- [AWSS3Config governance configuration](../aws/s3/s3.md#awss3config-governance-model)
+
+For architectural and governance details, see the design documents in kropath-core:
+
+- ADR-019: Cross-account resource management
+- ADR-015: Consolidated platform decisions (§5.3 governance cascade)
+- ADR-010: kropath-controller effective-config cascade
 
 ## Reference
 
-This task implements the story described in [KRO-1176: Onboard platform-shared namespace](https://kropath.atlassian.net/browse/KRO-1176). For detailed context and implementation details:
+This task implements the story described in [KRO-1176: Onboard platform-shared namespace](https://github.com/kropath/kropath-core/issues). For detailed context and implementation details, see the related Multica tickets:
 
-- **Namespace onboarding**: [KRO-1178](https://kropath.atlassian.net/browse/KRO-1178)
-- **Resource creation**: [KRO-1183](https://kropath.atlassian.net/browse/KRO-1183)
-- **Verification in AWS**: [KRO-1179](https://kropath.atlassian.net/browse/KRO-1179)
+- **KRO-1178**: Namespace onboarding template creation
+- **KRO-1183**: S3 resource creation (central-logging and artifacts buckets)
+- **KRO-1179**: Verification in AWS
