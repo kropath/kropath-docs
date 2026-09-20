@@ -4,7 +4,16 @@ type: task
 
 # Onboard the platform-shared namespace
 
-This task walks you through onboarding a Kubernetes namespace for platform-shared resources — a namespace that hosts shared AWS resources such as central logging buckets and artifact storage.
+## Why this matters
+
+As a platform team, you need a shared namespace to serve as the foundation for all other teams in your organization. The data team, payments team, analytics team, and every other tenant needs a consistent place to onboard from — and a working central-logging bucket plus artifacts bucket pair to build on.
+
+Without a shared namespace and its dedicated resources:
+- Teams lack a standard location for platform-wide logging and artifact storage
+- Each team reinvents observability and artifact management independently (duplication, inconsistency)
+- Platform operations become fragmented, making troubleshooting and compliance harder
+
+This task walks you through onboarding a Kubernetes namespace for platform-shared resources — a namespace that hosts shared AWS resources such as central logging buckets and artifact storage. Once this foundation is in place, individual teams can onboard to kropath and access these shared resources as part of their standard setup.
 
 ## Before you begin
 
@@ -12,7 +21,7 @@ This task walks you through onboarding a Kubernetes namespace for platform-share
 - You have `kubectl` configured to access the cluster
 - You have AWS credentials configured with permissions to create S3 buckets and IAM resources in the target account(s)
 - Platform teams have created one or more `AWSS3Config` governance profiles in the `kro-system` namespace (e.g., `general-policy`, `strict`)
-- The namespace onboarding template has been merged into kropath-core (see [KRO-1178](https://github.com/kropath/kropath-core/issues) for details)
+- The namespace onboarding template has been prepared and is ready to apply to your cluster
 
 ## Goal
 
@@ -25,7 +34,7 @@ You will:
 
 ## Step 1: Create the namespace with the onboarding template
 
-The namespace onboarding template from kropath-core (task [KRO-1178](https://github.com/kropath/kropath-core/issues)) provides baseline configurations. Apply the template manifest to create the `platform-shared` namespace with all required local configurations:
+The namespace onboarding template provides baseline configurations for cross-account resource management. Apply the template manifest to create the `platform-shared` namespace with all required local configurations:
 
 ```bash
 kubectl apply -f platform-shared-namespace-template.yaml
@@ -64,8 +73,8 @@ spec:
   # Reference a governance profile created by platform teams
   configRef: general-policy
   
-  # Override bucket naming to ensure global uniqueness across accounts/regions
-  nameOverride: "central-logging-{account_id}-{region}"
+  # Override bucket naming to ensure global uniqueness
+  nameOverride: "central-logging-{account_id}"
   
   # Configure versioning
   versioning: "Enabled"
@@ -102,8 +111,8 @@ spec:
   # Reference the governance profile
   configRef: general-policy
   
-  # Override bucket naming for consistency across accounts/regions
-  nameOverride: "artifacts-{account_id}-{region}"
+  # Override bucket naming for consistency across accounts
+  nameOverride: "artifacts-{account_id}"
   
   # Enable versioning for artifact history
   versioning: "Enabled"
@@ -232,19 +241,21 @@ aws s3api get-bucket-tagging \
 # Expected output shows tags matching the CR spec
 ```
 
-## Step 5: Verify cross-account access (if applicable)
+## Step 5: Verify namespace annotations (if applicable)
 
-If the cluster manages resources across multiple AWS accounts, verify that ACK's cross-account role is configured correctly:
+If the cluster manages resources across multiple AWS accounts, verify that the namespace has the correct cross-account annotations applied by the onboarding template:
 
 ```bash
-# List the cross-account role ARN from the namespace annotation
-kubectl get namespace platform-shared -o jsonpath='{.metadata.annotations.aws\.kropath\.run/cross-account-role-arn}'
+# List the namespace annotations
+kubectl get namespace platform-shared -o jsonpath='{.metadata.annotations}' | jq .
 
-# Verify the role exists in the target account
-aws iam get-role \
-  --role-name ack-cross-account-role \
-  --profile <target-account-profile>
+# Expected annotations:
+# - aws.kropath.run/global-config-namespace: shared
+# - services.k8s.aws/owner-account-id: <account-id>
+# - services.k8s.aws/default-region: <region>
 ```
+
+These annotations enable ACK to manage resources across accounts and regions. For details on how these annotations work, see ADR-019: Cross-account resource management in kropath-core.
 
 ## Troubleshooting
 
@@ -266,20 +277,22 @@ Common causes:
 
 - Verify the account and region using the bucket ARN in the status
 - Check IAM permissions for the user viewing the bucket
-- Confirm the role ARN in the namespace annotation matches the cross-account role in the target account
+- Confirm the namespace annotations (especially `services.k8s.aws/owner-account-id`) match the target account
 
 ### Bucket names do not match the naming template
 
-The naming template uses `{account_id}` and `{region}` tokens, which are interpolated at creation time. Verify:
+The naming override template uses `{account_id}` tokens, which are interpolated at creation time. Verify:
 
 ```bash
 # Check the actual bucket name created
 kubectl get s3bucket -n platform-shared -o jsonpath='{.items[*].status.bucketName}'
 
 # Confirm it matches the expected template
-# central-logging-<account_id>-<region>
-# artifacts-<account_id>-<region>
+# central-logging-<account_id>
+# artifacts-<account_id>
 ```
+
+If you need region information in the bucket name, set `spec.region` in your S3Bucket CR and include the region value in the `nameOverride` as a literal string (e.g., `central-logging-us-east-1-{account_id}`).
 
 ## Next steps
 
@@ -302,8 +315,10 @@ For architectural and governance details, see the design documents in kropath-co
 
 ## Reference
 
-This task implements the story described in [KRO-1176: Onboard platform-shared namespace](https://github.com/kropath/kropath-core/issues). For detailed context and implementation details, see the related Multica tickets:
+This task sets up the foundation for platform teams to onboard shared resources. Once the `platform-shared` namespace is ready, individual teams can reference the central-logging and artifacts buckets in their own onboarding process.
 
-- **KRO-1178**: Namespace onboarding template creation
-- **KRO-1183**: S3 resource creation (central-logging and artifacts buckets)
-- **KRO-1179**: Verification in AWS
+For design and governance details, see these references in kropath-core:
+
+- **ADR-019**: Cross-account resource management (annotations, role configuration)
+- **ADR-015** (§5.3): Governance cascade for S3 configuration
+- **ADR-010**: kropath-controller effective-config cascade
