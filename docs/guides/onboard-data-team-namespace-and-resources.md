@@ -62,13 +62,13 @@ You need:
 
 - **Cluster access** — `kubectl` against the kropath management cluster, with permission to create
   resources in a new namespace.
-- **A target AWS account and region.** This page uses account `111122223333` and `us-east-1`.
+- **A target AWS account and region.** This page uses account `111122223333` and `ap-southeast-2`.
   Substitute your own.
 - **The platform-shared foundation** from [KRO-1176](https://github.com/kropath/kropath-core/issues/1176).
   The platform team owns these buckets, but they are provisioned **into each product account**, not
   into a single shared account: `central-logging-<account_id>-<region>` and
   `artifacts-<account_id>-<region>` exist on every product-dev and product-test account. For this
-  page that means `central-logging-111122223333-us-east-1` and `artifacts-111122223333-us-east-1`.
+  page that means `central-logging-111122223333-ap-southeast-2` and `artifacts-111122223333-ap-southeast-2`.
 - **The Lambda artifact.** `file-process-lambda` is built from TypeScript by the pipeline in
   [KRO-1190](https://github.com/kropath/kropath-core/issues/1190), which uploads the ZIP to the
   **dev account's** artifacts bucket and promotes that same artifact to the **test account's**
@@ -131,7 +131,7 @@ metadata:
   annotations:
     # ACK cross-account resource management (ADR-019 D-1/D-4)
     services.k8s.aws/owner-account-id: "111122223333"
-    services.k8s.aws/default-region: "us-east-1"
+    services.k8s.aws/default-region: "ap-southeast-2"
 
 ---
 # Namespace-scoped platform configuration
@@ -168,7 +168,7 @@ spec:
     enforceHttpsOnly: true
   defaults:
     versioning: "Enabled"
-    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+    kmsKeyArn: "arn:aws:kms:ap-southeast-2:111122223333:key/11111111-2222-3333-4444-555555555555"
 ```
 
 Create the remaining family configs the same way — `SQSConfig`, `SNSConfig`, `CloudWatchLogsConfig`,
@@ -207,11 +207,12 @@ spec:
   configRef: general-policy
   nameOverride: file-process-bucket
   deletionPolicy: retain
+  region: ap-southeast-2   # required outside us-east-1 (sets locationConstraint)
 
   # Enforced by the mandatory tier; repeated for clarity
   encryption:
     algorithm: "aws:kms"
-    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+    kmsKeyArn: "arn:aws:kms:ap-southeast-2:111122223333:key/11111111-2222-3333-4444-555555555555"
     bucketKeyEnabled: true
   blockPublicAccess: true
   enforceHttpsOnly: true
@@ -220,7 +221,7 @@ spec:
   # Server access logging
   logging:
     enabled: true
-    targetBucket: "central-logging-111122223333-us-east-1"
+    targetBucket: "central-logging-111122223333-ap-southeast-2"
     targetPrefix: "file-process-bucket/"
 
   # Lifecycle: expire raw input after 90 days, clean up old versions and failed uploads
@@ -243,6 +244,10 @@ spec:
     data-pipeline: file-process
 ```
 
+`spec.region` must be set for every region except `us-east-1`, where it has to be omitted — AWS
+rejects a `locationConstraint` of `us-east-1`. See
+[Region Handling](../aws/s3/s3.md#region-handling-the-us-east-1-special-case).
+
 Note that `enforceHttpsOnly` currently writes the `DenyNonTLSAccess` statement straight into the
 bucket policy field, so kropath owns that field outright — do not attach another bucket policy to
 this bucket until the `bucketPolicyRef` composition work lands. See
@@ -254,7 +259,7 @@ S3 server access logging requires the target bucket to be **owned by the same AW
 source bucket and to be in the same Region** — AWS rejects a cross-account target outright. This is
 why `central-logging-<account_id>-<region>` is provisioned per product account rather than as one
 bucket in a shared account, and why the manifest above names
-`central-logging-111122223333-us-east-1`.
+`central-logging-111122223333-ap-southeast-2`.
 
 If you ever do need S3 access records centralized into another account, server access logging is
 not the mechanism — use **CloudTrail S3 data events**, which support a cross-account destination
@@ -272,7 +277,7 @@ in the diagram above cannot be turned on declaratively**. Two ways forward:
 aws s3api put-bucket-notification-configuration \
   --bucket file-process-bucket \
   --notification-configuration '{"EventBridgeConfiguration": {}}' \
-  --region us-east-1
+  --region ap-southeast-2
 ```
 
 Because ACK owns the bucket's notification configuration, a later reconcile can overwrite this.
@@ -286,7 +291,7 @@ spec:
   notification:
     lambdaConfigurations:
       - id: file-process-direct
-        lambdaFunctionARN: "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+        lambdaFunctionARN: "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
         events:
           - "s3:ObjectCreated:*"
         filter:
@@ -370,7 +375,7 @@ spec:
   configRef: general-policy
   nameOverride: "/aws/lambda/file-process-lambda"
   retentionDays: 90
-  kmsKeyId: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+  kmsKeyId: "arn:aws:kms:ap-southeast-2:111122223333:key/11111111-2222-3333-4444-555555555555"
   deletionPolicy: retain
   tags:
     data-pipeline: file-process
@@ -427,25 +432,25 @@ spec:
                 "Sid": "DecryptInputObjects",
                 "Effect": "Allow",
                 "Action": ["kms:Decrypt"],
-                "Resource": "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+                "Resource": "arn:aws:kms:ap-southeast-2:111122223333:key/11111111-2222-3333-4444-555555555555"
               },
               {
                 "Sid": "SendToQueue",
                 "Effect": "Allow",
                 "Action": ["sqs:SendMessage", "sqs:GetQueueUrl"],
-                "Resource": "arn:aws:sqs:us-east-1:111122223333:file-process-message-queue"
+                "Resource": "arn:aws:sqs:ap-southeast-2:111122223333:file-process-message-queue"
               },
               {
                 "Sid": "PublishNotification",
                 "Effect": "Allow",
                 "Action": ["sns:Publish"],
-                "Resource": "arn:aws:sns:us-east-1:111122223333:file-process-sns-topic"
+                "Resource": "arn:aws:sns:ap-southeast-2:111122223333:file-process-sns-topic"
               },
               {
                 "Sid": "WriteOwnLogs",
                 "Effect": "Allow",
                 "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-                "Resource": "arn:aws:logs:us-east-1:111122223333:log-group:/aws/lambda/file-process-lambda:*"
+                "Resource": "arn:aws:logs:ap-southeast-2:111122223333:log-group:/aws/lambda/file-process-lambda:*"
               }
             ]
           }
@@ -483,7 +488,7 @@ spec:
             "Statement": [{
               "Effect": "Allow",
               "Action": ["lambda:InvokeFunction"],
-              "Resource": "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+              "Resource": "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
             }]
           }
   tags:
@@ -510,7 +515,7 @@ spec:
   roleRef: file-process-lambda-role   # resolves to the IAMRole from Step 6
 
   code:
-    s3Bucket: "artifacts-111122223333-us-east-1"   # same account as the function
+    s3Bucket: "artifacts-111122223333-ap-southeast-2"   # same account as the function
     s3Key: "file-process-lambda/v1.4.0/function.zip"
     s3ObjectVersion: ""   # pin a version id for immutable deploys
 
@@ -616,7 +621,7 @@ spec:
 
   targets:
     - id: file-process-lambda
-      arn: "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+      arn: "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
       roleARN: "arn:aws:iam::111122223333:role/file-process-eventbridge-role"
 
   tags:
@@ -634,7 +639,7 @@ is what makes the invocation work: EventBridge assumes that role instead. Do not
 Because the rule is on the default bus, its ARN has no bus segment:
 
 ```
-arn:aws:events:us-east-1:111122223333:rule/file-process-rule
+arn:aws:events:ap-southeast-2:111122223333:rule/file-process-rule
 ```
 
 ## Verification
@@ -653,20 +658,20 @@ exist — fix the tag or the template before going further.
 ### Resources match in AWS
 
 ```bash
-aws s3api head-bucket --bucket file-process-bucket --region us-east-1
-aws s3api get-bucket-notification-configuration --bucket file-process-bucket --region us-east-1
-aws s3api get-bucket-policy --bucket file-process-bucket --region us-east-1   # DenyNonTLSAccess
-aws s3api get-bucket-lifecycle-configuration --bucket file-process-bucket --region us-east-1
+aws s3api head-bucket --bucket file-process-bucket --region ap-southeast-2
+aws s3api get-bucket-notification-configuration --bucket file-process-bucket --region ap-southeast-2
+aws s3api get-bucket-policy --bucket file-process-bucket --region ap-southeast-2   # DenyNonTLSAccess
+aws s3api get-bucket-lifecycle-configuration --bucket file-process-bucket --region ap-southeast-2
 
-aws sqs get-queue-url --queue-name file-process-message-queue --region us-east-1
+aws sqs get-queue-url --queue-name file-process-message-queue --region ap-southeast-2
 aws sns get-topic-attributes \
-  --topic-arn arn:aws:sns:us-east-1:111122223333:file-process-sns-topic --region us-east-1
+  --topic-arn arn:aws:sns:ap-southeast-2:111122223333:file-process-sns-topic --region ap-southeast-2
 aws logs describe-log-groups \
-  --log-group-name-prefix /aws/lambda/file-process-lambda --region us-east-1
+  --log-group-name-prefix /aws/lambda/file-process-lambda --region ap-southeast-2
 
-aws events describe-rule --name file-process-rule --region us-east-1
-aws events list-targets-by-rule --rule file-process-rule --region us-east-1
-aws lambda get-function --function-name file-process-lambda --region us-east-1
+aws events describe-rule --name file-process-rule --region ap-southeast-2
+aws events list-targets-by-rule --rule file-process-rule --region ap-southeast-2
+aws lambda get-function --function-name file-process-lambda --region ap-southeast-2
 ```
 
 The notification check matters most: if `EventBridgeConfiguration` is absent from its output, gap
@@ -678,27 +683,27 @@ bytes means an empty ZIP:
 
 ```bash
 aws lambda get-function --function-name file-process-lambda \
-  --query 'Configuration.[CodeSize,LastModified,Runtime]' --region us-east-1
+  --query 'Configuration.[CodeSize,LastModified,Runtime]' --region ap-southeast-2
 ```
 
 ### End-to-end: drop a file
 
 ```bash
 echo '{"record": "test"}' > test.json
-aws s3 cp test.json s3://file-process-bucket/data-service1/output/test.json --region us-east-1
+aws s3 cp test.json s3://file-process-bucket/data-service1/output/test.json --region ap-southeast-2
 ```
 
 Then, within a minute or so:
 
 ```bash
 # 1. The Lambda ran and logged both lines
-aws logs tail /aws/lambda/file-process-lambda --since 5m --region us-east-1
+aws logs tail /aws/lambda/file-process-lambda --since 5m --region ap-southeast-2
 
 # 2. A message reached the queue
 aws sqs receive-message \
   --queue-url "$(aws sqs get-queue-url --queue-name file-process-message-queue \
-      --query QueueUrl --output text --region us-east-1)" \
-  --wait-time-seconds 10 --region us-east-1
+      --query QueueUrl --output text --region ap-southeast-2)" \
+  --wait-time-seconds 10 --region ap-southeast-2
 
 # 3. The notification was published — subscribe an endpoint first, or read the metric
 aws cloudwatch get-metric-statistics \
@@ -706,7 +711,7 @@ aws cloudwatch get-metric-statistics \
   --dimensions Name=TopicName,Value=file-process-sns-topic \
   --start-time "$(date -u -v-10M +%Y-%m-%dT%H:%M:%SZ)" \
   --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --period 300 --statistics Sum --region us-east-1
+  --period 300 --statistics Sum --region ap-southeast-2
 ```
 
 SNS has no "read the last message" API — either attach a subscription (an SQS queue is easiest for
@@ -716,7 +721,7 @@ Also confirm the negative case, since the rule's whole job is filtering: upload 
 the watched path and check that nothing fires.
 
 ```bash
-aws s3 cp test.json s3://file-process-bucket/data-service1/other/test.json --region us-east-1
+aws s3 cp test.json s3://file-process-bucket/data-service1/other/test.json --region ap-southeast-2
 ```
 
 ## Troubleshooting
@@ -734,7 +739,7 @@ missing family config CR, or one missing its `aws.kropath.run/resource-name` lab
    ```bash
    aws events test-event-pattern \
      --event-pattern file://pattern.json \
-     --event file://sample-s3-event.json --region us-east-1
+     --event file://sample-s3-event.json --region ap-southeast-2
    ```
 3. Is the rule firing? Check the `TriggeredRules` metric in the `AWS/Events` namespace. If it is
    firing but the Lambda is not running, check `FailedInvocations` — that is almost always the
