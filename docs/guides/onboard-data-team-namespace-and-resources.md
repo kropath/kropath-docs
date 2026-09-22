@@ -1,54 +1,121 @@
 ---
 doc_type: task
-title: Onboard a Data Team Namespace and Resources
+title: Onboard the data-team namespace and its file-processing resources
 ---
 
-# Onboard a Data Team Namespace and Resources
+# Onboard the data-team namespace and its file-processing resources
 
-**Document Type:** Task
+**Document type:** Task — this page walks you through one concrete goal in a sequence of steps. It
+is not a concept page or a tutorial. For field-by-field reference material, follow the links in
+[Reference](#reference).
 
-## The Business Case
+## The business case
 
-Your data team needs an **observable, event-driven pipeline** to automate data processing when files land in S3. This task walks you through building one on kropath's shared namespace foundation ([KRO-1176](https://github.com/kropath/kropath/issues/KRO-1176)). Here's the flow:
+The data team runs a **file-processing data flow**. An upstream service, `data-service1`, writes its
+output into an S3 bucket. Every file that lands there has to be picked up, recorded for downstream
+systems, and announced to other teams — without anyone watching a console.
 
-1. A file arrives in S3
-2. EventBridge detects the event and routes it to a Lambda function
-3. Lambda processes the file and writes messages to **SQS** — a durable queue for your team's downstream systems to consume
-4. Lambda also publishes to **SNS** — so other teams can subscribe to the same events without being tightly coupled to your Lambda
+The flow this task builds:
 
-This architecture decouples your processing logic (Lambda) from consumption (SQS/SNS), making the pipeline observable, scalable, and shareable.
+```
+data-service1 writes  s3://file-process-bucket/data-service1/output/*.json
+        │
+        ▼  S3 sends the object-created event to EventBridge
+EventBridge rule  (matches data-service1/output/*)
+        │
+        ▼  invokes
+file-process-lambda  (TypeScript)
+        ├──▶ sends a message to SQS  file-process-message-queue   → downstream processing
+        ├──▶ writes a log line
+        ├──▶ publishes a notification to SNS  file-process-sns-topic  → other teams subscribe
+        └──▶ writes a log line
+                 all logs → CloudWatch log group /aws/lambda/file-process-lambda
+```
 
-## What you'll accomplish
+Why it is shaped this way:
 
-By following this task, you will:
+- **SQS** gives downstream systems a durable, replayable work queue. If a consumer is down, the
+  message waits instead of being lost.
+- **SNS** lets other teams subscribe to the same event without the data team having to know who they
+  are, or coupling anyone to the Lambda.
+- **EventBridge** sits between S3 and the Lambda so that the routing rule — *which* key prefixes
+  matter — is configuration rather than code, and so more consumers can be added later without
+  touching the bucket.
+- **CloudWatch Logs** makes the run observable: each stage writes a log line, so a failed file can
+  be traced to the step that dropped it.
 
-- Create a new Kubernetes namespace with kropath governance and IAM configuration
-- Provision AWS resources that form the observable pipeline: S3 bucket (ingestion), Lambda (processor), SQS (internal queue), SNS (broadcast notifications), and EventBridge (trigger)
-- Establish the event-driven trigger chain: S3 object creation → EventBridge rule → Lambda invocation → SQS message + SNS notification
-- Verify that the complete pipeline works end-to-end
+This is the data team's slice of the kropath golden path. It sits on top of the platform-shared
+namespace foundation ([KRO-1176](https://github.com/kropath/kropath-core/issues/1176)), which
+supplies the central-logging bucket and the artifacts bucket the Lambda build pipeline publishes to.
+
+## What you will accomplish
+
+- Onboard the `data-team` namespace with its local `KropathConfig` and family config CRs
+- Provision the pipeline resources: S3 bucket, SQS queue, SNS topic, CloudWatch log group,
+  EventBridge rule, Lambda function, and a least-privilege IAM role
+- Wire the S3 → EventBridge → Lambda → SQS/SNS chain
+- Verify the chain end to end by dropping a file in the bucket
 
 ## Before you begin
 
 You need:
 
-- **Cluster access:** kubectl access to the target EKS cluster in kropath
-- **AWS credentials:** Permissions to create S3 buckets, Lambda functions, EventBridge rules, SQS queues, SNS topics, and IAM roles in the target AWS account
-- **Platform prerequisites:**
-  - A `KropathConfig` profile configured in the target namespace with appropriate mandatory and default settings
-  - An `S3AdvancedConfig` profile for your organization's S3 governance policies (e.g., encryption, tagging)
-  - The central logging S3 bucket already provisioned (from the platform-shared namespace story)
-  - Access logging must be configured to send S3 logs to the central logging bucket
-- **Lambda artifact:** The Lambda function artifact built and promoted to the target account's artifacts bucket by the lambda build repository (see [KRO-1190](https://github.com/kropath/kropath/issues/KRO-1190))
-- **Knowledge prerequisites:**
-  - Basic Kubernetes manifest authoring (deployments, namespaces, secrets)
-  - Understanding of AWS IAM, S3 event notifications, EventBridge, Lambda, and SQS/SNS
-  - Familiarity with kropath's governance model and the effectiveConfig cascade (see [AWS S3 Buckets](../aws/s3/s3.md))
+- **Cluster access** — `kubectl` against the kropath management cluster, with permission to create
+  resources in a new namespace.
+- **A target AWS account and region.** This page uses account `111122223333` and `us-east-1` for
+  the data team, and account `999988887777` for the platform-shared account. Substitute your own.
+- **The platform-shared foundation** from [KRO-1176](https://github.com/kropath/kropath-core/issues/1176):
+  the `central-logging` bucket and the `artifacts-<account_id>-<region>` bucket.
+- **The Lambda artifact.** `file-process-lambda` is built from TypeScript by the pipeline in
+  [KRO-1190](https://github.com/kropath/kropath-core/issues/1190), which uploads the ZIP to the
+  platform-shared artifacts bucket. The artifact must exist before Step 7 — a `LambdaFunction`
+  whose code source points at a missing key reconciles into an error, and one pointed at an empty
+  placeholder reports `Ready` while running no real code.
+- **Familiarity** with the [governance cascade](../engineering-standards.md#5-governance-config-hierarchy)
+  and with how kropath derives resource names from naming templates.
 
-## Onboarding Steps
+### Naming: template versus `nameOverride`
 
-### Step 1: Create the namespace and apply governance configurations
+Every kropath resource family derives its AWS name from a naming template — by default
+`{namespace}-{name}`, and `{namespace}-{name}-{account_id}` for S3 buckets. A CR named
+`file-process-bucket` in namespace `data-team` would therefore become
+`data-team-file-process-bucket-111122223333`.
 
-Create a Kubernetes namespace with appropriate labels and annotations for cross-account resource management.
+This task uses `nameOverride` on each resource so the AWS names match the names the business flow
+above specifies exactly, and so every ARN on this page is easy to follow. **Prefer the template on
+resources you are not required to name exactly** — it keeps names collision-free across namespaces,
+which matters most for S3, whose bucket names are globally unique across all AWS accounts.
+
+The names this task produces:
+
+| Resource | Kind | AWS name |
+|---|---|---|
+| Bucket | `S3Bucket` | `file-process-bucket` |
+| Queue | `SQSQueue` | `file-process-message-queue` |
+| Topic | `SNSTopic` | `file-process-sns-topic` |
+| Log group | `CloudWatchLogsLogGroup` | `/aws/lambda/file-process-lambda` |
+| Rule | `EventBridgeRule` | `file-process-rule` |
+| Function | `LambdaFunction` | `file-process-lambda` |
+| Execution role | `IAMRole` | `file-process-lambda-role` |
+| EventBridge invoke role | `IAMRole` | `file-process-eventbridge-role` |
+
+## Known platform gaps
+
+Three parts of this flow cannot be expressed in kropath-aws today. Each is called out again at the
+step it affects, with the supported workaround. They are tracked under
+[KRO-1188](https://github.com/kropath/kropath-core/issues/1188).
+
+| # | Gap | Affects |
+|---|---|---|
+| G-1 | `S3Bucket.spec.notification` has no EventBridge option — only `lambdaConfigurations`, `sqsConfigurations`, and `snsConfigurations` | [Step 2](#step-2-create-the-s3-bucket) |
+| G-2 | `LambdaFunction` has no `environment` field, so the queue URL and topic ARN cannot be injected as environment variables | [Step 7](#step-7-deploy-the-lambda-function) |
+| G-3 | There is no `LambdaPermission` resource, so EventBridge → Lambda invoke permission must come from the target's `roleARN` rather than a resource-based policy | [Step 8](#step-8-let-eventbridge-invoke-the-lambda) |
+
+## Step 1: Onboard the namespace
+
+Create the namespace, its ACK cross-account annotations, and the local config CRs. Every config CR
+carries the `aws.kropath.run/resource-name` label — that label is how `externalRef` lookups resolve
+the profile, and a config CR without it is invisible to the RGDs that need it.
 
 ```yaml
 ---
@@ -56,476 +123,655 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: data-team
-  labels:
-    kropath.run/governance: enabled
   annotations:
-    # ACK annotations for cross-account resource management (ADR-019)
-    ack.aws.com/account-id: "123456789012"
-    ack.aws.com/region: "us-east-1"
+    # ACK cross-account resource management (ADR-019 D-1/D-4)
+    services.k8s.aws/owner-account-id: "111122223333"
+    services.k8s.aws/default-region: "us-east-1"
 
 ---
-# Local KropathConfig for this namespace
-apiVersion: kropath.run/v1alpha1
+# Namespace-scoped platform configuration
+apiVersion: aws.kropath.run/v1alpha1
 kind: KropathConfig
 metadata:
   name: baseline
   namespace: data-team
+  labels:
+    aws.kropath.run/resource-name: baseline
 spec:
-  # Mandatory governance for the data team
   mandatory:
     tags:
       team: data-team
       cost-center: data-platform
       data-classification: internal
-  
-  # Default values for this namespace
   defaults:
     tags:
       environment: production
-    annotations:
-      managed-by: kropath
 
 ---
-# Local S3AdvancedConfig for data team buckets
+# S3 governance for this namespace
 apiVersion: aws.kropath.run/v1alpha1
-kind: S3AdvancedConfig
+kind: S3Config
 metadata:
-  name: data-team-policy
+  name: general-policy
   namespace: data-team
   labels:
-    aws.kropath.run/resource-name: data-team-policy
+    aws.kropath.run/resource-name: general-policy
 spec:
   mandatory:
-    # Enforce encryption for all data team S3 buckets
     encryptionAlgorithm: "aws:kms"
-    # (Replace with your organization's KMS key ARN)
-    kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
-    # Enforce public access blocking
     blockPublicAccess: true
-  
+    enforceHttpsOnly: true
   defaults:
-    # Default naming template for data team buckets
-    namingTemplate: "data-team-{name}-{account_id}"
-    # Enable versioning by default
     versioning: "Enabled"
-    # Enable access logging
-    accessLogging: true
-    accessLoggingTargetBucket: "central-logging-123456789012-us-east-1"
-    accessLoggingTargetPrefix: "data-team/"
+    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
 ```
 
-Apply this manifest to your cluster:
+Create the remaining family configs the same way — `SQSConfig`, `SNSConfig`, `CloudWatchLogsConfig`,
+`EventBridgeConfig`, `LambdaConfig`, and `IAMConfig`, each named `general-policy` and each carrying
+the `aws.kropath.run/resource-name: general-policy` label. A resource whose `configRef` names a
+profile that does not exist falls back to `general-policy`; if that is missing too, the RGD cannot
+resolve its effective config and the resource never becomes ready.
+
+Apply and confirm:
 
 ```bash
-kubectl apply -f namespace-and-config.yaml
-```
-
-Verify the namespace was created:
-
-```bash
+kubectl apply -f namespace-and-configs.yaml
 kubectl get ns data-team
-kubectl get KropathConfig baseline -n data-team
+kubectl get kropathconfig baseline -n data-team
+kubectl get s3config general-policy -n data-team
 ```
 
-### Step 2: Create the S3 bucket with access logging
+> The mandatory tier wins over anything an instance sets. Because `general-policy` mandates
+> `encryptionAlgorithm: "aws:kms"`, `blockPublicAccess: true`, and `enforceHttpsOnly: true`, every
+> bucket in this namespace gets KMS encryption, public-access blocking, and a `DenyNonTLSAccess`
+> bucket policy whether or not the bucket spec asks for them.
 
-Create the S3 bucket that will trigger the data pipeline.
+## Step 2: Create the S3 bucket
+
+The bucket that `data-service1` writes into. Encryption, public-access blocking, and TLS
+enforcement come from the mandatory tier in Step 1 — they are shown here explicitly only so the
+manifest reads as a complete statement of intent.
 
 ```yaml
----
 apiVersion: aws.kropath.run/v1alpha1
 kind: S3Bucket
 metadata:
-  name: data-input
+  name: file-process
   namespace: data-team
 spec:
-  # Reference the data team governance profile
-  configRef: data-team-policy
-  
-  # Additional tags for cost tracking and data governance
-  tags:
-    data-pipeline: enabled
-    retention-days: "90"
-  
-  syncedLabels:
-    pipeline-stage: ingestion
-  
-  # Retention policy: keep the S3 bucket even if the CR is deleted
+  configRef: general-policy
+  nameOverride: file-process-bucket
   deletionPolicy: retain
-  
-  # Enable versioning for audit trail
+
+  # Enforced by the mandatory tier; repeated for clarity
+  encryption:
+    algorithm: "aws:kms"
+    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+    bucketKeyEnabled: true
+  blockPublicAccess: true
+  enforceHttpsOnly: true
   versioning: "Enabled"
-```
 
-### Step 3: Create the SNS topic for notifications
+  # Server access logging
+  logging:
+    enabled: true
+    targetBucket: "central-logging-111122223333-us-east-1"
+    targetPrefix: "file-process-bucket/"
 
-Create an SNS topic that the Lambda function will publish to.
+  # Lifecycle: expire raw input after 90 days, clean up old versions and failed uploads
+  lifecycle:
+    - id: expire-processed-input
+      status: Enabled
+      filter:
+        prefix: "data-service1/output/"
+      transitions:
+        - days: 30
+          storageClass: STANDARD_IA
+      expiration:
+        days: 90
+      noncurrentVersionExpiration:
+        noncurrentDays: 30
+      abortIncompleteMultipartUpload:
+        daysAfterInitiation: 7
 
-```yaml
----
-apiVersion: aws.kropath.run/v1alpha1
-kind: SNSTopic
-metadata:
-  name: data-pipeline-notifications
-  namespace: data-team
-spec:
-  # Topic name follows kropath naming conventions
-  displayName: "Data Pipeline Notifications"
-  
-  # Enable server-side encryption
-  kmsMasterKeyId: "alias/aws/sns"
-  
   tags:
-    data-pipeline: enabled
-    notification-type: pipeline-events
-  
-  syncedLabels:
-    critical: "true"
+    data-pipeline: file-process
 ```
 
-### Step 4: Create the SQS queue
+Note that `enforceHttpsOnly` currently writes the `DenyNonTLSAccess` statement straight into the
+bucket policy field, so kropath owns that field outright — do not attach another bucket policy to
+this bucket until the `bucketPolicyRef` composition work lands. See
+[AWS S3 Buckets](../aws/s3/s3.md#https-enforcement).
 
-Create an SQS queue to receive messages from the Lambda function.
+### Access logging is same-account only
+
+S3 server access logging requires the target bucket to be **owned by the same AWS account as the
+source bucket and to be in the same Region**. If your `central-logging` bucket lives in the
+data-team account (the `central-logging-<account_id>-<region>` name from KRO-1176 resolves
+per-account), the manifest above works as written.
+
+If your `central-logging` bucket lives in the **platform-shared account**, server access logging
+cannot deliver to it — AWS rejects a cross-account target. Use **CloudTrail S3 data events**
+instead, which do support a cross-account destination bucket, and configure that trail in the
+platform-shared account. Raise this with the platform team before assuming either shape;
+[KRO-1186](https://github.com/kropath/kropath-core/issues/1186) AC-2 needs to say which one is
+intended.
+
+### Gap G-1: enabling the EventBridge notification
+
+`S3Bucket.spec.notification` accepts only `lambdaConfigurations`, `sqsConfigurations`, and
+`snsConfigurations`. There is no `eventBridgeConfiguration`, so **the S3 → EventBridge notification
+in the diagram above cannot be turned on declaratively**. Two ways forward:
+
+**Option A — enable it out of band (keeps the target architecture).**
+
+```bash
+aws s3api put-bucket-notification-configuration \
+  --bucket file-process-bucket \
+  --notification-configuration '{"EventBridgeConfiguration": {}}' \
+  --region us-east-1
+```
+
+Because ACK owns the bucket's notification configuration, a later reconcile can overwrite this.
+Re-apply it after any change to `spec.notification`, and verify with
+`aws s3api get-bucket-notification-configuration` before trusting the pipeline.
+
+**Option B — skip EventBridge and invoke the Lambda directly from S3 (fully supported today).**
 
 ```yaml
----
+spec:
+  notification:
+    lambdaConfigurations:
+      - id: file-process-direct
+        lambdaFunctionARN: "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+        events:
+          - "s3:ObjectCreated:*"
+        filter:
+          key:
+            filterRules:
+              - name: prefix
+                value: "data-service1/output/"
+              - name: suffix
+                value: ".json"
+```
+
+Option B costs you the routing indirection — adding a second consumer later means editing the
+bucket rather than adding a rule — so prefer Option A while G-1 is open if you expect more
+consumers. If you take Option B, skip Steps 5 and 8.
+
+## Step 3: Create the SQS queue
+
+```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: SQSQueue
 metadata:
-  name: data-pipeline-messages
+  name: file-process-messages
   namespace: data-team
 spec:
-  # Retain messages for 4 days
-  messageRetentionPeriod: 345600
-  
-  # Enable server-side encryption
+  configRef: general-policy
+  nameOverride: file-process-message-queue
+
+  encryptionType: "kms"
   kmsMasterKeyId: "alias/aws/sqs"
-  
-  # Visibility timeout: Lambda gets 5 minutes to process
+
+  # Give a consumer 5 minutes to process before the message reappears
   visibilityTimeout: 300
-  
-  # Dead-letter queue for failed messages
-  redrivePolicy:
-    deadLetterTargetArn: ""  # Will be configured separately
-    maxReceiveCount: 3
-  
+  messageRetentionPeriod: 345600  # 4 days
+
   tags:
-    data-pipeline: enabled
-    queue-type: processing
+    data-pipeline: file-process
 ```
 
-### Step 5: Create the EventBridge rule
-
-Create an EventBridge rule that triggers on S3 object creation.
+Adding a dead-letter queue is worth doing before this reaches production. Create a second
+`SQSQueue` and reference it by **CR name** — `redrivePolicy` takes `deadLetterTargetRef`, not an
+ARN, and an empty reference is invalid:
 
 ```yaml
----
+spec:
+  redrivePolicy:
+    deadLetterTargetRef: file-process-messages-dlq
+    maxReceiveCount: 3
+```
+
+## Step 4: Create the SNS topic
+
+```yaml
 apiVersion: aws.kropath.run/v1alpha1
-kind: EventBridgeRule
+kind: SNSTopic
 metadata:
-  name: s3-to-lambda
+  name: file-process-notifications
   namespace: data-team
 spec:
-  # React to S3 object creation in the data-input bucket
-  eventPattern:
-    source:
-      - aws.s3
-    detail-type:
-      - "Object Created"
-    detail:
-      bucket:
-        name:
-          - data-team-data-input-123456789012  # Effective bucket name from naming template
-      object:
-        key:
-          - prefix: "ingestion/"
-  
-  # Route events to the Lambda function
-  targets:
-    - arn: "arn:aws:lambda:us-east-1:123456789012:function:data-team-processor"
-      roleArn: "arn:aws:iam::123456789012:role/EventBridgeToLambdaRole"
-  
-  # Enable the rule
-  state: "ENABLED"
-  
+  configRef: general-policy
+  nameOverride: file-process-sns-topic
+  displayName: "File Process Notifications"
+  kmsMasterKeyId: "alias/aws/sns"
   tags:
-    data-pipeline: enabled
-    integration-type: s3-to-lambda
+    data-pipeline: file-process
 ```
 
-### Step 6: Create IAM roles for the Lambda function
+Other teams subscribe to this topic themselves; the data team does not manage their subscriptions.
 
-Create an IAM role with the minimum permissions needed for the Lambda function to:
-- Be invoked by EventBridge
-- Write messages to SQS
-- Publish to SNS
-- Log to CloudWatch
+## Step 5: Create the CloudWatch log group
+
+Lambda creates `/aws/lambda/<function-name>` on first invocation if it does not exist, but that
+auto-created group has no retention policy and no KMS key. Create it explicitly so it is governed:
 
 ```yaml
----
-apiVersion: iam.aws.kropath.run/v1alpha1
+apiVersion: aws.kropath.run/v1alpha1
+kind: CloudWatchLogsLogGroup
+metadata:
+  name: file-process-lambda-logs
+  namespace: data-team
+spec:
+  configRef: general-policy
+  nameOverride: "/aws/lambda/file-process-lambda"
+  retentionDays: 90
+  kmsKeyId: "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+  deletionPolicy: retain
+  tags:
+    data-pipeline: file-process
+```
+
+`kmsKeyId` must be a full KMS key ARN — CloudWatch Logs rejects an alias or a bare key ID. Create
+this before the Lambda, so the function's first invocation writes into the governed group rather
+than racing to create an ungoverned one.
+
+## Step 6: Create the IAM roles
+
+### Execution role for the Lambda
+
+Least privilege, per [KRO-1186](https://github.com/kropath/kropath-core/issues/1186) AC-4: no
+wildcard actions, no wildcard resources.
+
+Two things to know about `IAMRole` before reading the manifest:
+
+- `type: lambda` generates the `lambda.amazonaws.com` trust policy for you. There is no
+  `assumeRolePolicyDocument` field.
+- **Only the first entry of `spec.policies` and the first of `spec.inlinePolicies` are honored.**
+  Put every statement into a single inline document rather than splitting it across entries.
+
+`addLambdaBasicPolicy` is set to `false` deliberately: the managed `AWSLambdaBasicExecutionRole` it
+would attach grants logs on `arn:aws:logs:*:*:*`, a wildcard resource. The inline policy below
+scopes logging to the one log group instead.
+
+```yaml
+apiVersion: aws.kropath.run/v1alpha1
 kind: IAMRole
 metadata:
-  name: data-team-lambda-role
+  name: file-process-lambda-role
   namespace: data-team
 spec:
-  assumeRolePolicyDocument: |
-    {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": "lambda.amazonaws.com"
-          },
-          "Action": "sts:AssumeRole"
-        }
-      ]
-    }
-  
-  # Inline policy with minimal permissions
-  inlinePolicies:
-    - name: data-pipeline-permissions
-      policyDocument: |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "sqs:SendMessage"
-              ],
-              "Resource": "arn:aws:sqs:us-east-1:123456789012:data-pipeline-messages"
-            },
-            {
-              "Effect": "Allow",
-              "Action": [
-                "sns:Publish"
-              ],
-              "Resource": "arn:aws:sns:us-east-1:123456789012:data-pipeline-notifications"
-            },
-            {
-              "Effect": "Allow",
-              "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-              ],
-              "Resource": "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/*"
-            }
-          ]
-        }
-  
+  configRef: general-policy
+  type: lambda
+  nameOverride: file-process-lambda-role
+  description: "Execution role for file-process-lambda"
+  addLambdaBasicPolicy: false
+  policies:
+    - inline:
+        name: file-process-pipeline
+        documentJSON: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "ReadInputObjects",
+                "Effect": "Allow",
+                "Action": ["s3:GetObject"],
+                "Resource": "arn:aws:s3:::file-process-bucket/data-service1/output/*"
+              },
+              {
+                "Sid": "DecryptInputObjects",
+                "Effect": "Allow",
+                "Action": ["kms:Decrypt"],
+                "Resource": "arn:aws:kms:us-east-1:111122223333:key/11111111-2222-3333-4444-555555555555"
+              },
+              {
+                "Sid": "SendToQueue",
+                "Effect": "Allow",
+                "Action": ["sqs:SendMessage", "sqs:GetQueueUrl"],
+                "Resource": "arn:aws:sqs:us-east-1:111122223333:file-process-message-queue"
+              },
+              {
+                "Sid": "PublishNotification",
+                "Effect": "Allow",
+                "Action": ["sns:Publish"],
+                "Resource": "arn:aws:sns:us-east-1:111122223333:file-process-sns-topic"
+              },
+              {
+                "Sid": "WriteOwnLogs",
+                "Effect": "Allow",
+                "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+                "Resource": "arn:aws:logs:us-east-1:111122223333:log-group:/aws/lambda/file-process-lambda:*"
+              }
+            ]
+          }
   tags:
-    data-pipeline: enabled
-    role-type: lambda-execution
-  
-  syncedLabels:
-    security: strict
+    data-pipeline: file-process
 ```
 
-### Step 7: Deploy the Lambda function
+`kms:Decrypt` appears because the bucket is SSE-KMS: without it, `s3:GetObject` fails on every
+object. `sqs:GetQueueUrl` is there because of gap G-2 — see Step 7. `logs:CreateLogGroup` is
+deliberately absent: Step 5 already created the group, and omitting the permission keeps the
+function from silently creating an ungoverned one if the name ever drifts.
 
-Deploy the Lambda function using the artifact from the lambda build repository.
+### Invoke role for EventBridge
+
+EventBridge assumes this role to call the function (see gap G-3):
 
 ```yaml
----
+apiVersion: aws.kropath.run/v1alpha1
+kind: IAMRole
+metadata:
+  name: file-process-eventbridge-role
+  namespace: data-team
+spec:
+  configRef: general-policy
+  type: aws-service
+  servicePrincipal: "events.amazonaws.com"
+  nameOverride: file-process-eventbridge-role
+  description: "Lets the file-process EventBridge rule invoke file-process-lambda"
+  policies:
+    - inline:
+        name: invoke-file-process-lambda
+        documentJSON: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": ["lambda:InvokeFunction"],
+              "Resource": "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+            }]
+          }
+  tags:
+    data-pipeline: file-process
+```
+
+## Step 7: Deploy the Lambda function
+
+The code comes from the platform-shared artifacts bucket, which the pipeline in
+[KRO-1190](https://github.com/kropath/kropath-core/issues/1190) publishes to.
+
+```yaml
 apiVersion: aws.kropath.run/v1alpha1
 kind: LambdaFunction
 metadata:
-  name: data-team-processor
+  name: file-process
   namespace: data-team
 spec:
-  # Function runtime and handler
-  runtime: nodejs18.x
+  configRef: general-policy
+  nameOverride: file-process-lambda
+
+  runtime: nodejs20.x
   handler: index.handler
-  role: "arn:aws:iam::123456789012:role/data-team-lambda-role"
-  
-  # Code from S3 artifact bucket
+  roleRef: file-process-lambda-role   # resolves to the IAMRole from Step 6
+
   code:
-    s3Bucket: "artifacts-123456789012-us-east-1"
-    s3Key: "data-team-processor/latest/function.zip"
-  
-  # Environment variables
-  environment:
-    variables:
-      SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/data-pipeline-messages"
-      SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:data-pipeline-notifications"
-  
-  # Function timeout: 60 seconds
+    s3Bucket: "artifacts-999988887777-us-east-1"   # platform-shared account
+    s3Key: "file-process-lambda/v1.4.0/function.zip"
+    s3ObjectVersion: ""   # pin a version id for immutable deploys
+
   timeout: 60
-  
-  # Memory allocation: 256 MB
   memorySize: 256
-  
+
+  loggingConfig:
+    logFormat: JSON
+    applicationLogLevel: INFO
+
   tags:
-    data-pipeline: enabled
-    function-type: event-processor
-  
-  syncedLabels:
-    critical: "true"
+    data-pipeline: file-process
 ```
 
-### Step 8: Give EventBridge permission to invoke the Lambda
+Prefer `roleRef` over a hardcoded `role` ARN: the controller resolves it from the `IAMRole` CR's
+`status.predictedArn`, so the role can be changed without editing the function. Pin `s3Key` to a
+version rather than `latest` — a mutable key makes it impossible to tell which build is running.
 
-Create a Lambda permission to allow EventBridge to invoke the function.
+### Cross-account artifact: who actually needs `s3:GetObject`
+
+This is the part most teams get wrong. **The Lambda execution role does not need any permission on
+the artifacts bucket.** Lambda reads the ZIP **once, at create/update time, using the credentials of
+whoever is deploying the function** — here, the ACK lambda-controller's IAM role. At invoke time the
+code is already inside the Lambda service; the execution role is never used to fetch it.
+
+So for a cross-account artifact, arrange all of the following:
+
+| Requirement | Where it is configured | Who owns it |
+|---|---|---|
+| `s3:GetObject` on the artifact key | ACK lambda-controller's IAM role, data-team account | Platform team |
+| Cross-account read grant for that principal | Bucket policy on `artifacts-999988887777-us-east-1` | Platform team (platform-shared account) |
+| `kms:Decrypt` on the artifacts bucket's CMK, if it is SSE-KMS | Both the controller's role **and** the KMS key policy | Platform team |
+| Artifacts bucket in the **same Region** as the function | Bucket placement | Platform team |
+
+That last one is a hard AWS constraint, not a policy question: a Lambda cannot be created from a
+ZIP in a bucket in another Region, cross-account or not. If the platform-shared artifacts bucket is
+in a different Region from your function, the artifact has to be replicated into a same-Region
+bucket first.
+
+The execution role's `s3:GetObject` in Step 6 is a separate grant, scoped to the **data** bucket
+prefix the Lambda reads at runtime.
+
+### Gap G-2: getting the queue URL and topic ARN into the function
+
+`LambdaFunction` has no `environment` field, so `SQS_QUEUE_URL` and `SNS_TOPIC_ARN` cannot be
+injected as configuration. (`docs/aws/lambda/lambda-function.md` documents an `environment` field —
+that reference page is wrong and is being corrected alongside this one.)
+
+Until G-2 is closed, have the TypeScript handler resolve its targets at startup instead:
+
+```ts
+import { SQSClient, GetQueueUrlCommand } from "@aws-sdk/client-sqs";
+
+const region = process.env.AWS_REGION!;               // always set by the Lambda runtime
+const accountId = context.invokedFunctionArn.split(":")[4];
+
+const { QueueUrl } = await sqs.send(
+  new GetQueueUrlCommand({ QueueName: "file-process-message-queue" }),
+);
+const topicArn = `arn:aws:sns:${region}:${accountId}:file-process-sns-topic`;
+```
+
+`GetQueueUrl` is why `sqs:GetQueueUrl` appears in the execution role in Step 6. Resolve once at
+module scope so the call is paid on cold start, not per invocation. Baking the names into the build
+is the other option, but it couples the artifact to one account.
+
+## Step 8: Let EventBridge invoke the Lambda
+
+Create the rule on the **default** event bus — S3 delivers its notifications there, not to a custom
+bus. Exactly one of `eventBusRef` or `eventBusName` must be set.
 
 ```yaml
----
 apiVersion: aws.kropath.run/v1alpha1
-kind: LambdaPermission
+kind: EventBridgeRule
 metadata:
-  name: allow-eventbridge-invoke
+  name: file-process
   namespace: data-team
 spec:
-  functionName: data-team-processor
-  action: lambda:InvokeFunction
-  principal: events.amazonaws.com
-  sourceArn: "arn:aws:events:us-east-1:123456789012:rule/s3-to-lambda"
+  configRef: general-policy
+  nameOverride: file-process-rule
+  eventBusName: "default"
+  state: "ENABLED"
+
+  # eventPattern is a JSON *string*, not a YAML map
+  eventPattern: |
+    {
+      "source": ["aws.s3"],
+      "detail-type": ["Object Created"],
+      "detail": {
+        "bucket": {"name": ["file-process-bucket"]},
+        "object": {"key": [{"wildcard": "data-service1/output/*.json"}]}
+      }
+    }
+
+  targets:
+    - id: file-process-lambda
+      arn: "arn:aws:lambda:us-east-1:111122223333:function:file-process-lambda"
+      roleARN: "arn:aws:iam::111122223333:role/file-process-eventbridge-role"
+
+  tags:
+    data-pipeline: file-process
+```
+
+Use `wildcard` rather than separate `prefix` and `suffix` entries. Entries in a key array are
+OR-ed, so `[{"prefix": "data-service1/output/"}, {"suffix": ".json"}]` would match every object
+under the prefix *and* every `.json` anywhere in the bucket — not the intersection you want.
+
+**Gap G-3:** there is no `LambdaPermission` resource in kropath-aws, so the function has no
+resource-based policy granting `events.amazonaws.com` permission to invoke it. The `roleARN` above
+is what makes the invocation work: EventBridge assumes that role instead. Do not remove it.
+
+Because the rule is on the default bus, its ARN has no bus segment:
+
+```
+arn:aws:events:us-east-1:111122223333:rule/file-process-rule
 ```
 
 ## Verification
 
-After applying all manifests, verify that the resources are provisioned correctly.
-
-### Verify namespace and configurations
+### Resources are ready in Kubernetes
 
 ```bash
-# Check namespace
-kubectl get ns data-team
-
-# Check local configurations
-kubectl get kropath -n data-team
-kubectl get s3advanced -n data-team
+kubectl get s3bucket,sqsqueue,snstopic,cloudwatchlogsloggroup,eventbridgerule,lambdafunction,iamrole \
+  -n data-team
 ```
 
-Expected output: All resources should show `Ready` or `Synced` status.
+Every resource should report `valid` under `NAMINGSTATUS` and a populated `PREDICTEDARN`. A
+`NAMINGSTATUS` of `invalid-unresolved-tokens` means a naming template referenced a tag that does not
+exist — fix the tag or the template before going further.
 
-### Verify S3 bucket
+### Resources match in AWS
 
 ```bash
-# Check bucket creation in Kubernetes
-kubectl get s3bucket -n data-team
+aws s3api head-bucket --bucket file-process-bucket --region us-east-1
+aws s3api get-bucket-notification-configuration --bucket file-process-bucket --region us-east-1
+aws s3api get-bucket-policy --bucket file-process-bucket --region us-east-1   # DenyNonTLSAccess
+aws s3api get-bucket-lifecycle-configuration --bucket file-process-bucket --region us-east-1
 
-# Verify in AWS
-aws s3api head-bucket --bucket data-team-data-input-123456789012 --region us-east-1
+aws sqs get-queue-url --queue-name file-process-message-queue --region us-east-1
+aws sns get-topic-attributes \
+  --topic-arn arn:aws:sns:us-east-1:111122223333:file-process-sns-topic --region us-east-1
+aws logs describe-log-groups \
+  --log-group-name-prefix /aws/lambda/file-process-lambda --region us-east-1
 
-# Check access logging
-aws s3api get-bucket-logging --bucket data-team-data-input-123456789012 --region us-east-1
+aws events describe-rule --name file-process-rule --region us-east-1
+aws events list-targets-by-rule --rule file-process-rule --region us-east-1
+aws lambda get-function --function-name file-process-lambda --region us-east-1
 ```
 
-### Verify SNS and SQS
+The notification check matters most: if `EventBridgeConfiguration` is absent from its output, gap
+G-1's out-of-band step was never applied or has been reconciled away, and nothing downstream will
+fire.
+
+Confirm the deployed code is the real artifact, not a placeholder — `CodeSize` of a few hundred
+bytes means an empty ZIP:
 
 ```bash
-# Check SNS topic
-kubectl get snstopic -n data-team
-aws sns list-topics --region us-east-1 | grep data-pipeline-notifications
-
-# Check SQS queue
-kubectl get sqsqueue -n data-team
-aws sqs list-queues --region us-east-1 | grep data-pipeline-messages
+aws lambda get-function --function-name file-process-lambda \
+  --query 'Configuration.[CodeSize,LastModified,Runtime]' --region us-east-1
 ```
 
-### Verify EventBridge rule and Lambda
+### End-to-end: drop a file
 
 ```bash
-# Check EventBridge rule
-kubectl get eventbridgerule -n data-team
-aws events describe-rule --name s3-to-lambda --region us-east-1
-
-# Check Lambda function
-kubectl get lambdafunction -n data-team
-aws lambda get-function --function-name data-team-processor --region us-east-1
+echo '{"record": "test"}' > test.json
+aws s3 cp test.json s3://file-process-bucket/data-service1/output/test.json --region us-east-1
 ```
 
-### End-to-end trigger test
+Then, within a minute or so:
 
-Verify that the complete S3 → EventBridge → Lambda → SQS/SNS trigger chain works:
+```bash
+# 1. The Lambda ran and logged both lines
+aws logs tail /aws/lambda/file-process-lambda --since 5m --region us-east-1
 
-1. **Upload a test file to S3:**
-   ```bash
-   echo "test data" > test.txt
-   aws s3 cp test.txt s3://data-team-data-input-123456789012/ingestion/test.txt --region us-east-1
-   ```
+# 2. A message reached the queue
+aws sqs receive-message \
+  --queue-url "$(aws sqs get-queue-url --queue-name file-process-message-queue \
+      --query QueueUrl --output text --region us-east-1)" \
+  --wait-time-seconds 10 --region us-east-1
 
-2. **Check Lambda logs:**
-   ```bash
-   # Get the latest log stream
-   LATEST_STREAM=$(aws logs describe-log-streams \
-     --log-group-name /aws/lambda/data-team-processor \
-     --order-by LastEventTime \
-     --descending --max-items 1 \
-     --query 'logStreams[0].logStreamName' \
-     --output text \
-     --region us-east-1)
-   
-   # View logs
-   aws logs get-log-events \
-     --log-group-name /aws/lambda/data-team-processor \
-     --log-stream-name "$LATEST_STREAM" \
-     --region us-east-1
-   ```
+# 3. The notification was published — subscribe an endpoint first, or read the metric
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/SNS --metric-name NumberOfMessagesPublished \
+  --dimensions Name=TopicName,Value=file-process-sns-topic \
+  --start-time "$(date -u -v-10M +%Y-%m-%dT%H:%M:%SZ)" \
+  --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --period 300 --statistics Sum --region us-east-1
+```
 
-3. **Verify SQS message:**
-   ```bash
-   # Check if a message was written to the queue
-   aws sqs receive-message \
-     --queue-url https://sqs.us-east-1.amazonaws.com/123456789012/data-pipeline-messages \
-     --region us-east-1
-   ```
+SNS has no "read the last message" API — either attach a subscription (an SQS queue is easiest for
+testing) or use the published-message metric as above.
 
-4. **Verify SNS notification:**
-   ```bash
-   # Check SNS subscription and message history
-   aws sns list-subscriptions-by-topic \
-     --topic-arn arn:aws:sns:us-east-1:123456789012:data-pipeline-notifications \
-     --region us-east-1
-   ```
+Also confirm the negative case, since the rule's whole job is filtering: upload a file **outside**
+the watched path and check that nothing fires.
 
-If all checks pass and the Lambda function executed successfully, the trigger chain is working end-to-end.
+```bash
+aws s3 cp test.json s3://file-process-bucket/data-service1/other/test.json --region us-east-1
+```
 
 ## Troubleshooting
 
-**S3 bucket not created:**
-- Check that the `S3AdvancedConfig` profile (`data-team-policy`) exists and is `Ready`
-- Verify that the cluster has permissions to create S3 buckets in the target account
-- Check the bucket CR status: `kubectl describe s3bucket data-input -n data-team`
+**A resource never becomes ready.** Check `status.conditions` first
+(`kubectl describe <kind> <name> -n data-team`). The most common cause in a fresh namespace is a
+missing family config CR, or one missing its `aws.kropath.run/resource-name` label — the RGD's
+`externalRef` lookup then resolves nothing and the resource waits forever.
 
-**Lambda not invoked on S3 events:**
-- Verify that the EventBridge rule is enabled: `aws events describe-rule --name s3-to-lambda`
-- Check that the Lambda function ARN in the rule target is correct
-- Verify that the EventBridge role has permissions to invoke the Lambda
-- Check CloudTrail logs for EventBridge invocation attempts
+**Nothing happens when a file lands.** Work the chain in order rather than guessing:
 
-**SQS/SNS messages not received:**
-- Verify that the Lambda code is actually writing to SQS and SNS
-- Check IAM role permissions for the Lambda function
-- Verify SQS queue and SNS topic ARNs are correct in Lambda environment variables
+1. Is the EventBridge notification on the bucket?
+   `aws s3api get-bucket-notification-configuration --bucket file-process-bucket`. If not, gap G-1.
+2. Does the pattern match? Test it without uploading anything:
+   ```bash
+   aws events test-event-pattern \
+     --event-pattern file://pattern.json \
+     --event file://sample-s3-event.json --region us-east-1
+   ```
+3. Is the rule firing? Check the `TriggeredRules` metric in the `AWS/Events` namespace. If it is
+   firing but the Lambda is not running, check `FailedInvocations` — that is almost always the
+   invoke role (gap G-3).
+4. Is the Lambda erroring? `aws logs tail /aws/lambda/file-process-lambda --since 15m`.
 
-**Access logging not working:**
-- Verify that the central logging bucket exists and is accessible
-- Check S3 bucket ACLs and permissions for log delivery
-- Verify the logging target prefix is correct
+**The Lambda runs but SQS or SNS stays empty.** Read the log output: an `AccessDenied` on
+`sqs:SendMessage` or `sns:Publish` means the execution role's inline policy did not apply. Remember
+that **only the first entry of `spec.policies` is honored** — if you split the statements across
+several entries, everything after the first was silently dropped.
 
-## Related Issues and Tickets
+**`s3:GetObject` fails on the input object.** The bucket is SSE-KMS, so the role needs `kms:Decrypt`
+on the bucket's key as well as `s3:GetObject`. Check the key policy too: a grant in the role's
+policy is not enough if the key policy does not allow the account.
 
-For detailed implementation notes, see:
+**The function deploys but runs no code.** The artifact key is wrong or empty. Check `CodeSize`
+(above), then confirm the pipeline in KRO-1190 actually promoted the build. Cross-account and
+cross-Region artifact failures show up here too — see
+[the cross-account table](#cross-account-artifact-who-actually-needs-s3getobject).
 
-- **[KRO-1182](https://github.com/kropath/kropath/issues/KRO-1182)** — Parent tracker for this onboarding story
-- **[KRO-1185](https://github.com/kropath/kropath/issues/KRO-1185)** — Onboard namespace subtask (creating the namespace and local configs)
-- **[KRO-1186](https://github.com/kropath/kropath/issues/KRO-1186)** — Create resources subtask (S3, SNS, SQS, EventBridge, Lambda, IAM roles)
-- **[KRO-1190](https://github.com/kropath/kropath/issues/KRO-1190)** — Lambda build repository + CI/CD pipeline for the Lambda artifact
+**Access logs never appear in the central-logging bucket.** If that bucket is in the platform-shared
+account, server access logging cannot deliver to it at all; see
+[Access logging is same-account only](#access-logging-is-same-account-only).
 
-## Next Steps
+## Related tickets
 
-After onboarding the data team namespace, you can:
+- [KRO-1182](https://github.com/kropath/kropath-core/issues/1182) — story tracker
+- [KRO-1185](https://github.com/kropath/kropath-core/issues/1185) — onboard the namespace
+- [KRO-1186](https://github.com/kropath/kropath-core/issues/1186) — create the resources
+- [KRO-1187](https://github.com/kropath/kropath-core/issues/1187) — verify in AWS
+- [KRO-1188](https://github.com/kropath/kropath-core/issues/1188) — gap tickets, including G-1/G-2/G-3
+- [KRO-1190](https://github.com/kropath/kropath-core/issues/1190) — Lambda repo and build pipeline
+- [KRO-1176](https://github.com/kropath/kropath-core/issues/1176) — platform-shared foundation
 
-- **Add data processing logic** — Update the Lambda function in the lambda build repository to implement your specific data processing requirements
-- **Scale to additional data sources** — Add more EventBridge rules to process events from other S3 buckets or AWS services
-- **Monitor and alert** — Set up CloudWatch Alarms and SNS subscriptions to monitor the data pipeline
-- **Test in AWS** — Follow the verification steps in [KRO-1187](https://github.com/kropath/kropath/issues/KRO-1187) to verify the pipeline end-to-end in AWS
+## Next steps
 
-## See Also
+- **Add a dead-letter queue** to the SQS queue and a `FailedInvocations` alarm on the rule.
+- **Add subscribers** to `file-process-sns-topic` as other teams ask for the events — no change to
+  this pipeline is needed.
+- **Add a second consumer** by adding a target to the EventBridge rule, which is the payoff for
+  keeping EventBridge in the path.
 
-- [AWS S3 Buckets Configuration](../aws/s3/s3.md)
-- [Kubernetes API Conventions](https://kubernetes.io/docs/concepts/overview/working-with-objects/)
+## Reference
+
+- [AWS S3 Buckets](../aws/s3/s3.md)
+- [EventBridgeRule](../aws/eventbridge/eventbridgerule.md)
+- [LambdaFunction](../aws/lambda/lambda-function.md)
+- [SQSQueue](../aws/sqs/sqsqueue.md)
+- [SNSTopic](../aws/sns/snstopic.md)
+- [CloudWatchLogsLogGroup](../aws/cloudwatchlogs/cloudwatchlogsloggroup.md)
+- [IAMRole](../aws/iam/iamrole.md)
+- [kropath Engineering Standards](../engineering-standards.md)

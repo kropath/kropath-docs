@@ -14,7 +14,8 @@ The `LambdaFunction` resource wraps AWS Lambda functions. It handles function de
 
 ### Deployment Package
 
-Exactly one of `code` or `imageUri` must be set; they are mutually exclusive.
+Exactly one of `code.s3Bucket`/`code.s3Key` (ZIP) or `code.imageUri` (container image) must be set;
+they are mutually exclusive. All deployment-package fields live under `code`.
 
 **ZIP package from S3:**
 
@@ -28,9 +29,9 @@ Exactly one of `code` or `imageUri` must be set; they are mutually exclusive.
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `imageUri` | string | `""` | ECR image URI; e.g. `123456789012.dkr.ecr.us-east-1.amazonaws.com/my-lambda:latest` |
+| `code.imageUri` | string | `""` | ECR image URI; e.g. `123456789012.dkr.ecr.us-east-1.amazonaws.com/my-lambda:latest` |
 
-**Container image config overrides** (only valid when using `imageUri`):
+**Container image config overrides** (only valid when using `code.imageUri`):
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
@@ -44,7 +45,6 @@ Exactly one of `code` or `imageUri` must be set; they are mutually exclusive.
 |---|---|---|---|
 | `runtime` | string | `""` | Runtime identifier (e.g., `python3.12`, `nodejs20.x`, `java17`); required for ZIP packages; `""` = fall through to governance defaults |
 | `handler` | string | `""` | Entry-point method (e.g., `index.handler`); required for ZIP packages; ignored for container images |
-| `architectures` | array | `["x86_64"]` | CPU architecture: `x86_64` or `arm64` (Graviton) |
 | `packageType` | string | `"Zip"` | `Zip` or `Image` |
 
 ### Resource Limits (Governed by LambdaConfig)
@@ -72,9 +72,10 @@ Either `role` or `roleRef` can be set; they are mutually exclusive.
 
 ### Environment Variables
 
-| Field | Type | Default | Purpose |
-|---|---|---|---|
-| `environment` | map | `{}` | Key-value pairs injected at runtime; governed by KMS encryption settings |
+> **Not supported.** `LambdaFunction` has **no `environment` field**. Environment variables cannot
+> be set through the CR today. Have the handler resolve what it needs at startup (for example
+> `GetQueueUrl` by queue name, or an ARN built from `AWS_REGION` and the account id in
+> `context.invokedFunctionArn`), or bake the values into the build artifact.
 
 ### Encryption (Governed by LambdaConfig)
 
@@ -108,8 +109,7 @@ Either `role` or `roleRef` can be set; they are mutually exclusive.
 | `deadLetterTargetArn` | string | `""` | Legacy DLQ: SQS queue or SNS topic ARN for async failure routing |
 | `functionEventInvokeConfig.maximumEventAgeInSeconds` | integer | `0` | Discard async events older than this (60–21600 seconds); `0` = not set |
 | `functionEventInvokeConfig.maximumRetryAttempts` | integer | `-1` | Max async retry attempts (0–2); `-1` = AWS default (2 retries) |
-| `functionEventInvokeConfig.destinationConfig.onSuccess.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for successful async invocations |
-| `functionEventInvokeConfig.destinationConfig.onFailure.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for failed async invocations |
+| `functionEventInvokeConfig.destinationConfig.onFailure.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for failed async invocations. Only `onFailure` is supported; there is no `onSuccess` destination. |
 
 ### SnapStart
 
@@ -132,12 +132,6 @@ Either `codeSigningConfigArn` or `codeSigningConfigRef` can be set; they are mut
 |---|---|---|---|
 | `layers` | array | `[]` | List of layer version ARNs (max 5 layers) |
 | `fileSystemConfigs` | array | `[]` | EFS access point mounts; each: `{arn: "string", localMountPath: "string"}` |
-
-### Publishing
-
-| Field | Type | Default | Purpose |
-|---|---|---|---|
-| `publish` | boolean | `false` | If `true`, publish a numbered version immediately after function creation |
 
 ### Metadata and Tags
 
@@ -218,18 +212,16 @@ metadata:
   namespace: api-team
 spec:
   configRef: general-policy
-  imageUri: "123456789012.dkr.ecr.us-east-1.amazonaws.com/api-handler:latest"
+  code:
+    imageUri: "123456789012.dkr.ecr.us-east-1.amazonaws.com/api-handler:latest"
   packageType: Image
   memorySize: 512
   timeout: 60
-  architectures:
-    - arm64  # Graviton processor
   role: "arn:aws:iam::123456789012:role/lambda-api-execution-role"
 ```
 
 Result:
 - Function deployed using ECR image
-- Runs on ARM64 architecture (Graviton)
 - Custom execution role provided directly
 
 ### Function with Cross-Resource References
@@ -253,8 +245,6 @@ spec:
   timeout: 300
   roleRef: lambda-db-sync  # References IAMRole CR
   kmsKeyRef: db-encryption-key  # References KMSKey CR
-  environment:
-    DB_CONNECTION_STRING: "secrets-manager-reference"
   layers:
     - "arn:aws:lambda:us-east-1:123456789012:layer:db-client:1"
 ```
@@ -327,15 +317,12 @@ spec:
     maximumEventAgeInSeconds: 3600
     maximumRetryAttempts: 2
     destinationConfig:
-      onSuccess:
-        destination: "arn:aws:sqs:us-east-1:123456789012:success-queue"
       onFailure:
         destination: "arn:aws:sqs:us-east-1:123456789012:dlq"
 ```
 
 Result:
 - Async events processed with retry logic
-- Successful invocations routed to success queue
 - Failed invocations routed to DLQ
 - Events older than 1 hour discarded
 
