@@ -21,7 +21,7 @@ This task builds that foundation. The platform team onboards the `platform-share
 provisions two kinds of bucket:
 
 ```
-  platform-shared account (999988887777)
+  shared account (999988887777)                 ns: platform-shared
   ┌──────────────────────────────────────────────┐
   │  central-logging-999988887777-us-east-1      │  ← log sink for this account
   │    ← S3 server access logs (same account)    │
@@ -29,7 +29,8 @@ provisions two kinds of bucket:
   │    ← other AWS service log delivery          │
   └──────────────────────────────────────────────┘
 
-  product-dev account (111122223333)          product-test account (444455556666)
+  dev account (111122223333)                  test account (444455556666)
+  ns: platform-dev, payments-dev, data-dev    ns: platform-test, payments-test, data-test
   ┌────────────────────────────────────┐      ┌────────────────────────────────────┐
   │ central-logging-111122223333-…     │      │ central-logging-444455556666-…     │
   │   ▲ server access logs             │      │   ▲ server access logs             │
@@ -38,6 +39,9 @@ provisions two kinds of bucket:
   │   versioned; build artifacts,      │      │   versioned; build artifacts,      │
   │   Lambda ZIPs, promotion history   │      │   Lambda ZIPs, promotion history   │
   └────────────────────────────────────┘      └────────────────────────────────────┘
+
+  One pair per ACCOUNT, not per namespace — every tenant namespace placed into the
+  dev account shares that account's two buckets.
 ```
 
 Why it is shaped this way:
@@ -50,7 +54,7 @@ Why it is shaped this way:
 - **`central-logging` does not log itself.** It is the target, not a source. Turning server access
   logging on for a log sink either loops it back onto itself or doubles the object count for no
   added signal.
-- **`artifacts` is provisioned per product-dev/test account and is accessed only from within that
+- **`artifacts` is provisioned per dev/test account and is accessed only from within that
   account.** Its consumers — Lambda functions loading deployment packages, build pipelines
   publishing them — live alongside it, so the bucket policy carries no cross-account grants and the
   KMS key needs no external principals. Keeping it same-account is what makes the policy small
@@ -69,7 +73,7 @@ publishes into that account's `artifacts` bucket.
 - Onboard the `platform-shared` namespace with its ACK cross-account annotations and local config CRs
 - Provision `central-logging-<account_id>-<region>` in the platform-shared account, with a bucket
   policy that accepts log delivery from S3, ALB, and other AWS services
-- Onboard a namespace per product-dev/test account and provision
+- Onboard a namespace per dev/test account and provision
   `artifacts-<account_id>-<region>` and that account's `central-logging` bucket
 - Verify both bucket kinds in Kubernetes and in AWS
 
@@ -84,21 +88,36 @@ You need:
 - **A KMS key per account** for bucket encryption. This page references existing key ARNs; if you
   manage keys through kropath, create them first with
   [`KMSKey`](../aws/kms/kmskey.md) and reference the resulting ARN.
+- **The `platform-global` governance namespace**, already present in the cluster. It holds the
+  platform-wide baseline every resource namespace points at, and it deliberately carries **none**
+  of the three placement annotations (ADR-019 D-5) — it is a governance namespace, not a placement
+  target. Rendering it with placement annotations breaks the cascade.
 - **Familiarity** with the [governance cascade](../engineering-standards.md#5-governance-config-hierarchy)
   and with how kropath derives resource names from naming templates.
 
 ### Account topology
 
-| Account | ID | Buckets created here |
-|---|---|---|
-| platform-shared | `999988887777` | `central-logging-999988887777-us-east-1` |
-| product-dev | `111122223333` | `central-logging-111122223333-us-east-1`, `artifacts-111122223333-us-east-1` |
-| product-test | `444455556666` | `central-logging-444455556666-us-east-1`, `artifacts-444455556666-us-east-1` |
+Namespaces are named `<team>-<environment>` (KRO-1164) — the suffix names the AWS account the
+namespace places into, so placement is readable from the name alone. `platform-shared` is the
+exception to the pattern: `kropath-platform-shared` *is* the environment, and it is a placement
+target as well as the identity account.
+
+| Account | ID | Namespaces placed here | Buckets created here | Created from |
+|---|---|---|---|---|
+| shared | `999988887777` | `platform-shared` | `central-logging-999988887777-us-east-1` | `platform-shared` |
+| dev | `111122223333` | `platform-dev`, `payments-dev`, `data-dev` | `central-logging-111122223333-us-east-1`, `artifacts-111122223333-us-east-1` | `platform-dev` |
+| test | `444455556666` | `platform-test`, `payments-test`, `data-test` | `central-logging-444455556666-us-east-1`, `artifacts-444455556666-us-east-1` | `platform-test` |
+
+**Create each bucket from exactly one namespace per account.** Several tenant namespaces place into
+the same account, and `{account_id}` and `{region}` resolve identically in all of them — so an
+`artifacts` CR in both `payments-dev` and `data-dev` would resolve to the same globally-unique
+bucket name and the second would fail to create. The platform team's namespace in each environment
+(`platform-dev`, `platform-test`) owns both buckets; tenants consume them by name.
 
 ### Naming: template versus `nameOverride`
 
 The default S3 naming template is `{namespace}-{name}-{account_id}`, so an `S3Bucket` CR named
-`artifacts` in namespace `product-dev` would become `product-dev-artifacts-111122223333`. The names
+`artifacts` in namespace `platform-dev` would become `platform-dev-artifacts-111122223333`. The names
 this foundation publishes are contracts other teams hard-code, so this task pins them with
 `nameOverride` instead.
 
@@ -110,7 +129,7 @@ lower-cased. So:
 nameOverride: "artifacts-{account_id}-{region}"
 ```
 
-resolves to `artifacts-111122223333-us-east-1` in the product-dev account. Do **not** hard-code the
+resolves to `artifacts-111122223333-us-east-1` in the platform-dev account. Do **not** hard-code the
 Region as a literal — `{region}` resolves from the effective config, which keeps one manifest
 correct across Regions.
 
@@ -127,6 +146,8 @@ Each is called out again at the step it affects.
 | C-1 | S3 server access logging requires the target bucket in the **same account and Region** as the source. AWS rejects a cross-account target. This is why `central-logging` is per account. | [Step 3](#step-3-create-the-central-logging-bucket), [Step 5](#step-5-create-the-artifacts-bucket) |
 | C-2 | To centralize S3 access records across accounts anyway, server access logging is not the mechanism — use **CloudTrail S3 data events**, which do support a cross-account destination. Data events are billed per event, unlike server access logging, which is free apart from log storage. | [Step 3](#step-3-create-the-central-logging-bucket) |
 | C-3 | `S3Bucket.spec.notification` has no EventBridge option. Not needed by this task, but it affects tenants that build on these buckets. | Tenant onboarding |
+| C-4 | All three namespace annotations are required. A missing `owner-account-id` or `default-region` is a reconcile failure; a missing `global-config-namespace` silently makes the namespace resolve governance-only. None of them defaults (ADR-019 D-4/D-5, amended by KRO-1139). | [Step 1](#step-1-onboard-the-platform-shared-namespace), [Step 4](#step-4-onboard-each-product-account-namespace) |
+| C-5 | Bucket names resolve per **account**, not per namespace, so two namespaces placed in the same account cannot both create the same bucket. | [Account topology](#account-topology) |
 
 ## Step 1: Onboard the platform-shared namespace
 
@@ -141,9 +162,13 @@ kind: Namespace
 metadata:
   name: platform-shared
   annotations:
-    # ACK cross-account resource management (ADR-019 D-1/D-4)
+    # All three are required on every resource namespace (ADR-019 §5.6/§5.8).
+    # owner-account-id and default-region let ACK's CARM chain resolve the target
+    # account; global-config-namespace points kropath-controller at the platform-global
+    # baseline for the global tier.
     services.k8s.aws/owner-account-id: "999988887777"
     services.k8s.aws/default-region: "us-east-1"
+    aws.kropath.run/global-config-namespace: platform-global
 
 ---
 # Namespace-scoped platform configuration
@@ -180,6 +205,15 @@ spec:
     enforceHttpsOnly: true
   defaults:
     kmsKeyArn: "arn:aws:kms:us-east-1:999988887777:key/11111111-2222-3333-4444-555555555555"
+```
+
+`aws.kropath.run/global-config-namespace: platform-global` is what makes the global tier of the
+cascade resolve for this namespace. Omitting it is not a fallback to some default — the namespace
+resolves governance-only, and the buckets below inherit nothing from the platform baseline. Confirm
+all three annotations landed before moving on:
+
+```bash
+kubectl get ns platform-shared -o jsonpath='{.metadata.annotations}' | jq .
 ```
 
 Because the `mandatory` tier wins over anything an instance sets, every bucket in this namespace
@@ -372,7 +406,7 @@ kubectl apply -f central-logging-bucket.yaml
 
 ## Step 4: Onboard each product account namespace
 
-Repeat Step 1 for each product-dev/test account, changing the namespace name and the owner account
+Repeat Step 1 for each dev/test account, changing the namespace name and the owner account
 annotation. The config CRs are otherwise identical apart from the account-local KMS key:
 
 ```yaml
@@ -380,17 +414,18 @@ annotation. The config CRs are otherwise identical apart from the account-local 
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: product-dev
+  name: platform-dev
   annotations:
     services.k8s.aws/owner-account-id: "111122223333"
     services.k8s.aws/default-region: "us-east-1"
+    aws.kropath.run/global-config-namespace: platform-global
 
 ---
 apiVersion: aws.kropath.run/v1alpha1
 kind: KropathConfig
 metadata:
   name: baseline
-  namespace: product-dev
+  namespace: platform-dev
   labels:
     aws.kropath.run/resource-name: baseline
 spec:
@@ -408,7 +443,7 @@ apiVersion: aws.kropath.run/v1alpha1
 kind: S3Config
 metadata:
   name: general-policy
-  namespace: product-dev
+  namespace: platform-dev
   labels:
     aws.kropath.run/resource-name: general-policy
 spec:
@@ -425,11 +460,11 @@ substituting `111122223333` for `999988887777` in the namespace, the policy reso
 `aws:SourceAccount` condition, and the KMS key ARN. The `nameOverride` template needs no change —
 `{account_id}` and `{region}` resolve per namespace.
 
-Repeat for `product-test` with `444455556666`.
+Repeat for `platform-test` with `444455556666`.
 
 ## Step 5: Create the artifacts bucket
 
-One per product-dev/test account. Unlike `central-logging`, this bucket is a source of access logs
+One per dev/test account. Unlike `central-logging`, this bucket is a source of access logs
 rather than a target, and it carries no bucket policy of its own — the `DenyNonTLSAccess` statement
 from the mandatory tier is the whole policy, because every consumer lives in this same account and
 is authorized through its own IAM role.
@@ -439,7 +474,7 @@ apiVersion: aws.kropath.run/v1alpha1
 kind: S3Bucket
 metadata:
   name: artifacts
-  namespace: product-dev
+  namespace: platform-dev
 spec:
   configRef: general-policy
   nameOverride: "artifacts-{account_id}-{region}"
@@ -494,15 +529,15 @@ Apply:
 
 ```bash
 kubectl apply -f artifacts-bucket.yaml
-kubectl get s3bucket -n product-dev
+kubectl get s3bucket -n platform-dev
 ```
 
 ## Step 6: Verify in Kubernetes
 
 ```bash
 kubectl get s3bucket -n platform-shared
-kubectl get s3bucket -n product-dev
-kubectl describe s3bucket artifacts -n product-dev
+kubectl get s3bucket -n platform-dev
+kubectl describe s3bucket artifacts -n platform-dev
 ```
 
 Check three things in the output:
@@ -515,8 +550,8 @@ Check three things in the output:
   child resource too:
 
 ```bash
-kubectl get buckets.s3.services.k8s.aws -n product-dev -o wide
-kubectl describe buckets.s3.services.k8s.aws -n product-dev artifacts-111122223333-us-east-1
+kubectl get buckets.s3.services.k8s.aws -n platform-dev -o wide
+kubectl describe buckets.s3.services.k8s.aws -n platform-dev artifacts-111122223333-us-east-1
 ```
 
 If a bucket is stuck, the ACK S3 controller's log is the place to look. The controller is
@@ -586,8 +621,8 @@ from the namespace annotations. Confirm the annotations exist and the config CR 
 `aws.kropath.run/resource-name` label:
 
 ```bash
-kubectl get ns product-dev -o jsonpath='{.metadata.annotations}' | jq .
-kubectl get s3config general-policy -n product-dev -o jsonpath='{.status.effectiveConfig.aws}' | jq .
+kubectl get ns platform-dev -o jsonpath='{.metadata.annotations}' | jq .
+kubectl get s3config general-policy -n platform-dev -o jsonpath='{.status.effectiveConfig.aws}' | jq .
 ```
 
 ### The bucket policy contains only `DenyNonTLSAccess`
