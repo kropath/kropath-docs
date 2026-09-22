@@ -89,7 +89,7 @@ This rule:
 - Calls a health-check Lambda function
 - Useful for periodic polling and monitoring tasks
 
-### Rule with Retry and Dead-Letter Queue
+### Rule Targeting an SQS Queue
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -105,18 +105,16 @@ spec:
     - id: notify-customer
       arn: "arn:aws:sqs:us-east-1:123456789012:order-notifications"
       roleARN: "arn:aws:iam::123456789012:role/eventbridge-send-sqs"
-      retryPolicy:
-        maximumRetryAttempts: 3
-        maximumEventAgeInSeconds: 3600
-      deadLetterConfig:
-        arn: "arn:aws:sqs:us-east-1:123456789012:order-notifications-dlq"
 ```
 
 This rule:
-- Routes to an SQS queue
-- Retries up to 3 times if delivery fails
-- Keeps events for up to 1 hour
-- Sends failed events to a dead-letter queue for debugging
+- Routes matched events to an SQS queue
+- Uses a role that grants EventBridge `sqs:SendMessage` on that queue
+
+> **Retry policies and dead-letter configuration are not supported.** The `Target` type exposes
+> only `id`, `arn`, `roleARN`, `input`, and `inputPath`. Per-target `retryPolicy` and
+> `deadLetterConfig` are not part of the RGD schema; to catch failed deliveries today, monitor the
+> rule's `FailedInvocations` metric in the `AWS/Events` namespace.
 
 ### Rule with Multiple Targets
 
@@ -138,8 +136,6 @@ spec:
     - id: archive-events
       arn: "arn:aws:kinesis:us-east-1:123456789012:stream/events"
       roleARN: "arn:aws:iam::123456789012:role/eventbridge-send-kinesis"
-      kinesisParameters:
-        partitionKeyPath: "$.account_id"
 
     - id: notify-external
       arn: "arn:aws:sns:us-east-1:123456789012:domain-events-topic"
@@ -274,12 +270,11 @@ targets:
     roleARN: "arn:aws:iam::account-id:role/eventbridge-role"  # Required for most targets
     input: '{"fixed": "payload"}'  # Optional: send a fixed JSON payload
     inputPath: "$.detail"  # Optional: extract a portion of the event
-    retryPolicy:  # Optional
-      maximumRetryAttempts: 3
-      maximumEventAgeInSeconds: 3600
-    deadLetterConfig:  # Optional
-      arn: "arn:aws:sqs:region:account-id:dlq-queue"
 ```
+
+These five fields are the whole of the `Target` type. Nested parameter blocks (`ecsParameters`,
+`kinesisParameters`, `inputTransformer`, `retryPolicy`, `deadLetterConfig`, …) are intentionally
+omitted from the RGD.
 
 **Supported targets:**
 - AWS Lambda functions
@@ -295,7 +290,6 @@ targets:
 **Input transformation:**
 - `input` — Send a constant JSON payload (ignores the matched event)
 - `inputPath` — Extract a portion of the event using JSONPath
-- `inputTransformer` — Map and transform event fields
 
 ### Naming
 
@@ -370,7 +364,7 @@ kubectl patch eventbridgerule order-processor -n payments-prod -p '{"spec":{"sta
 2. Check the event pattern matches your events (test with `aws events test-event-pattern`)
 3. Verify the IAM role has `events:PutEvents` permission on the target
 4. Check CloudWatch Logs for the Lambda function (if target is Lambda)
-5. Review the dead-letter queue for failed deliveries
+5. Check the rule's `FailedInvocations` metric in the `AWS/Events` namespace
 
 ### Rule naming errors
 
@@ -381,4 +375,4 @@ If `status.namingStatus` is `invalid-unresolved-tokens`, a naming template token
 - EventBridge rules with JSON event patterns are AWS-specific
 - Schedule expressions (cron and rate) are AWS EventBridge native; GCP and Azure use different scheduler services
 - The target ARN format and role requirements vary by target service (Lambda, SQS, SNS, etc.)
-- Dead-letter queues are available for SQS and SNS targets; other targets handle failed deliveries differently
+- Per-target dead-letter queues exist in the AWS EventBridge API but are not exposed by this RGD (see the Target field list above)

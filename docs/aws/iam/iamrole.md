@@ -65,18 +65,17 @@ spec:
   type: lambda
   description: "Role for Lambda data processing"
   policies:
-    - arn: "arn:aws:iam::aws:policy/service-role/AWSLambdaS3ExecutionRole"
-  inlinePolicies:
-    - name: dynamodb-access
-      documentJSON: |
-        {
-          "Version": "2012-10-17",
-          "Statement": [{
-            "Effect": "Allow",
-            "Action": ["dynamodb:PutItem", "dynamodb:GetItem"],
-            "Resource": "arn:aws:dynamodb:*:123456789012:table/data-table"
-          }]
-        }
+    - inline:
+        name: dynamodb-access
+        documentJSON: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": ["dynamodb:PutItem", "dynamodb:GetItem"],
+              "Resource": "arn:aws:dynamodb:*:123456789012:table/data-table"
+            }]
+          }
 ```
 
 ### EKS IRSA Role (OIDC Federation)
@@ -148,21 +147,39 @@ policies:
 
 ### Inline Policies
 
-Define policies directly on the role:
+There are two ways to attach an inline policy, and they take different fields.
+
+**Inline JSON, written on the role** — goes under `policies[].inline`:
+
+```yaml
+policies:
+  - inline:
+      name: s3-logs
+      documentJSON: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::my-logs/*"
+          }]
+        }
+```
+
+**Inline policy from a separate document CR** — goes under `inlinePolicies`, whose items take
+`name` and `documentRef` (both required). There is no `documentJSON` field on `inlinePolicies`:
 
 ```yaml
 inlinePolicies:
   - name: s3-logs
-    documentJSON: |
-      {
-        "Version": "2012-10-17",
-        "Statement": [{
-          "Effect": "Allow",
-          "Action": "s3:PutObject",
-          "Resource": "arn:aws:s3:::my-logs/*"
-        }]
-      }
+    documentRef: s3-logs-document   # references a PolicyDocument CR
 ```
+
+> **Only the first entry of `policies` and the first entry of `inlinePolicies` are honored.**
+> The RGD reads `policies[0]` and `inlinePolicies[0]` and ignores the rest, so a role can carry at
+> most one managed-policy attachment plus one inline document from each list. Put every statement
+> you need into a **single** policy document rather than splitting it across list entries — extra
+> entries are dropped silently, with no error on the CR.
 
 ## Governance Controls
 
