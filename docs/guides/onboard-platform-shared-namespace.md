@@ -51,7 +51,7 @@ Why it is shaped this way:
   logging requires the target bucket to be owned by the same AWS account as the source bucket and
   to sit in the same Region — AWS rejects a cross-account target outright. A single shared log
   bucket would therefore be unusable as an S3 access-log target for every account but its own. See
-  [Constraint C-1](#constraints-and-platform-gaps).
+  [Constraint C-1](#aws-constraints-that-shape-this-design).
 - **`central-logging` does not log itself.** It is the target, not a source. Turning server access
   logging on for a log sink either loops it back onto itself or doubles the object count for no
   added signal.
@@ -64,10 +64,9 @@ Why it is shaped this way:
   former — a bad deploy is rolled back by pointing at the previous object version. Log objects are
   write-once and are aged out by lifecycle rules instead.
 
-The data team's pipeline ([KRO-1184](https://github.com/kropath/kropath-docs/pull/75)) is the first
-consumer of both: its `file-process-bucket` logs into its account's `central-logging` bucket, and
-its Lambda build pipeline ([KRO-1190](https://github.com/kropath/kropath-core/issues/1190))
-publishes into that account's `artifacts` bucket.
+The [data-team file-processing pipeline](onboard-data-team-namespace-and-resources.md) is the first
+consumer of both: its bucket logs into its account's `central-logging` bucket, and its Lambda build
+pipeline publishes into that account's `artifacts` bucket.
 
 ## What you will accomplish
 
@@ -86,20 +85,17 @@ You need:
   namespaces and resources in them.
 - **The target AWS accounts and Region.** This page uses the accounts in the table below and
   `us-east-1` throughout. Substitute your own.
-- **A KMS key per account** for bucket encryption. This page references existing key ARNs; if you
-  manage keys through kropath, create them first with
-  [`KMSKey`](../aws/kms/kmskey.md) and reference the resulting ARN.
 - **The `platform-global` governance namespace**, already present in the cluster. It holds the
   platform-wide baseline every resource namespace points at, and it deliberately carries **none**
-  of the three placement annotations (ADR-019 D-5) — it is a governance namespace, not a placement
-  target. Rendering it with placement annotations breaks the cascade.
+  of the three placement annotations — it is a governance namespace, not a placement target.
+  Giving it placement annotations breaks the cascade.
 - **Familiarity** with the [governance cascade](../engineering-standards.md#5-governance-config-hierarchy)
   and with how kropath derives resource names from naming templates.
 
 ### Account topology
 
 A namespace name carries its owner and the account it places into, so placement and ownership are
-both readable from the name alone (KRO-1164). The platform team's shared-services namespaces are
+both readable from the name alone. The platform team's shared-services namespaces are
 `platform-shared` in the identity account and `shared-product-<environment>` in each product
 account. Business-unit namespaces alongside them are named for the business unit — `payments-dev`,
 `data-dev` — not for a team; the group that operates a business unit's resources is not necessarily
@@ -144,23 +140,21 @@ If a token cannot be resolved, the name keeps the literal `{token}` text and
 `status.namingStatus` reports `invalid-unresolved-tokens`. Check that field first when a name
 looks wrong.
 
-## Constraints and platform gaps
+## AWS constraints that shape this design
 
-Each is called out again at the step it affects.
+Two AWS behaviours determine the topology above. Both are AWS platform behaviour, not kropath
+limitations, and neither can be configured away. Each is restated at the step it affects.
 
 | # | Constraint | Affects |
 |---|---|---|
-| C-1 | S3 server access logging requires the target bucket in the **same account and Region** as the source. AWS rejects a cross-account target. This is why `central-logging` is per account. | [Step 3](#step-3-create-the-central-logging-bucket), [Step 5](#step-5-create-the-artifacts-bucket) |
-| C-2 | To centralize S3 access records across accounts anyway, server access logging is not the mechanism — use **CloudTrail S3 data events**, which do support a cross-account destination. Data events are billed per event, unlike server access logging, which is free apart from log storage. | [Step 3](#step-3-create-the-central-logging-bucket) |
-| C-3 | `S3Bucket.spec.notification` has no EventBridge option. Not needed by this task, but it affects tenants that build on these buckets. | Tenant onboarding |
-| C-4 | All three namespace annotations are required. A missing `owner-account-id` or `default-region` is a reconcile failure; a missing `global-config-namespace` silently makes the namespace resolve governance-only. None of them defaults (ADR-019 D-4/D-5, amended by KRO-1139). | [Step 1](#step-1-onboard-the-platform-shared-namespace), [Step 4](#step-4-onboard-each-product-account-namespace) |
-| C-5 | Bucket names resolve per **account**, not per namespace. Both buckets are therefore owned by the platform team and created from its shared-services namespace only; business-unit namespaces in the same account create neither. | [Account topology](#account-topology) |
+| C-1 | S3 server access logging requires the target bucket to be owned by the **same AWS account** as the source bucket and to be in the **same Region**. AWS rejects a cross-account target. This is why `central-logging` is provisioned per account. | [Step 3](#step-3-create-the-central-logging-bucket), [Step 5](#step-5-create-the-artifacts-bucket) |
+| C-2 | Because of C-1, server access logging cannot centralize S3 access records across accounts. The mechanism that can is **CloudTrail S3 data events**, which do support a cross-account destination — at a per-event charge, where server access logging is free apart from the storage its logs consume. | [Step 3](#step-3-create-the-central-logging-bucket) |
 
 ## Step 1: Onboard the platform-shared namespace
 
 Create the namespace, its ACK cross-account annotations, and the local config CRs. Every config CR
 must carry the `aws.kropath.run/resource-name` label — that label is how `externalRef` lookups
-resolve the profile, and a config CR without it is invisible to the RGDs that need it.
+resolve the profile, and a config CR without it is invisible to the resources that need it.
 
 ```yaml
 ---
@@ -169,9 +163,9 @@ kind: Namespace
 metadata:
   name: platform-shared
   annotations:
-    # All three are required on every resource namespace (ADR-019 §5.6/§5.8).
-    # owner-account-id and default-region let ACK's CARM chain resolve the target
-    # account; global-config-namespace points kropath-controller at the platform-global
+    # All three are required on every resource namespace. owner-account-id and
+    # default-region let ACK's CARM chain resolve the target account;
+    # global-config-namespace points kropath-controller at the platform-global
     # baseline for the global tier.
     services.k8s.aws/owner-account-id: "999988887777"
     services.k8s.aws/default-region: "us-east-1"
@@ -210,8 +204,6 @@ spec:
     encryptionAlgorithm: "aws:kms"
     blockPublicAccess: true
     enforceHttpsOnly: true
-  defaults:
-    kmsKeyArn: "arn:aws:kms:us-east-1:999988887777:key/11111111-2222-3333-4444-555555555555"
 ```
 
 `aws.kropath.run/global-config-namespace: platform-global` is what makes the global tier of the
@@ -240,8 +232,8 @@ kubectl get s3config general-policy -n platform-shared
 Create the remaining family configs the same way for any other resource family this namespace will
 hold — each named `general-policy` and each carrying the
 `aws.kropath.run/resource-name: general-policy` label. A resource whose `configRef` names a profile
-that does not exist falls back to `general-policy`; if that is missing too, the RGD cannot resolve
-its effective config and the resource never becomes ready.
+that does not exist falls back to `general-policy`; if that is missing too, the effective config
+cannot be resolved and the resource never becomes ready.
 
 ## Step 2: Define the central-logging bucket policy
 
@@ -316,16 +308,11 @@ spec:
 Each source writes under its own prefix, which is what makes lifecycle rules in Step 3 able to age
 log classes at different rates.
 
-**On TLS enforcement.** You do not add a `DenyNonTLSAccess` statement here. The `S3Bucket` RGD
-splices that statement into the front of the resolved policy document whenever `enforceHttpsOnly`
-is in effect, so the mandatory tier from Step 1 and this `PolicyDocument` compose rather than
-conflict.
-
-> **Verify before relying on this in production.** [AWS S3 Buckets](../aws/s3/s3.md#https-enforcement)
-> currently documents Phase-1 behaviour in which `enforceHttpsOnly` owns `spec.policy` outright and
-> conflicts with `bucketPolicyRef`. The RGD's `bucketWithUserPolicy*` variants do compose the two,
-> so that note appears stale — confirm against your deployed RGD version, and check the rendered
-> policy with `aws s3api get-bucket-policy` after Step 4.
+**On TLS enforcement.** You do not add a `DenyNonTLSAccess` statement here. When
+`enforceHttpsOnly` is in effect, kropath prepends that statement to the resolved policy document,
+so the mandatory tier from Step 1 and this `PolicyDocument` compose rather than replace one
+another. Confirm the composed result with `aws s3api get-bucket-policy` after Step 3 — the
+verification in [Step 7](#step-7-verify-in-aws) does exactly that.
 
 **Cross-account delivery (optional).** Services whose log delivery does support a cross-account
 destination — ALB and CloudTrail among them — can additionally target the platform-shared
@@ -348,8 +335,9 @@ spec:
 
   # Enforced by the mandatory tier; repeated for clarity
   encryption:
+    # Omitting kmsKeyArn uses the AWS managed key for S3 (aws/s3) — no key to
+    # create, rotate, or pay for. Set kmsKeyArn to use a customer managed key.
     algorithm: "aws:kms"
-    kmsKeyArn: "arn:aws:kms:us-east-1:999988887777:key/11111111-2222-3333-4444-555555555555"
     bucketKeyEnabled: true
   blockPublicAccess: true
   enforceHttpsOnly: true
@@ -459,8 +447,6 @@ spec:
     encryptionAlgorithm: "aws:kms"
     blockPublicAccess: true
     enforceHttpsOnly: true
-  defaults:
-    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/22222222-3333-4444-5555-666666666666"
 ```
 
 Then create this account's `central-logging` bucket with the manifests from Steps 2 and 3,
@@ -489,8 +475,9 @@ spec:
   deletionPolicy: retain
 
   encryption:
+    # Omitting kmsKeyArn uses the AWS managed key for S3 (aws/s3) — no key to
+    # create, rotate, or pay for. Set kmsKeyArn to use a customer managed key.
     algorithm: "aws:kms"
-    kmsKeyArn: "arn:aws:kms:us-east-1:111122223333:key/22222222-3333-4444-5555-666666666666"
     bucketKeyEnabled: true
   blockPublicAccess: true
   enforceHttpsOnly: true
@@ -554,8 +541,8 @@ Check three things in the output:
   bucket name still contains literal `{...}` text.
 - `status.resourceName` and `status.predictedArn` match the names in the topology table.
 - The ACK-managed `Bucket` behind the instance reports `ACK.Synced: True`. The kro instance
-  reaching `ACTIVE` means the RGD rendered its resources, not that AWS accepted them — check the
-  child resource too:
+  reaching `ACTIVE` means kropath rendered the underlying resources, not that AWS accepted them —
+  check the child resource too:
 
 ```bash
 kubectl get buckets.s3.services.k8s.aws -n shared-product-dev -o wide
@@ -679,29 +666,28 @@ Once both bucket kinds exist and verify:
 
 ## Reference
 
-This task is sub-issue 1 of the platform-shared onboarding story,
-[KRO-1176](https://github.com/kropath/kropath-core/issues/1176). The steps here are the
-documentation counterpart of:
-
-| Sub-issue | Ticket |
-|---|---|
-| Onboard namespace (Steps 1 and 4) | [KRO-1178](https://github.com/kropath/kropath-core/issues/1178) |
-| Create resources (Steps 2, 3, and 5) | [KRO-1183](https://github.com/kropath/kropath-core/issues/1183) |
-| Verify in AWS (Steps 6 and 7) | [KRO-1179](https://github.com/kropath/kropath-core/issues/1179) |
-| Namespace onboarding template | [KRO-1175](https://github.com/kropath/kropath-core/issues/1175) |
-
 Field-by-field reference material:
 
 - [AWS S3 Buckets](../aws/s3/s3.md) — `S3Bucket` fields, the
-  [`S3Config` governance model](../aws/s3/s3.md#s3config-governance-model), and the ten-tier cascade
+  [`S3Config` governance model](../aws/s3/s3.md#s3config-governance-model), and the governance
+  cascade
 - [PolicyDocument](../resources/aws-policy-document.md) — structured statements, service
   principals, conditions, and source composition
-- [KMSKey](../aws/kms/kmskey.md) — key provisioning and key policies
+- [KMSKey](../aws/kms/kmskey.md) — provisioning a customer managed key, if you choose one over the
+  AWS managed key this task uses
 - [Dynamic tag fields in naming templates](../resources/naming-template-dynamic-tags.md)
 - [Engineering standards](../engineering-standards.md) — governance cascade and wiring conventions
 
-For design and governance details, see these references in kropath-core:
+Related tasks:
 
-- **ADR-019** — cross-account resource management (annotations, role configuration)
-- **ADR-015 §5.3** — governance cascade for S3 configuration
-- **ADR-010** — kropath-controller effective-config cascade
+- [Onboard the data-team namespace and its file-processing resources](onboard-data-team-namespace-and-resources.md)
+  — the first tenant to build on this foundation
+
+External references:
+
+- [AWS: logging requests with server access logging](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html)
+  — including the same-account, same-Region requirement behind C-1
+- [AWS: logging data events with CloudTrail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html)
+- [AWS: S3 Bucket Keys](https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html)
+- [ACK: cross-account resource management (CARM)](https://aws-controllers-k8s.github.io/community/docs/user-docs/cross-account-resource-management/)
+- [kro: ResourceGraphDefinition](https://kro.run/docs/concepts/resource-group-definitions)
