@@ -46,6 +46,8 @@ they are mutually exclusive. All deployment-package fields live under `code`.
 | `runtime` | string | `""` | Runtime identifier (e.g., `python3.12`, `nodejs20.x`, `java17`); required for ZIP packages; `""` = fall through to governance defaults |
 | `handler` | string | `""` | Entry-point method (e.g., `index.handler`); required for ZIP packages; ignored for container images |
 | `packageType` | string | `"Zip"` | `Zip` or `Image` |
+| `architectures` | array | `["x86_64"]` | Processor architecture: `"x86_64"` (Intel) or `"arm64"` (Graviton); array length must be 1 |
+| `publish` | boolean | `false` | Publish a numbered version immediately after function creation |
 
 ### Resource Limits (Governed by LambdaConfig)
 
@@ -72,10 +74,9 @@ Either `role` or `roleRef` can be set; they are mutually exclusive.
 
 ### Environment Variables
 
-> **Not supported.** `LambdaFunction` has **no `environment` field**. Environment variables cannot
-> be set through the CR today. Have the handler resolve what it needs at startup (for example
-> `GetQueueUrl` by queue name, or an ARN built from `AWS_REGION` and the account id in
-> `context.invokedFunctionArn`), or bake the values into the build artifact.
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `environment` | map[string]string | `{}` | Environment variables injected at Lambda runtime; maps to AWS Lambda's `environment.variables` |
 
 ### Encryption (Governed by LambdaConfig)
 
@@ -109,7 +110,8 @@ Either `role` or `roleRef` can be set; they are mutually exclusive.
 | `deadLetterTargetArn` | string | `""` | Legacy DLQ: SQS queue or SNS topic ARN for async failure routing |
 | `functionEventInvokeConfig.maximumEventAgeInSeconds` | integer | `0` | Discard async events older than this (60–21600 seconds); `0` = not set |
 | `functionEventInvokeConfig.maximumRetryAttempts` | integer | `-1` | Max async retry attempts (0–2); `-1` = AWS default (2 retries) |
-| `functionEventInvokeConfig.destinationConfig.onFailure.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for failed async invocations. Only `onFailure` is supported; there is no `onSuccess` destination. |
+| `functionEventInvokeConfig.destinationConfig.onFailure.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for failed async invocations |
+| `functionEventInvokeConfig.destinationConfig.onSuccess.destination` | string | `""` | ARN (SQS/SNS/Lambda/EventBridge) for successful async invocations |
 
 ### SnapStart
 

@@ -114,7 +114,7 @@ intended end state.
 | # | Gap | Affects |
 |---|---|---|
 | G-1 | `S3Bucket.spec.notification` has no EventBridge option — only `lambdaConfigurations`, `sqsConfigurations`, and `snsConfigurations` | [Step 2](#step-2-create-the-s3-bucket) |
-| G-2 | `LambdaFunction` has no `environment` field, so the queue URL and topic ARN cannot be injected as environment variables | [Step 7](#step-7-deploy-the-lambda-function) |
+| ~~G-2~~ | ~~`LambdaFunction` has no `environment` field, so the queue URL and topic ARN cannot be injected as environment variables~~ **CLOSED** — `environment` field added in kropath-aws PR #294 | [Step 7](#step-7-deploy-the-lambda-function) |
 | G-3 | There is no `LambdaPermission` resource, and EventBridge invokes Lambda targets through a **resource-based policy**, not the target's `roleARN` — so this hop cannot be authorized declaratively at all | [Step 8](#step-8-let-eventbridge-invoke-the-lambda) |
 
 ## Step 1: Onboard the namespace
@@ -438,7 +438,7 @@ spec:
               {
                 "Sid": "SendToQueue",
                 "Effect": "Allow",
-                "Action": ["sqs:SendMessage", "sqs:GetQueueUrl"],
+                "Action": ["sqs:SendMessage"],
                 "Resource": "arn:aws:sqs:ap-southeast-2:111122223333:file-process-message-queue"
               },
               {
@@ -460,8 +460,7 @@ spec:
 ```
 
 `kms:Decrypt` appears because the bucket is SSE-KMS: without it, `s3:GetObject` fails on every
-object. `sqs:GetQueueUrl` is there because of gap G-2 — see Step 7. `logs:CreateLogGroup` is
-deliberately absent: Step 5 already created the group, and omitting the permission keeps the
+object. `logs:CreateLogGroup` is deliberately absent: Step 5 already created the group, and omitting the permission keeps the
 function from silently creating an ungoverned one if the name ever drifts.
 
 ### No invoke role for EventBridge
@@ -496,6 +495,10 @@ spec:
 
   timeout: 60
   memorySize: 256
+
+  environment:
+    SQS_QUEUE_URL: "https://sqs.ap-southeast-2.amazonaws.com/111122223333/file-process-message-queue"
+    SNS_TOPIC_ARN: "arn:aws:sns:ap-southeast-2:111122223333:file-process-sns-topic"
 
   loggingConfig:
     logFormat: JSON
@@ -542,29 +545,27 @@ policy has to name an external principal. The build-once, promote-the-artifact p
 [KRO-1190](https://github.com/kropath/kropath-core/issues/1190) is what keeps the dev and test
 buckets holding the identical build, so nothing is rebuilt per account.
 
-### Gap G-2: getting the queue URL and topic ARN into the function
+### Setting the queue URL and topic ARN via environment variables
 
-`LambdaFunction` has no `environment` field, so `SQS_QUEUE_URL` and `SNS_TOPIC_ARN` cannot be
-injected as configuration. (`docs/aws/lambda/lambda-function.md` documents an `environment` field —
-that reference page is wrong and is being corrected alongside this one.)
+The `LambdaFunction.spec.environment` field injects configuration as environment variables at runtime. Use it to pass the queue URL and topic ARN to the handler:
 
-Until G-2 is closed, have the TypeScript handler resolve its targets at startup instead:
+In the `LambdaFunction` manifest (Step 7), add the `environment` block:
 
-```ts
-import { SQSClient, GetQueueUrlCommand } from "@aws-sdk/client-sqs";
-
-const region = process.env.AWS_REGION!;               // always set by the Lambda runtime
-const accountId = context.invokedFunctionArn.split(":")[4];
-
-const { QueueUrl } = await sqs.send(
-  new GetQueueUrlCommand({ QueueName: "file-process-message-queue" }),
-);
-const topicArn = `arn:aws:sns:${region}:${accountId}:file-process-sns-topic`;
+```yaml
+spec:
+  environment:
+    SQS_QUEUE_URL: "https://sqs.ap-southeast-2.amazonaws.com/111122223333/file-process-message-queue"
+    SNS_TOPIC_ARN: "arn:aws:sns:ap-southeast-2:111122223333:file-process-sns-topic"
 ```
 
-`GetQueueUrl` is why `sqs:GetQueueUrl` appears in the execution role in Step 6. Resolve once at
-module scope so the call is paid on cold start, not per invocation. Baking the names into the build
-is the other option, but it couples the artifact to one account.
+Your TypeScript handler then reads them directly:
+
+```ts
+const queueUrl = process.env.SQS_QUEUE_URL!;
+const topicArn = process.env.SNS_TOPIC_ARN!;
+```
+
+This approach keeps the handler simple, avoids runtime discovery calls on every cold start, and decouples the artifact from account-specific details.
 
 ## Step 8: Let EventBridge invoke the Lambda
 
