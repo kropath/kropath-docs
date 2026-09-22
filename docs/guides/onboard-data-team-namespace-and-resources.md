@@ -62,15 +62,20 @@ You need:
 
 - **Cluster access** — `kubectl` against the kropath management cluster, with permission to create
   resources in a new namespace.
-- **A target AWS account and region.** This page uses account `111122223333` and `us-east-1` for
-  the data team, and account `999988887777` for the platform-shared account. Substitute your own.
-- **The platform-shared foundation** from [KRO-1176](https://github.com/kropath/kropath-core/issues/1176):
-  the `central-logging` bucket and the `artifacts-<account_id>-<region>` bucket.
+- **A target AWS account and region.** This page uses account `111122223333` and `us-east-1`.
+  Substitute your own.
+- **The platform-shared foundation** from [KRO-1176](https://github.com/kropath/kropath-core/issues/1176).
+  The platform team owns these buckets, but they are provisioned **into each product account**, not
+  into a single shared account: `central-logging-<account_id>-<region>` and
+  `artifacts-<account_id>-<region>` exist on every product-dev and product-test account. For this
+  page that means `central-logging-111122223333-us-east-1` and `artifacts-111122223333-us-east-1`.
 - **The Lambda artifact.** `file-process-lambda` is built from TypeScript by the pipeline in
   [KRO-1190](https://github.com/kropath/kropath-core/issues/1190), which uploads the ZIP to the
-  platform-shared artifacts bucket. The artifact must exist before Step 7 — a `LambdaFunction`
-  whose code source points at a missing key reconciles into an error, and one pointed at an empty
-  placeholder reports `Ready` while running no real code.
+  **dev account's** artifacts bucket and promotes that same artifact to the **test account's**
+  bucket on merge. Either way the bucket the function reads from is in the function's own account.
+  The artifact must exist before Step 7 — a `LambdaFunction` whose code source points at a missing
+  key reconciles into an error, and one pointed at an empty placeholder reports `Ready` while
+  running no real code.
 - **Familiarity** with the [governance cascade](../engineering-standards.md#5-governance-config-hierarchy)
   and with how kropath derives resource names from naming templates.
 
@@ -243,19 +248,17 @@ bucket policy field, so kropath owns that field outright — do not attach anoth
 this bucket until the `bucketPolicyRef` composition work lands. See
 [AWS S3 Buckets](../aws/s3/s3.md#https-enforcement).
 
-### Access logging is same-account only
+### Why the log target is in your own account
 
 S3 server access logging requires the target bucket to be **owned by the same AWS account as the
-source bucket and to be in the same Region**. If your `central-logging` bucket lives in the
-data-team account (the `central-logging-<account_id>-<region>` name from KRO-1176 resolves
-per-account), the manifest above works as written.
+source bucket and to be in the same Region** — AWS rejects a cross-account target outright. This is
+why `central-logging-<account_id>-<region>` is provisioned per product account rather than as one
+bucket in a shared account, and why the manifest above names
+`central-logging-111122223333-us-east-1`.
 
-If your `central-logging` bucket lives in the **platform-shared account**, server access logging
-cannot deliver to it — AWS rejects a cross-account target. Use **CloudTrail S3 data events**
-instead, which do support a cross-account destination bucket, and configure that trail in the
-platform-shared account. Raise this with the platform team before assuming either shape;
-[KRO-1186](https://github.com/kropath/kropath-core/issues/1186) AC-2 needs to say which one is
-intended.
+If you ever do need S3 access records centralized into another account, server access logging is
+not the mechanism — use **CloudTrail S3 data events**, which support a cross-account destination
+bucket.
 
 ### Gap G-1: enabling the EventBridge notification
 
@@ -489,7 +492,7 @@ spec:
 
 ## Step 7: Deploy the Lambda function
 
-The code comes from the platform-shared artifacts bucket, which the pipeline in
+The code comes from the artifacts bucket **in this same account**, which the pipeline in
 [KRO-1190](https://github.com/kropath/kropath-core/issues/1190) publishes to.
 
 ```yaml
@@ -507,7 +510,7 @@ spec:
   roleRef: file-process-lambda-role   # resolves to the IAMRole from Step 6
 
   code:
-    s3Bucket: "artifacts-999988887777-us-east-1"   # platform-shared account
+    s3Bucket: "artifacts-111122223333-us-east-1"   # same account as the function
     s3Key: "file-process-lambda/v1.4.0/function.zip"
     s3ObjectVersion: ""   # pin a version id for immutable deploys
 
@@ -526,29 +529,38 @@ Prefer `roleRef` over a hardcoded `role` ARN: the controller resolves it from th
 `status.predictedArn`, so the role can be changed without editing the function. Pin `s3Key` to a
 version rather than `latest` — a mutable key makes it impossible to tell which build is running.
 
-### Cross-account artifact: who actually needs `s3:GetObject`
+### Artifact access: who actually needs `s3:GetObject`
 
 This is the part most teams get wrong. **The Lambda execution role does not need any permission on
 the artifacts bucket.** Lambda reads the ZIP **once, at create/update time, using the credentials of
 whoever is deploying the function** — here, the ACK lambda-controller's IAM role. At invoke time the
 code is already inside the Lambda service; the execution role is never used to fetch it.
 
-So for a cross-account artifact, arrange all of the following:
+So what has to be true is:
 
 | Requirement | Where it is configured | Who owns it |
 |---|---|---|
-| `s3:GetObject` on the artifact key | ACK lambda-controller's IAM role, data-team account | Platform team |
-| Cross-account read grant for that principal | Bucket policy on `artifacts-999988887777-us-east-1` | Platform team (platform-shared account) |
-| `kms:Decrypt` on the artifacts bucket's CMK, if it is SSE-KMS | Both the controller's role **and** the KMS key policy | Platform team |
+| `s3:GetObject` on the artifact key | ACK lambda-controller's IAM role | Platform team |
+| `kms:Decrypt` on the artifacts bucket's key, if it is SSE-KMS | The controller's role **and** the KMS key policy | Platform team |
 | Artifacts bucket in the **same Region** as the function | Bucket placement | Platform team |
-
-That last one is a hard AWS constraint, not a policy question: a Lambda cannot be created from a
-ZIP in a bucket in another Region, cross-account or not. If the platform-shared artifacts bucket is
-in a different Region from your function, the artifact has to be replicated into a same-Region
-bucket first.
 
 The execution role's `s3:GetObject` in Step 6 is a separate grant, scoped to the **data** bucket
 prefix the Lambda reads at runtime.
+
+#### Why the artifacts bucket is per-account, not shared
+
+A Lambda *can* be created from a ZIP in another account's bucket, but it costs you a standing
+cross-account setup: a bucket policy on the shared bucket granting each product account's ACK
+controller role, a matching KMS key policy, and a copy of the bucket in **every Region** any
+function runs in — because a Lambda cannot be created from a ZIP in a bucket in another Region,
+cross-account or not. That is three moving parts to keep in sync per account and Region, each of
+which fails at deploy time with an opaque error.
+
+Provisioning `artifacts-<account_id>-<region>` into each product-dev and product-test account
+removes all three: the controller reads a bucket in its own account and Region, and no bucket or key
+policy has to name an external principal. The build-once, promote-the-artifact pipeline in
+[KRO-1190](https://github.com/kropath/kropath-core/issues/1190) is what keeps the dev and test
+buckets holding the identical build, so nothing is rebuilt per account.
 
 ### Gap G-2: getting the queue URL and topic ARN into the function
 
@@ -739,13 +751,13 @@ on the bucket's key as well as `s3:GetObject`. Check the key policy too: a grant
 policy is not enough if the key policy does not allow the account.
 
 **The function deploys but runs no code.** The artifact key is wrong or empty. Check `CodeSize`
-(above), then confirm the pipeline in KRO-1190 actually promoted the build. Cross-account and
-cross-Region artifact failures show up here too — see
-[the cross-account table](#cross-account-artifact-who-actually-needs-s3getobject).
+(above), then confirm the pipeline in KRO-1190 actually promoted the build into **this account's**
+artifacts bucket — a function in the test account cannot read the dev account's bucket. See
+[Artifact access](#artifact-access-who-actually-needs-s3getobject).
 
-**Access logs never appear in the central-logging bucket.** If that bucket is in the platform-shared
-account, server access logging cannot deliver to it at all; see
-[Access logging is same-account only](#access-logging-is-same-account-only).
+**Access logs never appear in the central-logging bucket.** Check that `logging.targetBucket` names
+the bucket in **this** account and Region — a cross-account target is rejected outright. See
+[Why the log target is in your own account](#why-the-log-target-is-in-your-own-account).
 
 ## Related tickets
 
