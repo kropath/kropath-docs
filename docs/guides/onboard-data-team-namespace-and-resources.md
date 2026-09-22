@@ -102,19 +102,20 @@ The names this task produces:
 | Rule | `EventBridgeRule` | `file-process-rule` |
 | Function | `LambdaFunction` | `file-process-lambda` |
 | Execution role | `IAMRole` | `file-process-lambda-role` |
-| EventBridge invoke role | `IAMRole` | `file-process-eventbridge-role` |
 
 ## Known platform gaps
 
 Three parts of this flow cannot be expressed in kropath-aws today. Each is called out again at the
-step it affects, with the supported workaround. They are tracked under
-[KRO-1188](https://github.com/kropath/kropath-core/issues/1188).
+step it affects. **Two of them (G-1 and G-3) have no declarative option at all** — the golden path
+for this story currently requires two out-of-band `aws` CLI calls, neither of which anything
+reconciles. Each gap has a ticket; the workarounds below are a stopgap until those land, not the
+intended end state.
 
 | # | Gap | Affects |
 |---|---|---|
 | G-1 | `S3Bucket.spec.notification` has no EventBridge option — only `lambdaConfigurations`, `sqsConfigurations`, and `snsConfigurations` | [Step 2](#step-2-create-the-s3-bucket) |
 | G-2 | `LambdaFunction` has no `environment` field, so the queue URL and topic ARN cannot be injected as environment variables | [Step 7](#step-7-deploy-the-lambda-function) |
-| G-3 | There is no `LambdaPermission` resource, so EventBridge → Lambda invoke permission must come from the target's `roleARN` rather than a resource-based policy | [Step 8](#step-8-let-eventbridge-invoke-the-lambda) |
+| G-3 | There is no `LambdaPermission` resource, and EventBridge invokes Lambda targets through a **resource-based policy**, not the target's `roleARN` — so this hop cannot be authorized declaratively at all | [Step 8](#step-8-let-eventbridge-invoke-the-lambda) |
 
 ## Step 1: Onboard the namespace
 
@@ -463,37 +464,11 @@ object. `sqs:GetQueueUrl` is there because of gap G-2 — see Step 7. `logs:Crea
 deliberately absent: Step 5 already created the group, and omitting the permission keeps the
 function from silently creating an ungoverned one if the name ever drifts.
 
-### Invoke role for EventBridge
+### No invoke role for EventBridge
 
-EventBridge assumes this role to call the function (see gap G-3):
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: IAMRole
-metadata:
-  name: file-process-eventbridge-role
-  namespace: data-team
-spec:
-  configRef: general-policy
-  type: aws-service
-  servicePrincipal: "events.amazonaws.com"
-  nameOverride: file-process-eventbridge-role
-  description: "Lets the file-process EventBridge rule invoke file-process-lambda"
-  policies:
-    - inline:
-        name: invoke-file-process-lambda
-        documentJSON: |
-          {
-            "Version": "2012-10-17",
-            "Statement": [{
-              "Effect": "Allow",
-              "Action": ["lambda:InvokeFunction"],
-              "Resource": "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
-            }]
-          }
-  tags:
-    data-pipeline: file-process
-```
+An earlier version of this page created a second `IAMRole` for EventBridge to assume. **That does
+not work for a Lambda target** — see [gap G-3](#step-8-let-eventbridge-invoke-the-lambda) in Step 8.
+Do not create one; it grants nothing and hides the real problem.
 
 ## Step 7: Deploy the Lambda function
 
@@ -622,7 +597,7 @@ spec:
   targets:
     - id: file-process-lambda
       arn: "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
-      roleARN: "arn:aws:iam::111122223333:role/file-process-eventbridge-role"
+      # No roleARN — EventBridge does not use one for Lambda targets. See gap G-3 below.
 
   tags:
     data-pipeline: file-process
@@ -632,9 +607,39 @@ Use `wildcard` rather than separate `prefix` and `suffix` entries. Entries in a 
 OR-ed, so `[{"prefix": "data-service1/output/"}, {"suffix": ".json"}]` would match every object
 under the prefix *and* every `.json` anywhere in the bucket — not the intersection you want.
 
-**Gap G-3:** there is no `LambdaPermission` resource in kropath-aws, so the function has no
-resource-based policy granting `events.amazonaws.com` permission to invoke it. The `roleARN` above
-is what makes the invocation work: EventBridge assumes that role instead. Do not remove it.
+### Gap G-3: EventBridge still cannot invoke the function
+
+Applying the rule above is not enough. EventBridge splits its targets by how it authorizes them:
+
+| Target type | How EventBridge authorizes the call |
+|---|---|
+| Kinesis, Step Functions, ECS, API Gateway, cross-account buses | Assumes the IAM role in the target's `roleARN` |
+| **Lambda**, SNS, SQS, CloudWatch Logs | **Resource-based policy on the target itself** — `roleARN` is not used |
+
+A Lambda target therefore needs a resource-based policy on the *function*, granting
+`events.amazonaws.com` permission to invoke it, conditioned on the rule's ARN. That is what
+`aws lambda add-permission` creates, and what `AWS::Lambda::Permission` emits in CloudFormation.
+
+kropath-aws has no resource for it, and neither does ACK — the lambda-controller ships no
+`Permission` CRD and `Function` has no `permissions` field. So **this hop cannot be authorized
+declaratively today.** Grant it out of band:
+
+```bash
+aws lambda add-permission \
+  --function-name file-process-lambda \
+  --statement-id eventbridge-file-process-rule \
+  --action lambda:InvokeFunction \
+  --principal events.amazonaws.com \
+  --source-arn arn:aws:events:ap-southeast-2:111122223333:rule/file-process-rule \
+  --region ap-southeast-2
+```
+
+Keep `--source-arn`: without it, any account's EventBridge rule could invoke your function. Verify
+with `aws lambda get-policy --function-name file-process-lambda`.
+
+Unlike the G-1 workaround, nothing reconciles this away — a Lambda resource policy is not a field
+ACK manages. But it is also not captured in any manifest, so it has to be re-applied by hand
+whenever the function is recreated in a new account or region.
 
 Because the rule is on the default bus, its ARN has no bus segment:
 
@@ -743,7 +748,9 @@ missing family config CR, or one missing its `aws.kropath.run/resource-name` lab
    ```
 3. Is the rule firing? Check the `TriggeredRules` metric in the `AWS/Events` namespace. If it is
    firing but the Lambda is not running, check `FailedInvocations` — that is almost always the
-   invoke role (gap G-3).
+   missing resource-based policy (gap G-3). Confirm with
+   `aws lambda get-policy --function-name file-process-lambda`; an empty or absent policy is the
+   answer.
 4. Is the Lambda erroring? `aws logs tail /aws/lambda/file-process-lambda --since 15m`.
 
 **The Lambda runs but SQS or SNS stays empty.** Read the log output: an `AccessDenied` on

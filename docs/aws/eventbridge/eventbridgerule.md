@@ -267,7 +267,7 @@ Each target specifies where events are delivered and how to handle delivery:
 targets:
   - id: unique-target-id
     arn: "arn:aws:service:region:account-id:resource"
-    roleARN: "arn:aws:iam::account-id:role/eventbridge-role"  # Required for most targets
+    roleARN: "arn:aws:iam::account-id:role/eventbridge-role"  # Only for role-authorized targets
     input: '{"fixed": "payload"}'  # Optional: send a fixed JSON payload
     inputPath: "$.detail"  # Optional: extract a portion of the event
 ```
@@ -275,6 +275,18 @@ targets:
 These five fields are the whole of the `Target` type. Nested parameter blocks (`ecsParameters`,
 `kinesisParameters`, `inputTransformer`, `retryPolicy`, `deadLetterConfig`, …) are intentionally
 omitted from the RGD.
+
+**How EventBridge authorizes the call depends on the target type:**
+
+| Target type | Authorization |
+|---|---|
+| Kinesis, Step Functions, ECS, Batch, API Gateway, API Destinations, cross-account event buses | EventBridge assumes the role in `roleARN` |
+| Lambda, SNS, SQS, CloudWatch Logs | A **resource-based policy on the target itself**; `roleARN` is not used |
+
+For a Lambda target this means setting `roleARN` achieves nothing — the function needs a
+resource-based policy granting `events.amazonaws.com` invoke rights, conditioned on the rule ARN
+(`aws lambda add-permission`). kropath-aws has no resource for that and neither does ACK, so it
+must be granted out of band today.
 
 **Supported targets:**
 - AWS Lambda functions
@@ -362,7 +374,9 @@ kubectl patch eventbridgerule order-processor -n payments-prod -p '{"spec":{"sta
 
 1. Verify the rule is `ENABLED` (`status.state`)
 2. Check the event pattern matches your events (test with `aws events test-event-pattern`)
-3. Verify the IAM role has `events:PutEvents` permission on the target
+3. For a role-authorized target, verify the role in `roleARN` grants the action on that target. For
+   a Lambda or SNS target, verify the target's own resource-based policy instead
+   (`aws lambda get-policy` / `aws sns get-topic-attributes`)
 4. Check CloudWatch Logs for the Lambda function (if target is Lambda)
 5. Check the rule's `FailedInvocations` metric in the `AWS/Events` namespace
 
