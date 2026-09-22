@@ -29,8 +29,8 @@ provisions two kinds of bucket:
   │    ← other AWS service log delivery          │
   └──────────────────────────────────────────────┘
 
-  dev account (111122223333)                  test account (444455556666)
-  ns: platform-dev, payments-dev, data-dev    ns: platform-test, payments-test, data-test
+  product-dev account (111122223333)          product-test account (444455556666)
+  ns: shared-product-dev  (+ BU namespaces)   ns: shared-product-test  (+ BU namespaces)
   ┌────────────────────────────────────┐      ┌────────────────────────────────────┐
   │ central-logging-111122223333-…     │      │ central-logging-444455556666-…     │
   │   ▲ server access logs             │      │   ▲ server access logs             │
@@ -40,8 +40,9 @@ provisions two kinds of bucket:
   │   Lambda ZIPs, promotion history   │      │   Lambda ZIPs, promotion history   │
   └────────────────────────────────────┘      └────────────────────────────────────┘
 
-  One pair per ACCOUNT, not per namespace — every tenant namespace placed into the
-  dev account shares that account's two buckets.
+  Both buckets are owned by the PLATFORM TEAM and created from its shared-services
+  namespace in each account. Business-unit namespaces in the same account create
+  neither — they consume both by name.
 ```
 
 Why it is shaped this way:
@@ -97,27 +98,33 @@ You need:
 
 ### Account topology
 
-Namespaces are named `<team>-<environment>` (KRO-1164) — the suffix names the AWS account the
-namespace places into, so placement is readable from the name alone. `platform-shared` is the
-exception to the pattern: `kropath-platform-shared` *is* the environment, and it is a placement
-target as well as the identity account.
+A namespace name carries its owner and the account it places into, so placement and ownership are
+both readable from the name alone (KRO-1164). The platform team's shared-services namespaces are
+`platform-shared` in the identity account and `shared-product-<environment>` in each product
+account. Business-unit namespaces alongside them are named for the business unit — `payments-dev`,
+`data-dev` — not for a team; the group that operates a business unit's resources is not necessarily
+a team of that name.
 
-| Account | ID | Namespaces placed here | Buckets created here | Created from |
-|---|---|---|---|---|
-| shared | `999988887777` | `platform-shared` | `central-logging-999988887777-us-east-1` | `platform-shared` |
-| dev | `111122223333` | `platform-dev`, `payments-dev`, `data-dev` | `central-logging-111122223333-us-east-1`, `artifacts-111122223333-us-east-1` | `platform-dev` |
-| test | `444455556666` | `platform-test`, `payments-test`, `data-test` | `central-logging-444455556666-us-east-1`, `artifacts-444455556666-us-east-1` | `platform-test` |
+| Account | ID | Platform-team namespace | Buckets created here |
+|---|---|---|---|
+| platform-shared | `999988887777` | `platform-shared` | `central-logging-999988887777-us-east-1` |
+| product-dev | `111122223333` | `shared-product-dev` | `central-logging-111122223333-us-east-1`, `artifacts-111122223333-us-east-1` |
+| product-test | `444455556666` | `shared-product-test` | `central-logging-444455556666-us-east-1`, `artifacts-444455556666-us-east-1` |
 
-**Create each bucket from exactly one namespace per account.** Several tenant namespaces place into
-the same account, and `{account_id}` and `{region}` resolve identically in all of them — so an
-`artifacts` CR in both `payments-dev` and `data-dev` would resolve to the same globally-unique
-bucket name and the second would fail to create. The platform team's namespace in each environment
-(`platform-dev`, `platform-test`) owns both buckets; tenants consume them by name.
+Business-unit namespaces — `payments-dev`, `data-dev`, and their `-test` counterparts — place into
+the same product accounts but **create neither bucket**. Both are platform-team-owned shared
+services that happen to be deployed into the product accounts; business units consume them by name.
+
+**Why ownership has to be explicit.** Bucket names resolve per account: `{account_id}` and
+`{region}` expand identically in every namespace placed into the same account. If two namespaces in
+one account both carried an `artifacts` CR, both would resolve to the same globally-unique bucket
+name and the second would fail to create. Confining both CRs to the platform team's shared-services
+namespace is what makes that situation impossible rather than merely unlikely.
 
 ### Naming: template versus `nameOverride`
 
 The default S3 naming template is `{namespace}-{name}-{account_id}`, so an `S3Bucket` CR named
-`artifacts` in namespace `platform-dev` would become `platform-dev-artifacts-111122223333`. The names
+`artifacts` in namespace `shared-product-dev` would become `shared-product-dev-artifacts-111122223333`. The names
 this foundation publishes are contracts other teams hard-code, so this task pins them with
 `nameOverride` instead.
 
@@ -129,7 +136,7 @@ lower-cased. So:
 nameOverride: "artifacts-{account_id}-{region}"
 ```
 
-resolves to `artifacts-111122223333-us-east-1` in the platform-dev account. Do **not** hard-code the
+resolves to `artifacts-111122223333-us-east-1` in the product-dev account. Do **not** hard-code the
 Region as a literal — `{region}` resolves from the effective config, which keeps one manifest
 correct across Regions.
 
@@ -147,7 +154,7 @@ Each is called out again at the step it affects.
 | C-2 | To centralize S3 access records across accounts anyway, server access logging is not the mechanism — use **CloudTrail S3 data events**, which do support a cross-account destination. Data events are billed per event, unlike server access logging, which is free apart from log storage. | [Step 3](#step-3-create-the-central-logging-bucket) |
 | C-3 | `S3Bucket.spec.notification` has no EventBridge option. Not needed by this task, but it affects tenants that build on these buckets. | Tenant onboarding |
 | C-4 | All three namespace annotations are required. A missing `owner-account-id` or `default-region` is a reconcile failure; a missing `global-config-namespace` silently makes the namespace resolve governance-only. None of them defaults (ADR-019 D-4/D-5, amended by KRO-1139). | [Step 1](#step-1-onboard-the-platform-shared-namespace), [Step 4](#step-4-onboard-each-product-account-namespace) |
-| C-5 | Bucket names resolve per **account**, not per namespace, so two namespaces placed in the same account cannot both create the same bucket. | [Account topology](#account-topology) |
+| C-5 | Bucket names resolve per **account**, not per namespace. Both buckets are therefore owned by the platform team and created from its shared-services namespace only; business-unit namespaces in the same account create neither. | [Account topology](#account-topology) |
 
 ## Step 1: Onboard the platform-shared namespace
 
@@ -404,17 +411,18 @@ Apply it:
 kubectl apply -f central-logging-bucket.yaml
 ```
 
-## Step 4: Onboard each product account namespace
+## Step 4: Onboard the shared-services namespace in each product account
 
-Repeat Step 1 for each dev/test account, changing the namespace name and the owner account
-annotation. The config CRs are otherwise identical apart from the account-local KMS key:
+Repeat Step 1 for the platform team's shared-services namespace in each product account, changing
+the namespace name and the owner account annotation. Business-unit namespaces in the same account
+are onboarded separately by their own teams and are not part of this task. The config CRs are otherwise identical apart from the account-local KMS key:
 
 ```yaml
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: platform-dev
+  name: shared-product-dev
   annotations:
     services.k8s.aws/owner-account-id: "111122223333"
     services.k8s.aws/default-region: "us-east-1"
@@ -425,7 +433,7 @@ apiVersion: aws.kropath.run/v1alpha1
 kind: KropathConfig
 metadata:
   name: baseline
-  namespace: platform-dev
+  namespace: shared-product-dev
   labels:
     aws.kropath.run/resource-name: baseline
 spec:
@@ -443,7 +451,7 @@ apiVersion: aws.kropath.run/v1alpha1
 kind: S3Config
 metadata:
   name: general-policy
-  namespace: platform-dev
+  namespace: shared-product-dev
   labels:
     aws.kropath.run/resource-name: general-policy
 spec:
@@ -460,7 +468,7 @@ substituting `111122223333` for `999988887777` in the namespace, the policy reso
 `aws:SourceAccount` condition, and the KMS key ARN. The `nameOverride` template needs no change —
 `{account_id}` and `{region}` resolve per namespace.
 
-Repeat for `platform-test` with `444455556666`.
+Repeat for `shared-product-test` in the product-test account, `444455556666`.
 
 ## Step 5: Create the artifacts bucket
 
@@ -474,7 +482,7 @@ apiVersion: aws.kropath.run/v1alpha1
 kind: S3Bucket
 metadata:
   name: artifacts
-  namespace: platform-dev
+  namespace: shared-product-dev
 spec:
   configRef: general-policy
   nameOverride: "artifacts-{account_id}-{region}"
@@ -529,15 +537,15 @@ Apply:
 
 ```bash
 kubectl apply -f artifacts-bucket.yaml
-kubectl get s3bucket -n platform-dev
+kubectl get s3bucket -n shared-product-dev
 ```
 
 ## Step 6: Verify in Kubernetes
 
 ```bash
 kubectl get s3bucket -n platform-shared
-kubectl get s3bucket -n platform-dev
-kubectl describe s3bucket artifacts -n platform-dev
+kubectl get s3bucket -n shared-product-dev
+kubectl describe s3bucket artifacts -n shared-product-dev
 ```
 
 Check three things in the output:
@@ -550,8 +558,8 @@ Check three things in the output:
   child resource too:
 
 ```bash
-kubectl get buckets.s3.services.k8s.aws -n platform-dev -o wide
-kubectl describe buckets.s3.services.k8s.aws -n platform-dev artifacts-111122223333-us-east-1
+kubectl get buckets.s3.services.k8s.aws -n shared-product-dev -o wide
+kubectl describe buckets.s3.services.k8s.aws -n shared-product-dev artifacts-111122223333-us-east-1
 ```
 
 If a bucket is stuck, the ACK S3 controller's log is the place to look. The controller is
@@ -621,8 +629,8 @@ from the namespace annotations. Confirm the annotations exist and the config CR 
 `aws.kropath.run/resource-name` label:
 
 ```bash
-kubectl get ns platform-dev -o jsonpath='{.metadata.annotations}' | jq .
-kubectl get s3config general-policy -n platform-dev -o jsonpath='{.status.effectiveConfig.aws}' | jq .
+kubectl get ns shared-product-dev -o jsonpath='{.metadata.annotations}' | jq .
+kubectl get s3config general-policy -n shared-product-dev -o jsonpath='{.status.effectiveConfig.aws}' | jq .
 ```
 
 ### The bucket policy contains only `DenyNonTLSAccess`
