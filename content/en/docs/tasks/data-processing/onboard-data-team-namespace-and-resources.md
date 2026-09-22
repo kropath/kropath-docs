@@ -41,9 +41,9 @@ Why it is shaped this way:
 - **CloudWatch Logs** makes the run observable: each stage writes a log line, so a failed file can
   be traced to the step that dropped it.
 
-This is the data team's slice of the kropath golden path. It sits on top of the platform-shared
-namespace foundation ([KRO-1176](https://github.com/kropath/kropath-core/issues/1176)), which
-supplies the central-logging bucket and the artifacts bucket the Lambda build pipeline publishes to.
+This is the data team's slice of the kropath golden path. It builds on the foundation your platform
+team provides: a central-logging bucket for access records, and an artifacts bucket the Lambda build
+pipeline publishes to.
 
 ## What you will accomplish
 
@@ -61,18 +61,14 @@ You need:
   resources in a new namespace.
 - **A target AWS account and region.** This page uses account `111122223333` and `ap-southeast-2`.
   Substitute your own.
-- **The platform-shared foundation** from [KRO-1176](https://github.com/kropath/kropath-core/issues/1176).
-  The platform team owns these buckets, but they are provisioned **into each product account**, not
-  into a single shared account: `central-logging-<account_id>-<region>` and
-  `artifacts-<account_id>-<region>` exist on every product-dev and product-test account. For this
-  page that means `central-logging-111122223333-ap-southeast-2` and `artifacts-111122223333-ap-southeast-2`.
-- **The Lambda artifact.** `file-process-lambda` is built from TypeScript by the pipeline in
-  [KRO-1190](https://github.com/kropath/kropath-core/issues/1190), which uploads the ZIP to the
-  **dev account's** artifacts bucket and promotes that same artifact to the **test account's**
-  bucket on merge. Either way the bucket the function reads from is in the function's own account.
-  The artifact must exist before Step 7 — a `LambdaFunction` whose code source points at a missing
-  key reconciles into an error, and one pointed at an empty placeholder reports `Ready` while
-  running no real code.
+- **Two platform-provided buckets in this account.** Your platform team provisions
+  `central-logging-<account_id>-<region>` and `artifacts-<account_id>-<region>` into each account,
+  so both live alongside the resources you are about to create. For this page that means
+  `central-logging-111122223333-ap-southeast-2` and `artifacts-111122223333-ap-southeast-2`.
+- **The Lambda artifact.** `file-process-lambda` is built from TypeScript by your build pipeline,
+  which uploads the ZIP to this account's artifacts bucket. The artifact must exist before Step 7 —
+  a `LambdaFunction` whose code source points at a missing key reconciles into an error, and one
+  pointed at an empty placeholder reports `Ready` while running no real code.
 - **Familiarity** with the governance cascade
   and with how kropath derives resource names from naming templates.
 
@@ -100,25 +96,11 @@ The names this task produces:
 | Function | `LambdaFunction` | `file-process-lambda` |
 | Execution role | `IAMRole` | `file-process-lambda-role` |
 
-## Known platform gaps
-
-Three parts of this flow cannot be expressed in kropath-aws today. Each is called out again at the
-step it affects. **Two of them (G-1 and G-3) have no declarative option at all** — the golden path
-for this story currently requires two out-of-band `aws` CLI calls, neither of which anything
-reconciles. Each gap has a ticket; the workarounds below are a stopgap until those land, not the
-intended end state.
-
-| # | Gap | Affects |
-|---|---|---|
-| G-1 | `S3Bucket.spec.notification` has no EventBridge option — only `lambdaConfigurations`, `sqsConfigurations`, and `snsConfigurations` | [Step 2](#step-2-create-the-s3-bucket) |
-| ~~G-2~~ | ~~`LambdaFunction` has no `environment` field, so the queue URL and topic ARN cannot be injected as environment variables~~ **CLOSED** — `environment` field added in kropath-aws PR #294 | [Step 7](#step-7-deploy-the-lambda-function) |
-| G-3 | There is no `LambdaPermission` resource, and EventBridge invokes Lambda targets through a **resource-based policy**, not the target's `roleARN` — so this hop cannot be authorized declaratively at all | [Step 8](#step-8-let-eventbridge-invoke-the-lambda) |
-
 ## Step 1: Onboard the namespace
 
 Create the namespace, its ACK cross-account annotations, and the local config CRs. Every config CR
 carries the `aws.kropath.run/resource-name` label — that label is how `externalRef` lookups resolve
-the profile, and a config CR without it is invisible to the RGDs that need it.
+the profile, and a config CR without it is invisible to the resources that need it.
 
 ```yaml
 ---
@@ -127,7 +109,8 @@ kind: Namespace
 metadata:
   name: data-team
   annotations:
-    # ACK cross-account resource management (ADR-019 D-1/D-4)
+    # Both are required: they tell ACK which account and region to create
+    # this namespace's AWS resources in.
     services.k8s.aws/owner-account-id: "111122223333"
     services.k8s.aws/default-region: "ap-southeast-2"
 
@@ -172,8 +155,8 @@ spec:
 Create the remaining family configs the same way — `SQSConfig`, `SNSConfig`, `CloudWatchLogsConfig`,
 `EventBridgeConfig`, `LambdaConfig`, and `IAMConfig`, each named `general-policy` and each carrying
 the `aws.kropath.run/resource-name: general-policy` label. A resource whose `configRef` names a
-profile that does not exist falls back to `general-policy`; if that is missing too, the RGD cannot
-resolve its effective config and the resource never becomes ready.
+profile that does not exist falls back to `general-policy`; if that is missing too, the resource
+cannot resolve its effective configuration and never becomes ready.
 
 Apply and confirm:
 
@@ -263,13 +246,10 @@ If you ever do need S3 access records centralized into another account, server a
 not the mechanism — use **CloudTrail S3 data events**, which support a cross-account destination
 bucket.
 
-### Gap G-1: enabling the EventBridge notification
+### Enable EventBridge notifications on the bucket
 
-`S3Bucket.spec.notification` accepts only `lambdaConfigurations`, `sqsConfigurations`, and
-`snsConfigurations`. There is no `eventBridgeConfiguration`, so **the S3 → EventBridge notification
-in the diagram above cannot be turned on declaratively**. Two ways forward:
-
-**Option A — enable it out of band (keeps the target architecture).**
+The `S3Bucket` resource cannot yet express this — `spec.notification` covers Lambda, SQS, and SNS
+targets, but not EventBridge. Until it does, turn the notification on with the AWS CLI:
 
 ```bash
 aws s3api put-bucket-notification-configuration \
@@ -278,32 +258,17 @@ aws s3api put-bucket-notification-configuration \
   --region ap-southeast-2
 ```
 
-Because ACK owns the bucket's notification configuration, a later reconcile can overwrite this.
-Re-apply it after any change to `spec.notification`, and verify with
-`aws s3api get-bucket-notification-configuration` before trusting the pipeline.
+This step is not optional — without it the bucket publishes nothing and every later step is inert.
 
-**Option B — skip EventBridge and invoke the Lambda directly from S3 (fully supported today).**
+Because kropath manages the bucket's notification configuration, changing `spec.notification` later
+can overwrite this. Re-apply it after any such change, and confirm before trusting the pipeline:
 
-```yaml
-spec:
-  notification:
-    lambdaConfigurations:
-      - id: file-process-direct
-        lambdaFunctionARN: "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
-        events:
-          - "s3:ObjectCreated:*"
-        filter:
-          key:
-            filterRules:
-              - name: prefix
-                value: "data-service1/output/"
-              - name: suffix
-                value: ".json"
+```bash
+aws s3api get-bucket-notification-configuration \
+  --bucket file-process-bucket --region ap-southeast-2
 ```
 
-Option B costs you the routing indirection — adding a second consumer later means editing the
-bucket rather than adding a rule — so prefer Option A while G-1 is open if you expect more
-consumers. If you take Option B, skip Steps 5 and 8.
+`EventBridgeConfiguration` must appear in the output.
 
 ## Step 3: Create the SQS queue
 
@@ -383,12 +348,11 @@ spec:
 this before the Lambda, so the function's first invocation writes into the governed group rather
 than racing to create an ungoverned one.
 
-## Step 6: Create the IAM roles
+## Step 6: Create the IAM role
 
 ### Execution role for the Lambda
 
-Least privilege, per [KRO-1186](https://github.com/kropath/kropath-core/issues/1186) AC-4: no
-wildcard actions, no wildcard resources.
+Least privilege: no wildcard actions, no wildcard resources.
 
 Two things to know about `IAMRole` before reading the manifest:
 
@@ -460,16 +424,15 @@ spec:
 object. `logs:CreateLogGroup` is deliberately absent: Step 5 already created the group, and omitting the permission keeps the
 function from silently creating an ungoverned one if the name ever drifts.
 
-### No invoke role for EventBridge
+### EventBridge does not need a role here
 
-An earlier version of this page created a second `IAMRole` for EventBridge to assume. **That does
-not work for a Lambda target** — see [gap G-3](#step-8-let-eventbridge-invoke-the-lambda) in Step 8.
-Do not create one; it grants nothing and hides the real problem.
+EventBridge does not assume an IAM role to invoke a Lambda function — it relies on a policy attached
+to the function itself, which [Step 8](#step-8-let-eventbridge-invoke-the-lambda) sets up. Do not
+create a role for it; one would grant nothing.
 
 ## Step 7: Deploy the Lambda function
 
-The code comes from the artifacts bucket **in this same account**, which the pipeline in
-[KRO-1190](https://github.com/kropath/kropath-core/issues/1190) publishes to.
+The code comes from the artifacts bucket in this account, which your build pipeline publishes to.
 
 ```yaml
 apiVersion: aws.kropath.run/v1alpha1
@@ -509,42 +472,10 @@ Prefer `roleRef` over a hardcoded `role` ARN: the controller resolves it from th
 `status.predictedArn`, so the role can be changed without editing the function. Pin `s3Key` to a
 version rather than `latest` — a mutable key makes it impossible to tell which build is running.
 
-### Artifact access: who actually needs `s3:GetObject`
+### Giving the function its queue URL and topic ARN
 
-This is the part most teams get wrong. **The Lambda execution role does not need any permission on
-the artifacts bucket.** Lambda reads the ZIP **once, at create/update time, using the credentials of
-whoever is deploying the function** — here, the ACK lambda-controller's IAM role. At invoke time the
-code is already inside the Lambda service; the execution role is never used to fetch it.
-
-So what has to be true is:
-
-| Requirement | Where it is configured | Who owns it |
-|---|---|---|
-| `s3:GetObject` on the artifact key | ACK lambda-controller's IAM role | Platform team |
-| `kms:Decrypt` on the artifacts bucket's key, if it is SSE-KMS | The controller's role **and** the KMS key policy | Platform team |
-| Artifacts bucket in the **same Region** as the function | Bucket placement | Platform team |
-
-The execution role's `s3:GetObject` in Step 6 is a separate grant, scoped to the **data** bucket
-prefix the Lambda reads at runtime.
-
-#### Why the artifacts bucket is per-account, not shared
-
-A Lambda *can* be created from a ZIP in another account's bucket, but it costs you a standing
-cross-account setup: a bucket policy on the shared bucket granting each product account's ACK
-controller role, a matching KMS key policy, and a copy of the bucket in **every Region** any
-function runs in — because a Lambda cannot be created from a ZIP in a bucket in another Region,
-cross-account or not. That is three moving parts to keep in sync per account and Region, each of
-which fails at deploy time with an opaque error.
-
-Provisioning `artifacts-<account_id>-<region>` into each product-dev and product-test account
-removes all three: the controller reads a bucket in its own account and Region, and no bucket or key
-policy has to name an external principal. The build-once, promote-the-artifact pipeline in
-[KRO-1190](https://github.com/kropath/kropath-core/issues/1190) is what keeps the dev and test
-buckets holding the identical build, so nothing is rebuilt per account.
-
-### Setting the queue URL and topic ARN via environment variables
-
-The `LambdaFunction.spec.environment` field injects configuration as environment variables at runtime. Use it to pass the queue URL and topic ARN to the handler:
+The `LambdaFunction.spec.environment` field injects configuration as environment variables at
+runtime. Use it to pass the queue URL and topic ARN to the handler.
 
 In the `LambdaFunction` manifest (Step 7), add the `environment` block:
 
@@ -595,7 +526,7 @@ spec:
   targets:
     - id: file-process-lambda
       arn: "arn:aws:lambda:ap-southeast-2:111122223333:function:file-process-lambda"
-      # No roleARN — EventBridge does not use one for Lambda targets. See gap G-3 below.
+      # No roleARN — EventBridge does not use one for Lambda targets. See below.
 
   tags:
     data-pipeline: file-process
@@ -605,7 +536,7 @@ Use `wildcard` rather than separate `prefix` and `suffix` entries. Entries in a 
 OR-ed, so `[{"prefix": "data-service1/output/"}, {"suffix": ".json"}]` would match every object
 under the prefix *and* every `.json` anywhere in the bucket — not the intersection you want.
 
-### Gap G-3: EventBridge still cannot invoke the function
+### Allow EventBridge to invoke the function
 
 Applying the rule above is not enough. EventBridge splits its targets by how it authorizes them:
 
@@ -618,9 +549,7 @@ A Lambda target therefore needs a resource-based policy on the *function*, grant
 `events.amazonaws.com` permission to invoke it, conditioned on the rule's ARN. That is what
 `aws lambda add-permission` creates, and what `AWS::Lambda::Permission` emits in CloudFormation.
 
-kropath-aws has no resource for it, and neither does ACK — the lambda-controller ships no
-`Permission` CRD and `Function` has no `permissions` field. So **this hop cannot be authorized
-declaratively today.** Grant it out of band:
+kropath has no resource for this yet, so grant it with the AWS CLI:
 
 ```bash
 aws lambda add-permission \
@@ -635,9 +564,9 @@ aws lambda add-permission \
 Keep `--source-arn`: without it, any account's EventBridge rule could invoke your function. Verify
 with `aws lambda get-policy --function-name file-process-lambda`.
 
-Unlike the G-1 workaround, nothing reconciles this away — a Lambda resource policy is not a field
-ACK manages. But it is also not captured in any manifest, so it has to be re-applied by hand
-whenever the function is recreated in a new account or region.
+Nothing overwrites this once set — unlike the bucket notification in Step 2, a function's policy is
+not a field kropath manages. But it also lives in no manifest, so it has to be re-applied by hand
+whenever the function is recreated in another account or region.
 
 Because the rule is on the default bus, its ARN has no bus segment:
 
@@ -678,8 +607,8 @@ aws lambda get-function --function-name file-process-lambda --region ap-southeas
 ```
 
 The notification check matters most: if `EventBridgeConfiguration` is absent from its output, gap
-G-1's out-of-band step was never applied or has been reconciled away, and nothing downstream will
-fire.
+the notification step in Step 2 was never applied or has since been overwritten, and nothing
+downstream will fire.
 
 Confirm the deployed code is the real artifact, not a placeholder — `CodeSize` of a few hundred
 bytes means an empty ZIP:
@@ -731,13 +660,14 @@ aws s3 cp test.json s3://file-process-bucket/data-service1/other/test.json --reg
 
 **A resource never becomes ready.** Check `status.conditions` first
 (`kubectl describe <kind> <name> -n data-team`). The most common cause in a fresh namespace is a
-missing family config CR, or one missing its `aws.kropath.run/resource-name` label — the RGD's
-`externalRef` lookup then resolves nothing and the resource waits forever.
+missing family config CR, or one missing its `aws.kropath.run/resource-name` label — the label
+lookup then resolves nothing and the resource waits forever.
 
 **Nothing happens when a file lands.** Work the chain in order rather than guessing:
 
 1. Is the EventBridge notification on the bucket?
-   `aws s3api get-bucket-notification-configuration --bucket file-process-bucket`. If not, gap G-1.
+   `aws s3api get-bucket-notification-configuration --bucket file-process-bucket`. If not, re-run the
+   enable step in Step 2.
 2. Does the pattern match? Test it without uploading anything:
    ```bash
    aws events test-event-pattern \
@@ -746,7 +676,7 @@ missing family config CR, or one missing its `aws.kropath.run/resource-name` lab
    ```
 3. Is the rule firing? Check the `TriggeredRules` metric in the `AWS/Events` namespace. If it is
    firing but the Lambda is not running, check `FailedInvocations` — that is almost always the
-   missing resource-based policy (gap G-3). Confirm with
+   missing invoke permission from Step 8. Confirm with
    `aws lambda get-policy --function-name file-process-lambda`; an empty or absent policy is the
    answer.
 4. Is the Lambda erroring? `aws logs tail /aws/lambda/file-process-lambda --since 15m`.
@@ -761,23 +691,12 @@ on the bucket's key as well as `s3:GetObject`. Check the key policy too: a grant
 policy is not enough if the key policy does not allow the account.
 
 **The function deploys but runs no code.** The artifact key is wrong or empty. Check `CodeSize`
-(above), then confirm the pipeline in KRO-1190 actually promoted the build into **this account's**
-artifacts bucket — a function in the test account cannot read the dev account's bucket. See
-[Artifact access](#artifact-access-who-actually-needs-s3getobject).
+(above), then confirm your build pipeline actually published the artifact to **this account's**
+artifacts bucket — a function cannot read a bucket in another account or another Region.
 
 **Access logs never appear in the central-logging bucket.** Check that `logging.targetBucket` names
 the bucket in **this** account and Region — a cross-account target is rejected outright. See
 [Why the log target is in your own account](#why-the-log-target-is-in-your-own-account).
-
-## Related tickets
-
-- [KRO-1182](https://github.com/kropath/kropath-core/issues/1182) — story tracker
-- [KRO-1185](https://github.com/kropath/kropath-core/issues/1185) — onboard the namespace
-- [KRO-1186](https://github.com/kropath/kropath-core/issues/1186) — create the resources
-- [KRO-1187](https://github.com/kropath/kropath-core/issues/1187) — verify in AWS
-- [KRO-1188](https://github.com/kropath/kropath-core/issues/1188) — gap tickets, including G-1/G-2/G-3
-- [KRO-1190](https://github.com/kropath/kropath-core/issues/1190) — Lambda repo and build pipeline
-- [KRO-1176](https://github.com/kropath/kropath-core/issues/1176) — platform-shared foundation
 
 ## Next steps
 

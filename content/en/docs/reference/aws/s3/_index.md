@@ -18,7 +18,7 @@ While `S3Bucket` resources can be created independently of compute or networking
 
 ## Configuration
 
-Kropath's S3 configuration is managed through two resources: instances of the `S3Bucket` resource kind (which comes from a kro RGD and auto-generates its CRD) for defining individual S3 buckets, and `S3Config` custom resource instances for establishing organization-wide or profile-specific governance policies. These resources leverage a robust ten-tier governance cascade to ensure compliance while providing flexibility.
+Kropath's S3 configuration is managed through two resources: instances of the `S3Bucket` resource kind for defining individual S3 buckets, and `S3Config` custom resource instances for establishing organization-wide or profile-specific governance policies. These resources leverage a robust ten-tier governance cascade to ensure compliance while providing flexibility.
 
 ### S3Bucket Core Fields
 
@@ -53,11 +53,9 @@ Controls how data is encrypted at rest within the bucket. (Note: `S3Bucket` uses
 
 #### HTTPS Enforcement
 
-*   `enforceHttpsOnly` (boolean, default: `false`): When `true`, the RGD automatically generates and applies a bucket policy statement (`DenyNonTLSAccess`) to ensure all access to the bucket is over HTTPS. This field follows the `S3Config` cascade.
-
-    **Phase 1 behavior:** In this phase, the `DenyNonTLSAccess` statement is injected directly into `spec.policy` on the underlying ACK `Bucket` CR. This means kropath owns the bucket policy field entirely; any external bucket policy configuration on the same bucket will be overwritten or conflict.
-
-    **Phase 2 (aws-s3-06, deferred):** Future phases will transition this to `bucketPolicyRef` composition, where bucket policies are managed as separate `PolicyDocument` CRs, enabling co-existence of the `enforceHttpsOnly` requirement with other user-defined policies.
+*   `enforceHttpsOnly` (boolean, default: `false`): When `true`, kropath automatically generates and applies a bucket policy statement (`DenyNonTLSAccess`) to ensure all access to the bucket is over HTTPS. This field follows the `S3Config` cascade.
+    
+    **Current behaviour:** the `DenyNonTLSAccess` statement is written directly into the bucket policy, so kropath owns that field entirely — any other bucket policy you attach to the same bucket is overwritten or conflicts. Do not combine `enforceHttpsOnly` with `bucketPolicyRef` on one bucket. A future release will compose the two, so that an `enforceHttpsOnly` bucket can also carry your own policy statements.
 
 #### Object Ownership
 
@@ -155,7 +153,7 @@ spec:
 *   `objectLockEnabled` / `objectLockMode` / `objectLockRetentionDays`: S3 Object Lock settings.
 *   `bucketPolicyRef` (string): Name of a `PolicyDocument` CR supplying the bucket policy. Note that
     `enforceHttpsOnly` currently writes directly into the bucket policy field (see
-    [HTTPS Enforcement](#https-enforcement)), so the two conflict until Phase 2 lands.
+    [HTTPS Enforcement](#https-enforcement)), so the two conflict today.
 
 ### S3Config Governance Model
 
@@ -172,9 +170,9 @@ spec:
 
 ### Ten-tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for S3 buckets. This cascade ensures that organizational-level policies take precedence, followed by profile-specific settings, and finally instance-level overrides.
+Kropath employs a ten-tier governance cascade to resolve effective configuration for S3 buckets. This cascade ensures that organizational-level policies take precedence, followed by profile-specific settings, and finally instance-level overrides.
 
-The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `S3Config`) into `status.effectiveConfig` on the namespaced `S3Config` CR. `S3Bucket` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `S3Config`) into `status.effectiveConfig` on the namespaced `S3Config` CR. `S3Bucket` resources read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.s3` vs. `S3Config`:**
 
@@ -187,7 +185,7 @@ The `kropath-controller` pre-merges all governance sources (from `KropathConfig`
 
 S3 bucket names must be globally unique across all AWS accounts, are 3-63 characters long, and can only contain lowercase alphanumeric characters and hyphens. They must start and end with an alphanumeric character.
 
-Kropath's default naming template for S3 buckets is `{namespace}-{name}-{account_id}`. The `effectiveName` (the final bucket name) is derived from this template, with `spec.nameOverride` providing an escape hatch to bypass the template. The RGD automatically applies `.lowerAscii()` to the generated name to ensure compliance with S3's lowercase requirement.
+Kropath's default naming template for S3 buckets is `{namespace}-{name}-{account_id}`. The `effectiveName` (the final bucket name) is derived from this template, with `spec.nameOverride` providing an escape hatch to bypass the template. The generated name is lower-cased automatically, to comply with S3's lowercase requirement.
 
 ### Dynamic Tag Fields in Naming Templates
 
