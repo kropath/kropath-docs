@@ -86,6 +86,16 @@ spec:
 
 Each message triggers a Lambda invocation. SNS invokes the function synchronously; the invocation is retried if it fails (subject to the delivery policy). Choose this for event-driven workflows and simple, inline transformations.
 
+### Application — Mobile Push Notifications
+
+```yaml
+spec:
+  protocol: application
+  endpoint: arn:aws:sns:us-east-1:123456789012:app/GCM/android-app
+```
+
+SNS delivers messages to a mobile application via AWS's SNS Platform Application, enabling push notifications to iOS, Android, and other platforms registered with the platform application. Choose this when you need to reach mobile devices with push notifications.
+
 ### HTTP / HTTPS — Webhook Delivery
 
 ```yaml
@@ -250,7 +260,7 @@ Once the subscriber confirms:
 - `status.pendingConfirmation: ""` — Confirmation received
 - `status.subscriptionArn: "arn:aws:sns:..."` — Subscription active
 
-Subscriptions to SQS, Lambda, SMS, Firehose, and mobile app endpoints activate immediately with no confirmation step.
+Subscriptions to SQS, Lambda, SMS, Firehose, and application (mobile) endpoints activate immediately with no confirmation step.
 
 ## Tags and Labels
 
