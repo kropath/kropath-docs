@@ -218,3 +218,7 @@ Check what profile a topic is using:
 ```bash
 kubectl describe snstopic order-events -n payments-prod | grep configRef
 ```
+
+## Subscriptions
+
+`SNSSubscription` CRs also reference `SNSConfig` via `spec.configRef`, following the same governance cascade rules. Tags, synced labels, and annotations defined in `SNSConfig` apply to both topics and their subscriptions. See [`SNSSubscription`](snssubscription.md) for subscription-specific governance and configuration.
