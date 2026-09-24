@@ -375,6 +375,18 @@ aws sns publish \
   --message '{"order_id": "12345"}'
 ```
 
+## Subscriptions
+
+A topic without subscriptions publishes messages to no one. Use [`SNSSubscription`](snssubscription.md) to bind delivery endpoints (SQS queues, Lambda functions, HTTP/S webhooks, email addresses, SMS numbers, Firehose streams) to your topic.
+
+Each subscription:
+- Independently filters, retries, and delivers messages
+- Can be deleted without affecting the topic or other subscriptions
+- Optionally routes failed deliveries to a dead-letter SQS queue
+- Supports message attribute or body-based filtering
+
+See [SNSSubscription](snssubscription.md) for complete configuration and examples.
+
 ## Cross-Provider Notes
 
 - SNS topic names are case-sensitive (unlike S3 bucket names)
