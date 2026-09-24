@@ -91,10 +91,10 @@ Each message triggers a Lambda invocation. SNS invokes the function synchronousl
 ```yaml
 spec:
   protocol: application
-  endpoint: arn:aws:sns:us-east-1:123456789012:app/GCM/android-app
+  endpoint: arn:aws:sns:us-east-1:123456789012:endpoint/GCM/android-app/12345678-1234-1234-1234-123456789012
 ```
 
-SNS delivers messages to a mobile application via AWS's SNS Platform Application, enabling push notifications to iOS, Android, and other platforms registered with the platform application. Choose this when you need to reach mobile devices with push notifications.
+SNS delivers messages to a mobile application via AWS's SNS Platform Application, enabling push notifications to iOS, Android, and other platforms registered with the platform application. The `endpoint` must be a Platform Endpoint ARN (not a Platform Application ARN). Choose this when you need to reach mobile devices with push notifications.
 
 ### HTTP / HTTPS — Webhook Delivery
 
