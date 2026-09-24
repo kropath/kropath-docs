@@ -41,6 +41,7 @@ Use `RDSClusterParameterGroup` when you need to enforce cluster-wide engine sett
 | `status.namingStatus` | string | Naming resolution status: `"valid"` or `"invalid-unresolved-tokens"` if template tokens cannot be resolved. |
 | `status.predictedArn` | string | The AWS ARN of the cluster parameter group in the format `arn:aws:rds:<region>:<account>:cluster-pg:<resourceName>`. Note: `cluster-pg`, not `pg` — this differs from instance parameter groups. |
 | `status.parameterOverrideStatuses` | array | Status of each parameter override, including `parameterName`, `parameterValue`, `applyStatus`, and `applyMethod`. |
+| `status.validationError` | string | Error message if the cluster parameter group configuration is invalid and cannot be created. Empty if the resource is valid. |
 | `status.conditions[]` | array | Standard Kubernetes conditions tracking resource state. |
 
 ## Naming convention
@@ -57,6 +58,10 @@ When you specify `spec.parameterOverrides`:
 - Some parameters require the cluster's writer instance to reboot before taking effect. The `status.parameterOverrideStatuses` field shows which parameters have `applyStatus: pending-reboot`. Kropath does not trigger reboots; you must do this manually.
 - If a parameter override is omitted, the cluster uses the database engine's default value for that family.
 - Common Aurora parameters: `rds.force_ssl`, `binlog_format` (MySQL), `rds.logical_replication` (PostgreSQL), `aurora_parallel_query`.
+
+## Deprecated fields
+
+**Note:** Earlier versions supported a `spec.parameters` field for inline parameter definitions. This field has been deprecated in favor of `spec.parameterOverrides`, which provides clearer semantics and stronger validation. Existing resources using `spec.parameters` continue to work, but new resources should use `spec.parameterOverrides`.
 
 ## Attaching cluster parameter groups to clusters
 
@@ -140,6 +145,6 @@ Deletion requires that no Aurora clusters are actively using the group.
 
 ## Related resources
 
-- [`RDSParameterGroup`](./RDSParameterGroup.md) — For instance-level settings
-- [`RDSCluster`](./RDSCluster.md) — Attaches a cluster parameter group via `spec.dbClusterParameterGroupName`
-- [`RDSConfig`](./RDSConfig.md) — Defines naming templates and shared tags
+- [`RDSParameterGroup`](./rdsparametergroup.md) — For instance-level settings
+- [`RDSCluster`](./rdscluster.md) — Attaches a cluster parameter group via `spec.dbClusterParameterGroupName`
+- [`RDSConfig`](./rdsconfig.md) — Defines naming templates and shared tags

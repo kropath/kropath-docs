@@ -65,6 +65,7 @@ Each entry in `spec.auth[]` must define:
 | `status.endpoint` | string | The DNS endpoint clients connect to. **Empty until the proxy reaches `proxyStatus: available`.** |
 | `status.proxyStatus` | string | Proxy lifecycle state: `available`, `creating`, `modifying`, `deleting`, `incompatible-network`, etc. |
 | `status.vpcID` | string | The VPC the proxy was deployed into. |
+| `status.validationError` | string | Error message if the proxy configuration is invalid and cannot be created. Empty if the resource is valid. |
 | `status.conditions[]` | array | Standard Kubernetes conditions tracking resource state. |
 
 ## Naming convention
@@ -192,6 +193,6 @@ Deletion requires that all attached targets are detached first.
 
 ## Related resources
 
-- [`RDSConfig`](./RDSConfig.md) — Defines naming templates and shared tags
-- [`RDSInstance`](./RDSInstance.md) — Attach as proxy target (manual step)
-- [`RDSCluster`](./RDSCluster.md) — Attach as proxy target (manual step)
+- [`RDSConfig`](./rdsconfig.md) — Defines naming templates and shared tags
+- [`RDSInstance`](./rdsinstance.md) — Attach as proxy target (manual step)
+- [`RDSCluster`](./rdscluster.md) — Attach as proxy target (manual step)

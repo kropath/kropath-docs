@@ -40,6 +40,7 @@ Use `RDSParameterGroup` when you need to configure engine settings for one or mo
 | `status.namingStatus` | string | Naming resolution status: `"valid"` or `"invalid-unresolved-tokens"` if template tokens cannot be resolved. |
 | `status.predictedArn` | string | The AWS ARN of the parameter group in the format `arn:aws:rds:<region>:<account>:pg:<resourceName>`. |
 | `status.parameterOverrideStatuses` | array | Status of each parameter override, including `parameterName`, `parameterValue`, `applyStatus` (e.g., `pending-reboot`), and `applyMethod`. |
+| `status.validationError` | string | Error message if the parameter group configuration is invalid and cannot be created. Empty if the resource is valid. |
 | `status.conditions[]` | array | Standard Kubernetes conditions tracking resource state. |
 
 ## Naming convention
@@ -53,7 +54,7 @@ Use `spec.nameOverride` to bypass the template and set an explicit name.
 When you specify `spec.parameterOverrides`:
 
 - Parameter names and values are family-specific — supplying an invalid key is accepted by the API but rejected by the database engine.
-- Some parameters require a reboot to take effect. The `status.parameterOverrideStatuses` field shows which parameters have `applyStatus: pending-reboot`. Krop ath does not trigger reboots; you must do this manually.
+- Some parameters require a reboot to take effect. The `status.parameterOverrideStatuses` field shows which parameters have `applyStatus: pending-reboot`. Kropath does not trigger reboots; you must do this manually.
 - If a parameter override is omitted, the database engine uses its default value for that family.
 
 ## Attaching parameter groups to instances
@@ -113,7 +114,7 @@ spec:
 To monitor which parameters require a reboot:
 
 ```bash
-kubectl describe rdparametergroup orders-pg -n production
+kubectl describe rdsparametergroup orders-pg -n production
 ```
 
 Look for parameters with `applyStatus: pending-reboot` in the status output.
@@ -131,6 +132,6 @@ Deletion requires that no instances or clusters are actively using the group.
 
 ## Related resources
 
-- [`RDSClusterParameterGroup`](./RDSClusterParameterGroup.md) — For Aurora cluster-wide settings
-- [`RDSInstance`](./RDSInstance.md) — Attaches a parameter group via `spec.dbParameterGroupName`
-- [`RDSConfig`](./RDSConfig.md) — Defines naming templates and shared tags
+- [`RDSClusterParameterGroup`](./rdsclusterparametergroup.md) — For Aurora cluster-wide settings
+- [`RDSInstance`](./rdsinstance.md) — Attaches a parameter group via `spec.dbParameterGroupName`
+- [`RDSConfig`](./rdsconfig.md) — Defines naming templates and shared tags

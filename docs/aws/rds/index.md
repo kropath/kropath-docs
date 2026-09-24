@@ -10,6 +10,9 @@ The RDS family in kropath provides a declarative Kubernetes interface for managi
 | **[RDSSubnetGroup](rdssubnetgroup.md)** | VPC subnet placement | Determines which subnets and AZs your databases can use |
 | **[RDSInstance](rdsinstance.md)** | Standalone database | Single RDS instance (MySQL, PostgreSQL, Oracle, SQL Server) |
 | **[RDSCluster](rdscluster.md)** | Aurora cluster | Distributed Aurora database (MySQL or PostgreSQL) with auto-scaling |
+| **[RDSParameterGroup](rdsparametergroup.md)** | Instance engine parameters | Configure engine-level settings for RDS instances |
+| **[RDSClusterParameterGroup](rdsclusterparametergroup.md)** | Cluster engine parameters | Configure engine-level settings for Aurora clusters |
+| **[RDSProxy](rdsproxy.md)** | Connection pooling | Managed proxy for connection pooling and high-concurrency workloads |
 
 ## Quick Start
 
@@ -163,10 +166,14 @@ RDSConfig (governance profiles)
     ├─→ RDSSubnetGroup (VPC placement)
     │
     ├─→ RDSInstance (single database)
+    │   ├─ Tuned by: RDSParameterGroup
+    │   ├─ Proxied by: RDSProxy
     │   ├─ References: KMS key, IAM role, Secrets Manager
     │   └─ Deployed to: Subnet group + security groups
     │
     └─→ RDSCluster (Aurora cluster)
+        ├─ Tuned by: RDSClusterParameterGroup
+        ├─ Proxied by: RDSProxy
         ├─ References: KMS key, IAM role, Secrets Manager
         ├─ Deployed to: Subnet group + security groups
         └─ Contains: RDSInstance members (read replicas)
@@ -228,7 +235,9 @@ See [RDSConfig](rdsconfig.md) for detailed governance semantics.
 
 9. **Aurora for scalability.** Use Aurora clusters with Serverless v2 for workloads with variable demand.
 
-10. **Parameter groups.** For custom database settings, create separate `RDSParameterGroup` resources (documented separately) and reference them by name.
+10. **Parameter groups.** For custom database engine settings, create `RDSParameterGroup` (instance-level) or `RDSClusterParameterGroup` (cluster-level) resources and attach them to your database.
+
+11. **Connection pooling.** For high-concurrency workloads or Lambda functions with frequent scaling, use `RDSProxy` to manage connection pooling and prevent connection storms.
 
 ## Related Resources
 
