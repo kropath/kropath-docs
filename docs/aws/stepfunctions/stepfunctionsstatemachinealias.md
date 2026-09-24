@@ -294,23 +294,43 @@ Validation status of the naming template.
 - `valid` — All naming tokens resolved successfully
 - `invalid-unresolved-tokens` — One or more template tokens (e.g. `{tag.missing-key}`) couldn't be resolved
 
-### `status.aliasArn`
+### `status.aliasArn` and `status.aliasArnNoDescription`
 
 The AWS ARN of the alias, populated after provisioning.
 
 **Format:** `arn:aws:states:region:account-id:stateMachine:state-machine-name:alias:alias-name`
 
-**Example:**
+**Which field to use:**
+- If you set `spec.description`: read `status.aliasArn`
+- If you omitted `spec.description`: read `status.aliasArnNoDescription`
+
+**Example (with description):**
 ```yaml
+spec:
+  description: "Canary deployment"
 status:
   aliasArn: "arn:aws:states:us-east-1:123456789012:stateMachine:order-processor:alias:workflows-prod-order-processor-alias"
 ```
 
-**Note:** Unlike state machines, this field is **not** predictable because it includes the parent state machine name, which isn't part of the alias spec. Callers must use the actual `status.aliasArn` at runtime.
+**Example (without description):**
+```yaml
+spec:
+  # description omitted
+status:
+  aliasArnNoDescription: "arn:aws:states:us-east-1:123456789012:stateMachine:order-processor:alias:workflows-prod-order-processor-alias"
+```
 
-### `status.conditions`
+**Note:** Unlike state machines, these fields are **not** predictable because they include the parent state machine name, which isn't part of the alias spec. Callers must use the actual ARN from status at runtime.
+
+### `status.conditions` and `status.conditionsNoDescription`
 
 Standard Kubernetes conditions reflecting reconciliation status (e.g. `Reconciling`, `Ready`, `Error`).
+
+**Which field to use:**
+- If you set `spec.description`: read `status.conditions`
+- If you omitted `spec.description`: read `status.conditionsNoDescription`
+
+Both fields work the same way; the split exists as a kro v0.9.2 workaround for optional field omission.
 
 ## Updating an Alias
 
@@ -361,26 +381,42 @@ Version ARNs are produced outside kropath — by publishing a state machine revi
 
 ### Weights Must Sum to 100
 
-If your weights don't sum to 100, the alias creation will be rejected at the Kubernetes API level with a clear validation error.
+If your weights don't sum to 100, the CR applies successfully, but the alias will not be provisioned in AWS. Check `status.conditions` to verify reconciliation status — if no ACK child resource was created, verify that your weights sum to exactly 100.
 
 ### At Most Two Versions
 
-AWS aliases support at most 2 versions. Attempts to specify 3 or more will be rejected.
+AWS aliases support at most 2 versions (and at least 1). If you specify fewer than 1 or more than 2 entries in `routingConfiguration`, the CR applies successfully, but the alias will not be provisioned in AWS. Check `status.conditions` to verify reconciliation status.
 
 ## Troubleshooting
 
-### The alias is stuck in a `Reconciling` state
+### The alias doesn't provision (no ACK child created)
 
-Check the conditions on the alias resource:
+If the CR applies successfully but no AWS alias is provisioned:
 
 ```bash
 kubectl describe stepfunctionsstatemachinealias order-processor-alias -n workflows-prod
 ```
 
-Common issues:
-- **Invalid version ARN** — The ARN format is incorrect or the version doesn't exist
-- **Weight validation failed** — Weights don't sum to 100 or are outside 0–100 range
-- **Invalid alias name** — The computed name violates AWS naming rules (e.g. all digits)
+Check for these silent validation failures (they prevent ACK child creation but don't report on `status.conditions`):
+
+- **Weights don't sum to 100** — Verify `routingConfiguration[].weight` entries sum to exactly 100
+- **Wrong number of versions** — Ensure `routingConfiguration` has 1 or 2 entries, not 0 or 3+
+- **Invalid weight range** — Ensure each weight is between 0 and 100
+- **Invalid version ARN** — Verify the ARN format: `arn:aws:states:region:account:stateMachine:name:version-number`
+- **Invalid alias name** — The computed cloud name violates AWS rules (e.g. all digits, too long, invalid characters)
+
+### The alias is stuck in a `Reconciling` or `Error` state
+
+If `status.conditions` shows an error:
+
+```bash
+kubectl describe stepfunctionsstatemachinealias order-processor-alias -n workflows-prod
+```
+
+Check the conditions for details — the most common issues are:
+- **Missing state machine** — The underlying `StepFunctionsStateMachine` doesn't exist
+- **Invalid governance config** — The referenced `StepFunctionsConfig` is missing or misconfigured
+- **Version ARN doesn't exist** — The version was deleted or the ARN is malformed
 
 ### I updated the alias but the alias doesn't reflect my changes
 
