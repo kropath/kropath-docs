@@ -51,7 +51,7 @@ Each entry in `spec.auth[]` must define:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `authScheme` | string | `"SECRETS"` | Authentication type: `"SECRETS"` (Secrets Manager-backed). |
-| `secretARN` | string | *required* | AWS Secrets Manager ARN containing database credentials. |
+| `secretARN` | string | *required* | AWS Secrets Manager ARN containing database credentials. Required — enforced via `status.validationError` at reconcile time, not rejected at admission. |
 | `iamAuth` | string | `"DISABLED"` | IAM database authentication: `"DISABLED"`, `"ENABLED"`, or `"REQUIRED"`. |
 | `clientPasswordAuthType` | string | `""` | Password authentication type for specific engines: `MYSQL_NATIVE_PASSWORD`, `POSTGRES_SCRAM_SHA_256`, or `POSTGRES_MD5`. Omit for engine defaults. |
 

@@ -59,9 +59,9 @@ When you specify `spec.parameterOverrides`:
 - If a parameter override is omitted, the cluster uses the database engine's default value for that family.
 - Common Aurora parameters: `rds.force_ssl`, `binlog_format` (MySQL), `rds.logical_replication` (PostgreSQL), `aurora_parallel_query`.
 
-## Deprecated fields
+## Note on underlying API deprecation
 
-**Note:** Earlier versions supported a `spec.parameters` field for inline parameter definitions. This field has been deprecated in favor of `spec.parameterOverrides`, which provides clearer semantics and stronger validation. Existing resources using `spec.parameters` continue to work, but new resources should use `spec.parameterOverrides`.
+**Note:** The underlying AWS RDS API (via ACK's `DBClusterParameterGroup`) has a deprecated `parameters` field for inline parameter definitions. `RDSClusterParameterGroup` never exposes this field to users — always use `spec.parameterOverrides`, which is the only supported path.
 
 ## Attaching cluster parameter groups to clusters
 
