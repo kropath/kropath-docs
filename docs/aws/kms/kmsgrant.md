@@ -54,7 +54,7 @@ Restrict when the grant can be used based on encryption-context parameters:
 
 | Field | Type | Default | Purpose |
 |---|---|---|---|
-| `configRef` | string | `"general-policy"` | Selects the `KMSConfig` governance profile; falls through to `general-policy` if the profile doesn't exist |
+| `configRef` | string | `"general-policy"` | Selects the `KMSConfig` governance profile; if the profile doesn't exist, the governance tier becomes empty (no allowlist enforced) |
 | `deletionPolicy` | string | `"retain"` | Behavior when the grant is deleted: `"retain"` (orphans the AWS grant) or `"delete"` (calls `RevokeGrant` to terminate the grant) |
 | `tags` | map | `{}` | Kubernetes metadata only — **AWS grants don't support cloud tags** |
 | `syncedLabels` | map | `{}` | Kubernetes labels (prefixed `aws.kropath.run/`) |
@@ -90,21 +90,21 @@ status:
   grantID: "0c237476b39f8bc44e45e41eae2d7d26ef78dc7ef5b7d67eb95e79c3fc0df58f"  # AWS-assigned grant ID
   grantToken: "opaque-token-value"  # Grant token for immediate-use call chaining (single-use)
   resolvedKeyID: "1234abcd-12ab-34cd-56ef-1234567890ab"  # The key ID actually forwarded to AWS
-  conditions: [...]  # Standard kro conditions (see below)
+  validationError: ""  # Non-empty if the grant CR is invalid (advisory validation)
+  droppedOperations: []  # Operations filtered by allowedGrantOperations allowlist (empty when nothing was dropped)
 ```
 
 **Note:** There is no `status.resourceName`, `status.predictedArn`, or `status.namingStatus` — AWS grants have no cloud resource name. They are identified solely by the grant ID and grant token.
 
-### Conditions
+### Validation and Filtering Signals
 
-The `status.conditions` array tracks grant readiness and filtering status:
+The `status.validationError` and `status.droppedOperations` fields provide feedback on grant validity and operation filtering:
 
-- **Ready = True:** The grant is created and active
-- **Ready = False:** The grant is not created or filtering has occurred:
-  - Key is not yet ready (`keyRef` points to a `KMSKey` whose `status.keyID` is empty)
-  - Allowlist filtering dropped all requested operations (empty intersection with `allowedGrantOperations`)
+- **`validationError` is non-empty when:** The grant CR is invalid (e.g., both `keyRef` and `keyArn` are set, `operations` is empty, or allowlist filtering resulted in zero allowed operations). This is an **advisory validation signal** — the CR itself is accepted (`apply` succeeds) but the ACK Grant child will not be created until the error is resolved. Check this field to understand why a grant isn't being created.
 
-When filtering occurs, the condition includes the dropped operation names.
+- **`droppedOperations` is non-empty when:** `KMSConfig.mandatory.allowedGrantOperations` or `.defaults.allowedGrantOperations` filtered your requested operations. For example, if you request `["Decrypt", "Encrypt"]` but the profile allows only `["Decrypt"]`, then `droppedOperations` will contain `["Encrypt"]` and the grant is created with only the allowed operations.
+
+**Important:** The "Required" and "Mutually exclusive" constraints on `keyRef`/`keyArn`/`operations` are enforced at the RGD advisory level (via `status.validationError`), not at the CRD or API server level. This means `kubectl apply` will **always succeed** — the validation occurs after acceptance, and the validation status appears in `status.validationError` rather than a creation failure.
 
 ## Complete Example: Cross-Account Snapshot Copy
 
@@ -236,7 +236,7 @@ When this profile is active and your grant requests `["Decrypt", "Encrypt"]`:
 - `Decrypt` is allowed → included
 - `Encrypt` is not on the allowlist → dropped
 - The grant is created with only `["Decrypt"]`
-- `status.conditions` reports that `Encrypt` was filtered out
+- `status.droppedOperations` reports that `Encrypt` was filtered out
 
 **Behavior:**
 - An empty allowlist (`[]`) means no restriction — all operations are permitted
@@ -277,9 +277,9 @@ keyRef: backup-encryption-key  # Name of a KMSKey CR in the same namespace
 ```
 
 The RGD:
-1. Reads `status.keyID` from the referenced `KMSKey` CR
-2. Waits for the key to be created (if `status.keyID` is empty)
-3. Forwards the key ID to AWS when the grant is created
+1. Attempts to read `status.keyID` from the referenced `KMSKey` CR
+2. Creates the ACK Grant child CR immediately, even if `status.keyID` is still empty (setting `keyID: ""`)
+3. Patches the Grant CR with the resolved key ID once the `KMSKey` CR's `status.keyID` becomes available
 
 ### Using an External KMS Key
 
@@ -347,17 +347,17 @@ The grant's configuration is resolved via the nine-tier governance cascade (see 
 
 ## Troubleshooting
 
-**Grant creation is delayed**
+**Grant is created but not accepting requests**
 
-- Check if `status.conditions` reports a False ready condition
-- If using `keyRef`, verify the referenced `KMSKey` CR exists and has `status.keyID` populated
-- Grant creation waits for the key to be ready — this is normal during key creation
+- Check `status.validationError` for advisory validation issues (e.g., `keyRef` and `keyArn` both set, or empty `operations`)
+- If using `keyRef`, verify the referenced `KMSKey` CR exists and check its `status.keyID`
+- If `status.resolvedKeyID` is empty, the grant was created with `keyID: ""` and is waiting for the `KMSKey` to be ready — this is normal during key creation
 
 **Grant operations are silently filtered**
 
-- Inspect `status.conditions` to see which operations were dropped
+- Inspect `status.droppedOperations` to see which operations were filtered
 - This happens when `KMSConfig.mandatory.allowedGrantOperations` or `.defaults.allowedGrantOperations` is set
-- Verify the profile's allowlist includes your requested operations
+- Verify the profile's allowlist includes your requested operations; if the allowlist is more restrictive, some operations will be dropped
 
 **Empty intersection — no operations allowed**
 
