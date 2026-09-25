@@ -24,7 +24,7 @@ for conceptual background instead, see [Concepts]({{< relref "/docs/concepts" >}
 
 ### Data processing
 
-- [Onboard a data-team namespace and resources](onboard-data-team-namespace-and-resources/) —
+- [Onboard a data-team namespace and resources](data-processing/onboard-data-team-namespace-and-resources/) —
   Set up infrastructure for a data team to provision governed S3 buckets, data processing
   pipelines, and monitoring.
 
