@@ -20,7 +20,7 @@ Use `CloudFrontConnectionGroup` to set up shared infrastructure for a multi-tena
 |---|---|---|---|
 | `configRef` | string | `"general-policy"` | Selects which `CloudFrontConfig` governance profile to apply |
 | `enabled` | boolean | `true` | Whether the connection group actively serves traffic |
-| `ipv6Enabled` | boolean | `true` | Enable IPv6 for tenants (immutable after creation) |
+| `ipv6Enabled` | boolean | `true` | Enable IPv6 for tenants |
 | `anycastIPListID` | string | `""` | (Optional) CloudFront Anycast static IP list ID for fixed IPs |
 | `nameOverride` | string | `""` | Bypasses the naming template when set (advanced) |
 | `deletionPolicy` | string | `"retain"` | When the resource is deleted: `"retain"` (keep the group) or `"delete"` (remove it) |
@@ -51,7 +51,6 @@ metadata:
   namespace: saas-platform
 spec:
   configRef: general-policy
-  name: saas-prod-routing
   enabled: true
   ipv6Enabled: true
   tags:
@@ -128,7 +127,7 @@ metadata:
   namespace: saas-platform
 spec:
   domains:
-    - acme.example.com
+    - domain: acme.example.com
   connectionGroupRef: tenant-routing  # Name of CloudFrontConnectionGroup CR
   distributionRef: shared-cdn
   # ... rest of tenant config
@@ -186,16 +185,6 @@ CloudFrontConnectionGroup (shared routing, Anycast IPs)
 All three customers route through the same connection group, but each has independent domains, certificates, and policies.
 
 ## Troubleshooting
-
-### Name Cannot Change After Creation
-
-If you attempt to update `spec.name`, `nameOverride`, or the naming template after creation, reconciliation fails with an immutability error:
-
-```
-Error: spec.name: Invalid value: "new-name": field is immutable
-```
-
-**Solution:** Connection group names are immutable in CloudFront. Delete the connection group and recreate it with the desired name, or redeploy all tenants to use a new group.
 
 ### Naming Template Cannot Resolve
 

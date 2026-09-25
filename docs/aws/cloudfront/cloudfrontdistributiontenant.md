@@ -29,7 +29,6 @@ Use `CloudFrontDistributionTenant` when you operate a multi-tenant SaaS platform
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `configRef` | string | `"general-policy"` | Selects which `CloudFrontConfig` governance profile to apply |
-| `name` | string | `""` | Friendly name for this tenant (immutable after creation) |
 
 ### Certificate Configuration (Choose One)
 
@@ -323,16 +322,6 @@ Error: WAF WebACL is required for this tenant
 If both the distribution and this tenant have geo-restrictions, the tenant's setting is applied to this tenant's traffic specifically.
 
 If `CloudFrontConfig.mandatory.geoRestrictionType` is set, it takes precedence and cannot be overridden at the tenant level.
-
-### Name Cannot Change After Creation
-
-If you attempt to update `spec.name`, `nameOverride`, or the naming template after creation, reconciliation fails:
-
-```
-Error: spec.name: Invalid value: "new-name": field is immutable
-```
-
-**Solution:** Tenant names are immutable in CloudFront. Delete the tenant and recreate it with the desired name.
 
 ### Distribution or Connection Group Not Found
 
