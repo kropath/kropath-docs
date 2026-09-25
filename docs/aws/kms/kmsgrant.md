@@ -48,7 +48,7 @@ Restrict when the grant can be used based on encryption-context parameters:
 | `constraints.encryptionContextEquals` | map | `{}` | Grant valid only when the request encryption context matches exactly (all pairs must match) |
 | `constraints.encryptionContextSubset` | map | `{}` | Grant valid only when the request encryption context includes these key-value pairs (can include additional pairs) |
 
-**Note:** Both `encryptionContextEquals` and `encryptionContextSubset` are optional. When empty or omitted, the grant is unconstrained by encryption context. Both may not be set simultaneously within a single `constraints` block (use one or the other, or neither).
+**Note:** Both `encryptionContextEquals` and `encryptionContextSubset` are optional. When empty or omitted, the grant is unconstrained by encryption context. While you can set both fields in the CR (and the RGD will render both), AWS KMS enforces a constraint that at most one of these two may be used per request — if you set both, AWS will reject grant operations that don't match both constraints exactly.
 
 ### Governance and Metadata
 
@@ -241,7 +241,7 @@ When this profile is active and your grant requests `["Decrypt", "Encrypt"]`:
 **Behavior:**
 - An empty allowlist (`[]`) means no restriction — all operations are permitted
 - If both `mandatory.allowedGrantOperations` and `defaults.allowedGrantOperations` are set, an error is raised (use one or the other)
-- If filtering results in **zero** remaining operations, the grant is not created and `status.conditions` reports the empty-set condition
+- If filtering results in **zero** remaining operations, the grant is not created and `status.validationError` reports the empty-set condition
 - **Why filtering, not rejection?** A narrower grant is still valid — blocking all key access because of one forbidden operation is a worse failure mode
 
 ## Idempotency Token
@@ -347,11 +347,17 @@ The grant's configuration is resolved via the nine-tier governance cascade (see 
 
 ## Troubleshooting
 
-**Grant is created but not accepting requests**
+**Grant was not created**
 
 - Check `status.validationError` for advisory validation issues (e.g., `keyRef` and `keyArn` both set, or empty `operations`)
-- If using `keyRef`, verify the referenced `KMSKey` CR exists and check its `status.keyID`
-- If `status.resolvedKeyID` is empty, the grant was created with `keyID: ""` and is waiting for the `KMSKey` to be ready — this is normal during key creation
+- When `status.validationError` is non-empty, the ACK Grant child CR is never created until the error is resolved
+- Fix the validation error (correct the CR spec), and the grant will be created in the next reconciliation
+
+**Grant is created but waiting for key to be ready**
+
+- If `status.resolvedKeyID` is empty and `status.validationError` is empty, the grant was created with `keyID: ""` and is waiting for the referenced `KMSKey` to be ready
+- Verify the referenced `KMSKey` CR exists and check its `status.keyID`
+- This is normal during key creation; once the `KMSKey` is ready, the grant will be patched with the resolved key ID
 
 **Grant operations are silently filtered**
 
@@ -363,7 +369,7 @@ The grant's configuration is resolved via the nine-tier governance cascade (see 
 
 - The allowlist in your profile doesn't overlap with your requested operations
 - Either expand the allowlist in the profile or request different operations
-- This is treated as an error: the grant is not created, and a condition reports the mismatch
+- This is treated as an error: the grant is not created, and `status.validationError` reports the mismatch
 
 **Encryption context constraint isn't working**
 
