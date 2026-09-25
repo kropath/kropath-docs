@@ -59,11 +59,23 @@ An `KMSKey` resource represents a single encryption key in AWS KMS. It defines:
 - `pci`: Hardened for PCI compliance (restricted key types, mandatory rotation)
 - `dev`: Permissive for development (any key type, rotation optional)
 
+### KMSGrant — Temporary Access Permissions
+
+A `KMSGrant` resource represents a temporary, scoped permission to use a KMS key. Grants allow you to delegate key access to named principals without modifying the key's resource policy — making them ideal for:
+- Short-lived or service-delegated access (e.g., allowing EBS to re-encrypt snapshots)
+- Cross-account access for a specific operation set
+- Encryption-context-scoped access (e.g., tenant isolation in multi-tenant systems)
+
+Grants differ from key policies in that they:
+- Are temporary (can be revoked immediately)
+- Support encryption-context constraints
+- Allow fine-grained operation filtering via governance profiles
+
 ### Governance Cascade
 
 Kropath employs a nine-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while providing flexibility for specific use cases.
 
-The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `KMSConfig` CR. `KMSKey` RGDs read this configuration to determine the final, resolved settings.
+The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `KMSConfig` CR. `KMSKey` and `KMSGrant` RGDs read this configuration to determine the final, resolved settings.
 
 **When to use `KropathConfig.kms` vs. `KMSConfig`:**
 - **`KropathConfig.kms`:** Org-wide governance (e.g., force all keys to have rotation enabled)
@@ -214,6 +226,7 @@ Use the `status` fields on your `KMSKey` resource to reference the key in other 
 For detailed guidance, see:
 - [KMSConfig Governance Model](./governance.md) — Understanding mandatory vs. defaults tiers and profile management
 - [KMSKey Usage Guide](./kmskey.md) — Field reference and configuration options
+- [KMSGrant Access Delegation](./kmsgrant.md) — Creating temporary, scoped key access permissions
 - [Cross-Family Integration](./cross-family-integration.md) — How to reference KMS keys in S3, EBS, RDS, Lambda, and EKS
 
 ## Out-of-Scope (Phase 2+)
@@ -222,4 +235,3 @@ The following KMS features are not yet supported and are deferred to later phase
 - Multi-region keys
 - Imported key material
 - Custom key stores
-- KMS Grants (temporary permissions)
