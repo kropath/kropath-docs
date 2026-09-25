@@ -1,0 +1,14 @@
+{
+  "name": "kropath-docs",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/hugoautogen"
+  ],
+  "devDependencies": {
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "postcss-cli": "^12.0.0",
+    "sass-embedded": "^1.105.0"
+  }
+}

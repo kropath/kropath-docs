@@ -1,0 +1,21 @@
+# htmltest config — internal link and anchor checking over the built public/ tree.
+# https://github.com/wjdp/htmltest
+#
+# Only internal links are checked here; external link checking is a separate,
+# non-blocking weekly job (spec §8, AC-13) so a third-party site going down
+# never blocks a PR.
+DirectoryPath: public
+CheckExternal: false
+CheckInternal: true
+CheckInternalHash: true
+CheckMailto: false
+CheckScripts: false
+CheckMeta: false
+CheckImages: true
+CheckLinks: true
+EnforceHTML5: false
+IgnoreDirectoryMissingTrailingSlash: true
+IgnoreEmptyHref: false
+IgnoreAltMissing: false
+IgnoreInternalEmptyHash: false
+LogLevel: 1

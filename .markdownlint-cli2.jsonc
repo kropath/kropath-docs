@@ -1,0 +1,30 @@
+{
+  "config": {
+    "default": true,
+    // Long lines are common and fine inside tables and fenced code blocks;
+    // markdownlint-cli2 already exempts code blocks by default. We relax the
+    // line-length rule itself rather than exempt tables via inline comments
+    // scattered across ~290 pages.
+    "MD013": {
+      "line_length": 120,
+      "tables": false,
+      "code_blocks": false
+    },
+    // Reference pages document real kropath resources that may legitimately
+    // repeat a heading (e.g. "Fields" per subsection).
+    "MD024": {
+      "siblings_only": true
+    },
+    // Docsy's homepage uses Hugo shortcodes as top-level blocks; a leading
+    // H1 is not always the very first line of the content body.
+    "MD041": false,
+    // Bare URLs appear in a few existing pages; not worth a mass rewrite.
+    "MD034": false
+  },
+  "globs": [
+    "content/**/*.md"
+  ],
+  "ignores": [
+    "content/**/node_modules/**"
+  ]
+}
