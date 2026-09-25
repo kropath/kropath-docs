@@ -1,0 +1,19 @@
+{{/*
+  kropath override of Docsy's empty "after header" content hook (spec §6.2).
+  Renders the document-type banner from the page's `doc_type` front matter so
+  the statement can never drift from the metadata — see the migrated
+  data-team guide, which previously hard-coded this paragraph by hand.
+*/}}
+{{- $bannerText := dict
+  "getting-started" "Getting Started — this page helps you install kropath and provision your first governed resource."
+  "concept" "Concept — this page explains an idea. It is not a step-by-step guide; for that, see Tasks or Tutorials."
+  "task" "Task — this page walks you through one concrete goal in a sequence of steps. It is not a concept page or a tutorial."
+  "tutorial" "Tutorial — this page is a longer, guided learning path that chains several tasks together."
+  "reference" "Reference — this page documents a resource kind field by field. It is not meant to be read top to bottom."
+  "contribution" "Contribution — this page covers how to write, preview, and submit changes to this site."
+-}}
+{{- with .Params.doc_type }}
+  {{- with index $bannerText . }}
+<p class="kropath-doc-type-banner"><strong>Document type:</strong> {{ . }}</p>
+  {{- end }}
+{{- end -}}

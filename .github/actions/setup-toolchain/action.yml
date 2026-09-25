@@ -1,0 +1,95 @@
+name: Setup kropath-docs toolchain
+description: >
+  Installs Hugo (extended), Node, Go, Python, and htmltest at the exact
+  versions pinned in versions.env. Project-level dependency fetching (Hugo
+  modules, npm packages) stays in `make deps` so CI runs the identical
+  command a contributor would. Shared by the lint and build jobs so the two
+  never drift.
+
+runs:
+  using: composite
+  steps:
+    - name: Load versions.env
+      shell: bash
+      run: cat versions.env >> "$GITHUB_ENV"
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache Hugo binary
+      id: hugo-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/hugo-bin
+        key: hugo-${{ runner.os }}-${{ env.HUGO_VERSION }}
+
+    - name: Install Hugo extended
+      if: steps.hugo-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.local/hugo-bin
+        curl -fsSL \
+          "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz" \
+          -o /tmp/hugo.tar.gz
+        tar -xzf /tmp/hugo.tar.gz -C ~/.local/hugo-bin hugo
+
+    - name: Add Hugo to PATH
+      shell: bash
+      run: echo "$HOME/.local/hugo-bin" >> "$GITHUB_PATH"
+
+    - name: Verify Hugo is the extended edition
+      shell: bash
+      run: |
+        set -euo pipefail
+        export PATH="$HOME/.local/hugo-bin:$PATH"
+        hugo version | grep -q extended || {
+          echo "Installed Hugo binary is not the extended (SCSS-capable) edition." >&2
+          exit 1
+        }
+
+    - name: Cache htmltest binary
+      id: htmltest-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/htmltest-bin
+        key: htmltest-${{ runner.os }}-${{ env.HTMLTEST_VERSION }}
+
+    - name: Install htmltest
+      if: steps.htmltest-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.local/htmltest-bin
+        curl -fsSL \
+          "https://github.com/wjdp/htmltest/releases/download/v${HTMLTEST_VERSION}/htmltest_${HTMLTEST_VERSION}_linux_amd64.tar.gz" \
+          -o /tmp/htmltest.tar.gz
+        tar -xzf /tmp/htmltest.tar.gz -C ~/.local/htmltest-bin htmltest
+
+    - name: Add htmltest to PATH
+      shell: bash
+      run: echo "$HOME/.local/htmltest-bin" >> "$GITHUB_PATH"
+
+    - name: Cache Hugo modules and node_modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/hugo_cache
+          node_modules
+        key: >-
+          hugomod-npm-${{ runner.os }}-${{ hashFiles('versions.env', 'go.sum',
+          'package-lock.json') }}
+        restore-keys: |
+          hugomod-npm-${{ runner.os }}-

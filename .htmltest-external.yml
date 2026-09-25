@@ -1,0 +1,14 @@
+# htmltest config for the weekly, non-blocking external-link check (spec §8,
+# AC-13). Kept separate from .htmltest.yml (internal-only, PR-gating) so a
+# third-party site going down can never fail a PR.
+DirectoryPath: public
+CheckExternal: true
+CheckInternal: false
+CheckInternalHash: false
+CheckMailto: false
+CheckScripts: false
+CheckMeta: false
+CheckImages: true
+CheckLinks: true
+IgnoreDirectoryMissingTrailingSlash: true
+LogLevel: 1
