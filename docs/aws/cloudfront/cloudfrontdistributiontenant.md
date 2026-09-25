@@ -38,6 +38,7 @@ Use `CloudFrontDistributionTenant` when you operate a multi-tenant SaaS platform
 | `customizations.certificate.arn` | string | ARN of an existing ACM certificate for this tenant's domains (bring-your-own) |
 | `managedCertificateRequest.primaryDomainName` | string | Primary domain for which CloudFront should request and manage an ACM certificate |
 | `managedCertificateRequest.validationTokenHost` | string | (Optional) DNS validation token host for the managed certificate |
+| `managedCertificateRequest.certificateTransparencyLoggingPreference` | string | (Optional) CT logging preference: `"enabled"` or `"disabled"` |
 
 Use **either** `customizations.certificate.arn` (bring your own certificate) **or** `managedCertificateRequest` (let CloudFront manage it). Using both is an error.
 
@@ -48,6 +49,7 @@ Use **either** `customizations.certificate.arn` (bring your own certificate) **o
 | `customizations.geoRestrictions.restrictionType` | string | `""` | Geographic restriction: `"none"`, `"whitelist"` (allow only listed countries), or `"blacklist"` (block listed countries) |
 | `customizations.geoRestrictions.locations[]` | array | `[]` | ISO 3166-1 alpha-2 country codes (e.g., `["US", "CA", "GB"]`); used with whitelist/blacklist |
 | `customizations.webACL.arn` | string | `""` | ARN of a WAF WebACL to protect this tenant (required if governance sets `webACLRequired: true`) |
+| `customizations.webACL.action` | string | `""` | WAF action override: `"block"` or `"count"` (optional; defaults to CloudFront behavior) |
 
 ### Tenant Parameters
 
@@ -87,10 +89,9 @@ metadata:
   namespace: saas-platform
 spec:
   configRef: general-policy
-  name: acme-inc
   domains:
-    - acme.example.com
-    - www.acme.example.com
+    - domain: acme.example.com
+    - domain: www.acme.example.com
   distributionRef: shared-cdn          # Name of CloudFrontDistribution CR
   connectionGroupRef: tenant-routing   # Name of CloudFrontConnectionGroup CR
   customizations:
@@ -208,8 +209,7 @@ Tenants use a naming template (default `{namespace}-{name}`) to generate the clo
 ```
 namespace: saas-platform
 metadata.name: acme-tenant
-spec.name: acme-inc
-expected resourceName: saas-platform-acme-tenant  (from naming template)
+expected resourceName: saas-platform-acme-tenant  (from namespace + metadata.name)
 ```
 
 To override the name entirely, use `nameOverride`:

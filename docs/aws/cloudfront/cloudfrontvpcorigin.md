@@ -26,7 +26,6 @@ Use `CloudFrontVPCOrigin` when you want CloudFront to fetch content from a priva
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `configRef` | string | `"general-policy"` | Selects which `CloudFrontConfig` governance profile to apply |
-| `name` | string | `""` | Human-readable description of this VPC origin (mutable after creation) |
 | `httpPort` | integer | `80` | HTTP port on the VPC endpoint (1–65535) |
 | `httpsPort` | integer | `443` | HTTPS port on the VPC endpoint (1–65535) |
 | `originProtocolPolicy` | string | `""` | How CloudFront connects to the origin: `"http-only"`, `"https-only"`, or `"match-viewer"` (uses governance default if unset) |
@@ -121,13 +120,12 @@ Supported values: `"TLSv1.0"`, `"TLSv1.1"`, `"TLSv1.2"`, `"TLSv1.3"` (exact form
 
 ## Resource Naming
 
-VPC origins use a naming template to generate their cloud resource name. The default template is `{namespace}-{name}` (where `{name}` is the resource's `spec.name` field, not `metadata.name`):
+VPC origins use a naming template to generate their cloud resource name. The default template is `{namespace}-{name}` (where `{name}` resolves from `metadata.name`):
 
 ```
 namespace: cdn-prod
-metadata.name: web-alb
-spec.name: my-origin
-expected cloudResourceName: my-origin  (from spec.name)
+metadata.name: web-alb-origin
+expected resourceName: cdn-prod-web-alb-origin  (from namespace + metadata.name)
 ```
 
 To override the name entirely, use `nameOverride`:
@@ -139,33 +137,6 @@ spec:
 
 If the naming template includes tokens that don't resolve (e.g., `{tag.environment}` but no `environment` tag), the resource reports `status.namingStatus: invalid-unresolved-tokens`.
 
-## Using VPC Origins in Distributions
-
-Once your VPC origin is created, reference its ID in a `CloudFrontDistribution`:
-
-```yaml
-apiVersion: aws.kropath.run/v1alpha1
-kind: CloudFrontDistribution
-metadata:
-  name: my-cdn
-  namespace: cdn-prod
-spec:
-  configRef: general-policy
-  origins:
-    - id: my-vpc-origin
-      vpcOriginConfig:
-        vpcOriginID: ${vpcorigin.status.id}  # Reference the VPC origin ID
-        # ... other origin config
-  # ... rest of distribution spec
-```
-
-Alternatively, use `vpcOriginRef` to reference the `CloudFrontVPCOrigin` CR by name (takes precedence over `vpcOriginID` if both are set):
-
-```yaml
-origins:
-  - id: my-vpc-origin
-    vpcOriginRef: web-app-origin  # Name of CloudFrontVPCOrigin CR in same namespace
-```
 
 ## Deletion Behavior
 

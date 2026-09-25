@@ -19,7 +19,6 @@ Use `CloudFrontConnectionGroup` to set up shared infrastructure for a multi-tena
 | Field | Type | Default | Purpose |
 |---|---|---|---|
 | `configRef` | string | `"general-policy"` | Selects which `CloudFrontConfig` governance profile to apply |
-| `name` | string | `""` | Friendly name for this connection group (immutable after creation) |
 | `enabled` | boolean | `true` | Whether the connection group actively serves traffic |
 | `ipv6Enabled` | boolean | `true` | Enable IPv6 for tenants (immutable after creation) |
 | `anycastIPListID` | string | `""` | (Optional) CloudFront Anycast static IP list ID for fixed IPs |
@@ -105,8 +104,7 @@ Connection groups use a naming template (default `{namespace}-{name}`) to genera
 ```
 namespace: saas-platform
 metadata.name: tenant-routing
-spec.name: saas-prod-routing
-expected resourceName: saas-platform-tenant-routing  (from naming template)
+expected resourceName: saas-platform-tenant-routing  (from namespace + metadata.name)
 ```
 
 To override the name entirely, use `nameOverride`:
