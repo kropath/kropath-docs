@@ -20,6 +20,7 @@ Resources are grouped by cloud provider and then by service. For example, AWS S3
 under **AWS > S3**, and IAM resources are under **AWS > IAM**.
 
 Within each service:
+
 - The service landing page lists all resource kinds available for that service
 - Each resource kind has its own detailed page with all fields, defaults, and constraints
 

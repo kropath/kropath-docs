@@ -90,6 +90,7 @@ Every page declares its type via the `doc_type` front-matter field. Use one of t
 5. Push your branch and open a pull request
 
 All pull requests run automated checks:
+
 - **lint:** Markdown style, front-matter validity, link resolution, and house rules
 - **build:** Full site build with no warnings or errors
 
@@ -98,6 +99,7 @@ Both checks must pass before your PR merges.
 ## Getting help
 
 If you have questions about:
+
 - **Markdown or Hugo syntax:** See the [Hugo documentation](https://gohugo.io/documentation/)
 - **Docsy theme:** See the [Docsy documentation](https://www.docsy.dev/)
 - **kropath concepts:** See the [Concepts]({{< relref "/docs/concepts" >}}) section
