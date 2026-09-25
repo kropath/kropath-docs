@@ -8,6 +8,9 @@ CloudFront is AWS's global content delivery network (CDN). Kropath provides reso
 |---|---|
 | [`CloudFrontConfig`](./cloudfrontconfig.md) | Governance configuration for CloudFront resources (mandatory and default settings) |
 | [`CloudFrontDistribution`](./cloudfrontdistribution.md) | A CloudFront CDN distribution delivering content from origins to viewers worldwide |
+| [`CloudFrontVPCOrigin`](./cloudfrontvpcorigin.md) | Register a private AWS resource (ALB, NLB, EC2) as a CloudFront origin |
+| [`CloudFrontConnectionGroup`](./cloudfrontconnectiongroup.md) | Shared routing endpoint and static IP configuration for multi-tenant distributions |
+| [`CloudFrontDistributionTenant`](./cloudfrontdistributiontenant.md) | Attach a single customer (tenant) to a multi-tenant CloudFront distribution |
 | [`CloudFrontOriginAccessControl`](./cloudfrontoriginaccesscontrol.md) | Restrict access to your origin (S3, MediaStore, Lambda) so only CloudFront can reach it |
 | [`CloudFrontCachePolicy`](./cloudfrontcachepolicy.md) | Define cache key and TTL behavior for a distribution cache behavior |
 | [`CloudFrontOriginRequestPolicy`](./cloudfrontoriginrequestpolicy.md) | Control which cookies, headers, and query strings are forwarded to your origin |
@@ -252,6 +255,9 @@ For production distributions and shared policies, use `retain` to prevent accide
 
 - [CloudFrontConfig](./cloudfrontconfig.md) — Governance configuration
 - [CloudFrontDistribution](./cloudfrontdistribution.md) — CDN distribution
+- [CloudFrontVPCOrigin](./cloudfrontvpcorigin.md) — Private VPC origin
+- [CloudFrontConnectionGroup](./cloudfrontconnectiongroup.md) — Multi-tenant routing endpoint
+- [CloudFrontDistributionTenant](./cloudfrontdistributiontenant.md) — Multi-tenant subscriber
 - [CloudFrontOriginAccessControl](./cloudfrontoriginaccesscontrol.md) — Origin access control
 - [CloudFrontCachePolicy](./cloudfrontcachepolicy.md) — Cache key policy
 - [CloudFrontOriginRequestPolicy](./cloudfrontoriginrequestpolicy.md) — Origin forwarding policy
