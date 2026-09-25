@@ -270,4 +270,5 @@ spec:
 ## Next Steps
 
 - [Governance Guide](./governance.md) — Understanding cascade and profiles
+- [KMSGrant Access Delegation](./kmsgrant.md) — Temporary, scoped key access permissions
 - [Cross-Family Integration](./cross-family-integration.md) — Using KMS keys in other AWS services
