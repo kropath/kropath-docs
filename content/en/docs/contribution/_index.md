@@ -78,6 +78,7 @@ Every page declares its type via the `doc_type` front-matter field. Use one of t
 - Use the actual field names and defaults from the resource schema
 - Always specify the API group: `aws.kropath.run/v1alpha1`, never bare `kropath.run`
 - Use `selector.matchLabels` for `externalRef` lookups, never CEL expressions
+<!-- kro-allow-rule-2 provider-prefixed kind name used as example of what not to do -->
 - Use unprefixed kind names: `S3Config`, not `AWSS3Config`
 - Include a working, self-contained example that readers can copy and run
 
