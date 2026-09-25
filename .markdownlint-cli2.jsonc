@@ -19,7 +19,23 @@
     // H1 is not always the very first line of the content body.
     "MD041": false,
     // Bare URLs appear in a few existing pages; not worth a mass rewrite.
-    "MD034": false
+    "MD034": false,
+    // Every page carries a front-matter `title` (browser tab / nav label)
+    // AND a body `# Heading` (the visible page H1) — the standard Hugo/Docsy
+    // convention this whole site follows. MD025's default `front_matter_title`
+    // pattern treats the front-matter title as an implicit first heading, so
+    // every single page's real H1 then reads as a second, "duplicate" H1.
+    // Disabling front-matter detection here matches the convention, not a
+    // content defect.
+    "MD025": {
+      "front_matter_title": ""
+    },
+    // Table formatting (padding/alignment style) is not something the
+    // pre-existing 290-page corpus was ever written to, and enforcing it
+    // wholesale here means reformatting thousands of table rows with no
+    // change in reader-facing meaning. Not worth the risk of a mechanical
+    // rewrite at this scale; revisit if markdownlint-cli2 adds an autofix.
+    "MD060": false
   },
   "globs": [
     "content/**/*.md"

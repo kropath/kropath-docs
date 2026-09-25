@@ -47,12 +47,33 @@ def check_rule1(lines):
     return violations
 
 
+# Real AWS-native identifiers that happen to match the AWS<Capital> shape but
+# are not kropath kind names — AWS's own reserved tag-key prefixes, managed
+# policy/rule-set names, and API field names. Found by hand while migrating
+# the existing reference corpus (KRO-1250 PR B); exact-match only, so a new
+# kind that happens to collide with one of these is not silently exempted.
+KNOWN_NON_KIND_IDENTIFIERS = {
+    "AWSOwnedKey",
+    "AWSLogs",
+    "AWSEC2",
+    "AWSConfigRemediation",
+    "AWSSupport",
+    "AWSManagedRulesCommonRuleSet",
+    "AWSRAMDefaultResourceAccessRolePolicy",
+    "AWSLambdaBasicExecutionRole",
+}
+
+
 def check_rule2(lines):
     violations = []
     pattern = re.compile(r"\b(AWS|GCP|Azure)[A-Z][A-Za-z0-9]*\b")
     for i, line in enumerate(lines, start=1):
-        if pattern.search(line) and not allow(line, 2):
-            violations.append((i, RULES[2]))
+        for m in pattern.finditer(line):
+            if m.group(0) in KNOWN_NON_KIND_IDENTIFIERS:
+                continue
+            if not allow(line, 2):
+                violations.append((i, RULES[2]))
+            break
     return violations
 
 
@@ -118,17 +139,27 @@ def check_file(path):
 
 
 def main(argv):
-    if len(argv) != 2:
-        print(f"usage: {argv[0]} <content-dir>", file=sys.stderr)
+    args = [a for a in argv[1:] if a != "--warn-only"]
+    warn_only = "--warn-only" in argv[1:]
+    if len(args) != 1:
+        print(f"usage: {argv[0]} [--warn-only] <content-dir>", file=sys.stderr)
         return 2
-    content_dir = Path(argv[1])
+    content_dir = Path(args[0])
     errors = []
     for md_path in sorted(content_dir.rglob("*.md")):
         errors.extend(check_file(md_path))
     if errors:
         for e in errors:
             print(e, file=sys.stderr)
-        print(f"\n{len(errors)} house-rule violation(s) found.", file=sys.stderr)
+        label = "WARNING" if warn_only else "violation"
+        print(f"\n{len(errors)} house-rule {label}(s) found.", file=sys.stderr)
+        if warn_only:
+            print(
+                "--warn-only: not failing the build. See .house-rules-followup.md "
+                "— these must be promoted back to blocking, never left as permanent warnings.",
+                file=sys.stderr,
+            )
+            return 0
         return 1
     print("House rules OK.")
     return 0
