@@ -11,7 +11,10 @@ runs:
   steps:
     - name: Load versions.env
       shell: bash
-      run: cat versions.env >> "$GITHUB_ENV"
+      # $GITHUB_ENV only accepts bare KEY=VALUE lines — comments (which
+      # versions.env has, for humans reading it directly) make GitHub's
+      # env-file parser reject the whole file with "Invalid format".
+      run: grep -vE '^\s*#|^\s*$' versions.env >> "$GITHUB_ENV"
 
     - name: Setup Go
       uses: actions/setup-go@v5
