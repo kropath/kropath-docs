@@ -181,7 +181,7 @@ inlinePolicies:
 ```
 
 > **Only the first entry of `policies` and the first entry of `inlinePolicies` are honored.**
-> The RGD reads `policies[0]` and `inlinePolicies[0]` and ignores the rest, so a role can carry at
+> Only the first element of each list is read; the rest are ignored, so a role can carry at
 > most one managed-policy attachment plus one inline document from each list. Put every statement
 > you need into a **single** policy document rather than splitting it across list entries — extra
 > entries are dropped silently, with no error on the CR.

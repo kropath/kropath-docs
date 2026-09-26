@@ -439,6 +439,4 @@ Ensure the EFS access point ARN is correct and the function's VPC subnets have p
 
 ## Reference
 
-- **Design:** See `kropath-core/docs/families/aws/lambda.md` for complete governance and deployment design
-- **ADRs:** ADR-015 covers governance cascade; ADR-010 covers cross-resource references
 - **AWS Lambda documentation:** https://docs.aws.amazon.com/lambda/latest/dg/

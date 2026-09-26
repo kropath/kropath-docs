@@ -118,7 +118,7 @@ This rule:
 
 > **Retry policies and dead-letter configuration are not supported.** The `Target` type exposes
 > only `id`, `arn`, `roleARN`, `input`, and `inputPath`. Per-target `retryPolicy` and
-> `deadLetterConfig` are not part of the RGD schema; to catch failed deliveries today, monitor the
+> `deadLetterConfig` are not available on `EventBridgeRule`; to catch failed deliveries today, monitor the
 > rule's `FailedInvocations` metric in the `AWS/Events` namespace.
 
 ### Rule with Multiple Targets
@@ -279,7 +279,7 @@ targets:
 
 These five fields are the whole of the `Target` type. Nested parameter blocks (`ecsParameters`,
 `kinesisParameters`, `inputTransformer`, `retryPolicy`, `deadLetterConfig`, …) are intentionally
-omitted from the RGD.
+omitted from `EventBridgeRule`.
 
 **How EventBridge authorizes the call depends on the target type:**
 
@@ -290,8 +290,8 @@ omitted from the RGD.
 
 For a Lambda target this means setting `roleARN` achieves nothing — the function needs a
 resource-based policy granting `events.amazonaws.com` invoke rights, conditioned on the rule ARN
-(`aws lambda add-permission`). kropath-aws has no resource for that and neither does ACK, so it
-must be granted out of band today.
+(`aws lambda add-permission`). kropath has no resource for that yet, so it must be granted with the
+AWS CLI today.
 
 **Supported targets:**
 - AWS Lambda functions
@@ -394,4 +394,4 @@ If `status.namingStatus` is `invalid-unresolved-tokens`, a naming template token
 - EventBridge rules with JSON event patterns are AWS-specific
 - Schedule expressions (cron and rate) are AWS EventBridge native; GCP and Azure use different scheduler services
 - The target ARN format and role requirements vary by target service (Lambda, SQS, SNS, etc.)
-- Per-target dead-letter queues exist in the AWS EventBridge API but are not exposed by this RGD (see the Target field list above)
+- Per-target dead-letter queues exist in the AWS EventBridge API but are not exposed by `EventBridgeRule` (see the Target field list above)
