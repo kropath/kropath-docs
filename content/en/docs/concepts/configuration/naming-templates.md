@@ -83,16 +83,29 @@ spec:
 
 ## Supported Resource Families
 
-Dynamic tag fields in naming templates are supported for the following AWS resource families:
+Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 133 out of 227 resource definitions support the `{tag.fieldName}` syntax.
 
-| Resource Family | Resource Kinds |
-|---|---|
-| S3 | `S3Bucket` |
-| IAM | `IAMRole`, `IAMUser`, `IAMGroup`, `IAMPolicy` |
-| KMS | `KMSKey` |
-| SQS | `SQSQueue` (and other SQS-family resources) |
+Supported families include (but are not limited to):
 
-Other resource families (e.g., EC2, RDS, Lambda) inherit support in their respective phases as they implement the naming template system.
+**Compute & Containers:** EC2 (many kinds), ECS, EKS, Lambda, AutoScaling
+
+**Storage:** S3, S3 Advanced, EFS, Backup
+
+**Database & Cache:** RDS, DynamoDB, ElastiCache, MemoryDB, Keyspaces
+
+**Messaging & Events:** SQS, SNS, EventBridge, MQ, Kinesis
+
+**Security & IAM:** IAM, KMS, WAF, Secrets Manager
+
+**Analytics & Data:** Athena, Glue, EMR, QuickSight, OpenSearch
+
+**Networking:** Route53, VPC, Network Firewall
+
+**Management & Monitoring:** CloudWatch, SSM
+
+**ML & AI:** SageMaker, Bedrock
+
+Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift).
 
 ## Provider Constraints
 
