@@ -472,21 +472,22 @@ Prefer `roleRef` over a hardcoded `role` ARN: the controller resolves it from th
 `status.predictedArn`, so the role can be changed without editing the function. Pin `s3Key` to a
 version rather than `latest` — a mutable key makes it impossible to tell which build is running.
 
+### Artifact access: the execution role is not what reads the ZIP
+
+**The function's execution role does not need any permission on the artifacts bucket.** Lambda
+reads the ZIP once, at deploy time, using the credentials of whoever applies the `LambdaFunction`
+resource. The execution role is only used at invoke time, when the code is already inside the
+Lambda service. If a deploy ever fails with an artifact-access error, check the permissions of the
+principal doing the deploying — adding `s3:GetObject` to the execution role will not fix it.
+
+The execution role's `s3:GetObject` grant in Step 6 is a separate thing entirely: it is scoped to
+the **data** bucket prefix the function reads at runtime.
+
 ### Giving the function its queue URL and topic ARN
 
-The `LambdaFunction.spec.environment` field injects configuration as environment variables at
-runtime. Use it to pass the queue URL and topic ARN to the handler.
-
-In the `LambdaFunction` manifest (Step 7), add the `environment` block:
-
-```yaml
-spec:
-  environment:
-    SQS_QUEUE_URL: "https://sqs.ap-southeast-2.amazonaws.com/111122223333/file-process-message-queue"
-    SNS_TOPIC_ARN: "arn:aws:sns:ap-southeast-2:111122223333:file-process-sns-topic"
-```
-
-Your TypeScript handler then reads them directly:
+The `environment` block in the manifest above injects configuration as environment variables at
+runtime — here, the queue URL from Step 3 and the topic ARN from Step 4. Your TypeScript handler
+reads them directly:
 
 ```ts
 const queueUrl = process.env.SQS_QUEUE_URL!;
