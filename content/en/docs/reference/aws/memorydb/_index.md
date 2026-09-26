@@ -212,6 +212,6 @@ All other fields (numReplicasPerShard, engineVersion, parameters, etc.) are upda
 ## Additional Resources
 
 - **Governance cascade details:** [MemoryDBConfig governance](./memorydbconfig.md#governance-cascade)
-- **Naming template syntax:** [Naming Template — Dynamic Tags](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md)
+- **Naming template syntax:** [Naming Template — Dynamic Tags](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md)
 - **Deletion policy semantics:** [ADR-009](https://github.com/kropath/kropath-core/blob/main/docs/adrs/adr-009-resource-lifecycle.md)
 - **Label/annotation syncing:** [ADR-015 §6](https://github.com/kropath/kropath-core/blob/main/docs/adrs/adr-015-governance-and-k8s-metadata.md)

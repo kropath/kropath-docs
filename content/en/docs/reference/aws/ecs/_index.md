@@ -310,7 +310,7 @@ AWS ECS naming constraints:
 
 Naming templates support `{tag.fieldName}` placeholders to embed tag values. For example, `{tag.environment}-{name}` becomes `prod-my-service` if `tags.environment: "prod"`. Tag resolution follows the cascade: mandatory > instance > defaults.
 
-For detailed information, see [Dynamic Tag Fields in Naming Templates](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md).
+For detailed information, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md).
 
 ## Example ECS Resources
 

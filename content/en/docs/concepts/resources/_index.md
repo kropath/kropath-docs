@@ -162,7 +162,7 @@ The operator automatically covers:
 - **All instance resources** — `S3Bucket`, `IAMRole`, `RDSInstance`, etc.
 - **Any new CRD** under a `<provider>.kropath.run` API group — no code changes needed
 
-The `KropathConfig` resource (in the `kropath.run` API group, not a provider-specific group) is excluded from labeling.
+The `KropathConfig` resource (in the `aws.kropath.run` API group, a provider-specific group) is excluded from labeling.
 
 ### Behavior During Outages
 

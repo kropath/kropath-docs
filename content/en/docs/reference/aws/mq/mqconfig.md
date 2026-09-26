@@ -222,4 +222,4 @@ spec:
 ## Related Resources
 
 - [MQBroker](mqbroker.md) — Create and manage individual message brokers
-- [KropathConfig](../../../concepts/controller/label-operator.md) — Organization-wide configuration defaults for all resource types
+- [KropathConfig](../../../concepts/resources/label-operator.md) — Organization-wide configuration defaults for all resource types

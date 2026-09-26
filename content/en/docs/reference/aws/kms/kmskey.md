@@ -197,7 +197,7 @@ Look for:
 - `status.arn` — The AWS ARN for the key
 - `status.namingStatus` — Validation status (`valid` or `invalid-unresolved-tokens`)
 
-For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md).
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md).
 
 ## Governance Cascade
 

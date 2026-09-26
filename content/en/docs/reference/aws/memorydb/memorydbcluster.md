@@ -329,7 +329,7 @@ Cluster names are resolved via the governance template:
 # Result: prod-cache-prod-session-store
 ```
 
-See [Naming Template — Dynamic Tags](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md) for full syntax.
+See [Naming Template — Dynamic Tags](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md) for full syntax.
 
 **AWS constraints:** 1–40 characters, starts with letter, alphanumeric + hyphens, no trailing hyphen, no consecutive hyphens, case-insensitive (stored lowercase).
 

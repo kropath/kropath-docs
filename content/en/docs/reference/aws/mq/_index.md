@@ -62,5 +62,5 @@ spec:
 
 ## Related Documentation
 
-- [KropathConfig](../../../concepts/controller/label-operator.md) — Organization-wide configuration
-- [Naming and Tags](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md) — Dynamic naming templates and tag propagation
+- [KropathConfig](../../../concepts/resources/label-operator.md) — Organization-wide configuration
+- [Naming and Tags](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md) — Dynamic naming templates and tag propagation
