@@ -1,8 +1,11 @@
 ---
 title: Dynamic Tag Fields in Naming Templates
+linkTitle: Naming Templates
 description: "Kropath allows you to embed tag values directly into resource naming templates using the `{tag.fieldName}` placeholder syntax."
+weight: 10
 doc_type: concept
 ---
+
 # Dynamic Tag Fields in Naming Templates
 
 Kropath allows you to embed tag values directly into resource naming templates using the `{tag.fieldName}` placeholder syntax. This enables you to derive cloud resource names from tags defined in your resource configuration without needing to use a separate `spec.nameOverride` field.
@@ -351,11 +354,4 @@ spec:
 
 ## Related Resources
 
-- [S3 Bucket Documentation](../../reference/aws/s3/_index.md) — S3-specific naming and constraint details
-- [IAM Role Documentation](../../reference/aws/iam/iamrole.md) — IAM-specific naming and constraint details
-- [KMS Key Documentation](../../reference/aws/kms/kmskey.md) — KMS-specific alias naming details
-- [SQS Queue Documentation](../../reference/aws/sqs/sqsqueue.md) — SQS-specific naming constraint details
-
-For comprehensive design documentation on naming conventions and governance configuration, refer to `kropath-core` repository:
-- `docs/design/naming-convention.md` — Complete naming system reference
-- `docs/design/governance-cascade.md` — Governance configuration patterns
+For comprehensive design documentation on naming conventions, refer to the [Configuration / Governance]({{< relref "/docs/concepts/configuration" >}}) section.

@@ -206,7 +206,7 @@ spec:
   # effectiveName = "production-data-pipeline-bucket"
 ```
 
-For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md).
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ### Region Handling: The `us-east-1` Special Case
 

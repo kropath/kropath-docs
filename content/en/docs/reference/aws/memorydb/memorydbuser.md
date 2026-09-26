@@ -276,7 +276,7 @@ User names are generated via the governance naming template:
 # Result: user-prod-appuser
 ```
 
-See [Naming Template — Dynamic Tags](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md) for full syntax.
+See [Naming Template — Dynamic Tags](../../../concepts/configuration/naming-templates.md) for full syntax.
 
 **AWS constraints:** Starts with letter, alphanumeric + hyphens.
 

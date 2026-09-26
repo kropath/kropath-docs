@@ -1,9 +1,12 @@
 ---
-title: Controller Label Operator
+title: Label Operator
+linkTitle: Label Injection
 description: The kropath controller includes a label-operator feature that automatically injects provider-specific resource-name labels onto all resources within provider API groups.
+weight: 10
 doc_type: concept
 ---
-# Controller Label Operator
+
+# Label Operator
 
 The kropath controller includes a label-operator feature that automatically injects provider-specific resource-name labels onto all resources within provider API groups. This ensures that resources are reliably discoverable by Resource Group Definition (RGD) `labelSelector` lookups, a critical requirement for the governance cascade pattern.
 

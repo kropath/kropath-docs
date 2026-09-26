@@ -327,4 +327,4 @@ Broker configurations follow a governance cascade that merges organization-wide 
 ## Related Resources
 
 - [MQConfig](mqconfig.md) — Governance profiles for broker configuration
-- [KropathConfig](../../../concepts/controller/label-operator.md) — Organization-wide configuration
+- [KropathConfig](../../../concepts/resources/label-operator.md) — Organization-wide configuration

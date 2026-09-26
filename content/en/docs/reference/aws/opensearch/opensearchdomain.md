@@ -363,6 +363,6 @@ The effective domain name is computed from:
 
 - **Governance profiles** — See [OpenSearchConfig](opensearchconfig.md)
 - **VPC endpoints** — See [OpenSearchVPCEndpoint](opensearchvpcendpoint.md)
-- **Access policies** — See [PolicyDocument](../../../concepts/iam/policy-documents.md)
+- **Access policies** — See [PolicyDocument](../../../concepts/configuration/policy-documents.md)
 - **Fine-grained access control** — See [OpenSearchConfig advanced security](opensearchconfig.md#security-fields)
 - **Serverless alternative** — See [OpenSearchCollection](opensearchcollection.md)

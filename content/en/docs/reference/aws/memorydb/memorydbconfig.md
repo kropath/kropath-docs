@@ -380,4 +380,4 @@ spec:
 ## Additional Resources
 
 - **Governance cascade semantics:** [ADR-015](https://github.com/kropath/kropath-core/blob/main/docs/adrs/adr-015-governance-and-k8s-metadata.md)
-- **Naming templates with tag substitution:** [Naming Template — Dynamic Tags](../../../concepts/naming/dynamic-tag-fields-in-naming-templates.md)
+- **Naming templates with tag substitution:** [Naming Template — Dynamic Tags](../../../concepts/configuration/naming-templates.md)

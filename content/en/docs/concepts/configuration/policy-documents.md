@@ -1,8 +1,11 @@
 ---
 title: PolicyDocument
+linkTitle: Policy Documents
 description: "`PolicyDocument` is a Kubernetes resource that lets you compose, validate, and reuse AWS IAM policy documents."
+weight: 20
 doc_type: concept
 ---
+
 # PolicyDocument
 
 `PolicyDocument` is a Kubernetes resource that lets you compose, validate, and reuse AWS IAM policy documents. Instead of embedding raw JSON in your resource specifications, you can structure your policies as YAML and let the kropath controller resolve cross-resource references and merge multiple policies into a single, validated document.

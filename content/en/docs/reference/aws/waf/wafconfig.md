@@ -242,4 +242,4 @@ WAF resource RGDs (WAFWebACL, WAFRuleGroup, WAFIPSet) read this `status.effectiv
 - [WAFWebACL](wafwebacl.md) — Create and manage web access control lists
 - [WAFRuleGroup](wafrulegroup.md) — Create and manage reusable rule groups
 - [WAFIPSet](wafipset.md) — Create and manage IP address sets
-- [KropathConfig](../../../concepts/controller/label-operator.md) — Organization-wide configuration
+- [KropathConfig](../../../concepts/resources/label-operator.md) — Organization-wide configuration
