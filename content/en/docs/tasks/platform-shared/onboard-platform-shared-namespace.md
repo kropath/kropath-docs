@@ -1,6 +1,9 @@
 ---
 doc_type: task
 title: Onboard the platform-shared namespace and its shared buckets
+linkTitle: Onboard the platform-shared namespace
+description: "The platform team needs one shared namespace per account so every other tenant has a consistent place to onboard from, and a working `central-logging` and `artifacts` bucket pair to build on."
+weight: 10
 ---
 
 # Onboard the platform-shared namespace and its shared buckets
@@ -20,7 +23,7 @@ scheme per team, and no way to answer "who read this object" consistently across
 This task builds that foundation. The platform team onboards the `platform-shared` namespace and
 provisions two kinds of bucket:
 
-```
+```text
   shared account (999988887777)                 ns: platform-shared
   ┌──────────────────────────────────────────────┐
   │  central-logging-999988887777-us-east-1      │  ← log sink for this account
@@ -64,7 +67,7 @@ Why it is shaped this way:
   former — a bad deploy is rolled back by pointing at the previous object version. Log objects are
   write-once and are aged out by lifecycle rules instead.
 
-The [data-team file-processing pipeline](onboard-data-team-namespace-and-resources.md) is the first
+The [data-team file-processing pipeline](../data-processing/onboard-data-team-namespace-and-resources.md) is the first
 consumer of both: its bucket logs into its account's `central-logging` bucket, and its Lambda build
 pipeline publishes into that account's `artifacts` bucket.
 
@@ -89,7 +92,7 @@ You need:
   platform-wide baseline every resource namespace points at, and it deliberately carries **none**
   of the three placement annotations — it is a governance namespace, not a placement target.
   Giving it placement annotations breaks the cascade.
-- **Familiarity** with the [governance cascade](../engineering-standards.md#5-governance-config-hierarchy)
+- **Familiarity** with the [governance cascade](../../reference/aws/s3/_index.md#ten-tier-governance-cascade)
   and with how kropath derives resource names from naming templates.
 
 ### Account topology
@@ -165,7 +168,7 @@ metadata:
   annotations:
     # All three are required on every resource namespace. owner-account-id and
     # default-region let ACK's CARM chain resolve the target account;
-    # global-config-namespace points kropath-controller at the platform-global
+    # global-config-namespace points kropath at the platform-global
     # baseline for the global tier.
     services.k8s.aws/owner-account-id: "999988887777"
     services.k8s.aws/default-region: "us-east-1"
@@ -403,7 +406,8 @@ kubectl apply -f central-logging-bucket.yaml
 
 Repeat Step 1 for the platform team's shared-services namespace in each product account, changing
 the namespace name and the owner account annotation. Business-unit namespaces in the same account
-are onboarded separately by their own teams and are not part of this task. The config CRs are otherwise identical apart from the account-local KMS key:
+are onboarded separately by their own teams and are not part of this task. The config CRs are
+otherwise identical apart from the account-local KMS key:
 
 ```yaml
 ---
@@ -611,8 +615,8 @@ aws s3 ls "s3://central-logging-111122223333-us-east-1/s3/artifacts/"
 ### `status.namingStatus: invalid-unresolved-tokens`
 
 A token in `nameOverride` could not be resolved. `{account_id}` and `{region}` come from
-`status.effectiveConfig.aws` on the namespace's `S3Config`, which the kropath-controller populates
-from the namespace annotations. Confirm the annotations exist and the config CR carries its
+`status.effectiveConfig.aws` on the namespace's `S3Config`, which kropath populates from the
+namespace annotations. Confirm the annotations exist and the config CR carries its
 `aws.kropath.run/resource-name` label:
 
 ```bash
@@ -658,7 +662,7 @@ namespace annotated for the wrong account creates real buckets — just somewher
 Once both bucket kinds exist and verify:
 
 1. **Onboard the first tenant.** [Onboard the data-team namespace and its file-processing
-   resources](onboard-data-team-namespace-and-resources.md) builds on this foundation.
+   resources](../data-processing/onboard-data-team-namespace-and-resources.md) builds on this foundation.
 2. **Point existing buckets at the log sink.** Any bucket already in these accounts can set
    `spec.logging` to its account's `central-logging` bucket.
 3. **Publish the contract.** Other teams hard-code these bucket names. Record them, and the prefix
@@ -668,19 +672,20 @@ Once both bucket kinds exist and verify:
 
 Field-by-field reference material:
 
-- [AWS S3 Buckets](../aws/s3/s3.md) — `S3Bucket` fields, the
-  [`S3Config` governance model](../aws/s3/s3.md#s3config-governance-model), and the governance
+- [AWS S3 Buckets](../../reference/aws/s3/_index.md) — `S3Bucket` fields, the
+  [`S3Config` governance model](../../reference/aws/s3/_index.md#s3config-governance-model), and the governance
   cascade
-- [PolicyDocument](../resources/aws-policy-document.md) — structured statements, service
+- [PolicyDocument](../../concepts/configuration/policy-documents.md) — structured statements, service
   principals, conditions, and source composition
-- [KMSKey](../aws/kms/kmskey.md) — provisioning a customer managed key, if you choose one over the
+- [KMSKey](../../reference/aws/kms/kmskey.md) — provisioning a customer managed key, if you choose one over the
   AWS managed key this task uses
-- [Dynamic tag fields in naming templates](../resources/naming-template-dynamic-tags.md)
-- [Engineering standards](../engineering-standards.md) — governance cascade and wiring conventions
+- [Dynamic tag fields in naming templates](../../concepts/configuration/naming-templates.md)
+- [How kropath resolves your configuration](../../concepts/architecture/_index.md) — how governance
+  CRs, the controller, and the provider layer combine to produce a cloud resource
 
 Related tasks:
 
-- [Onboard the data-team namespace and its file-processing resources](onboard-data-team-namespace-and-resources.md)
+- [Onboard the data-team namespace and its file-processing resources](../data-processing/onboard-data-team-namespace-and-resources.md)
   — the first tenant to build on this foundation
 
 External references:

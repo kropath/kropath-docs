@@ -9,5 +9,6 @@ doc_type: task
 
 Tasks in this section cover the foundation resources that platform teams provision as shared infrastructure.
 
-- **Provision shared platform resources** — *Coming soon.* Create the central logging bucket and
-  shared artifact repositories that platform teams use as a foundation.
+- **[Onboard the platform-shared namespace and its shared buckets](onboard-platform-shared-namespace.md)**
+  — Create the per-account `central-logging` sink and the per-product-account `artifacts` bucket
+  that every other tenant builds on.
