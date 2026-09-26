@@ -68,9 +68,19 @@ A `NetworkFirewallPolicy`:
 
 ## Naming Convention
 
+Firewall policy names are generated from a template using:
+
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
+
 - **Default template:** `{namespace}-{name}`
 - **Cloud resource name:** 1–128 characters, alphanumeric and hyphens only
 - **Predicted ARN:** `arn:aws:network-firewall:<region>:<account>:firewall-policy/<name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Example: Production Firewall Policy
 

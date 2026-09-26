@@ -62,10 +62,20 @@ Choose ONE of the following:
 
 ## Naming Convention
 
+Rule group names are generated from a template using:
+
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
+
 - **Default template:** `{namespace}-{name}`
 - **Cloud resource name:** 1–128 characters, alphanumeric and hyphens only
 - **Predicted ARN (stateful):** `arn:aws:network-firewall:<region>:<account>:stateful-rulegroup/<name>`
 - **Predicted ARN (stateless):** `arn:aws:network-firewall:<region>:<account>:stateless-rulegroup/<name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 Use `spec.nameOverride` to set a custom identifier if the default template doesn't fit your naming scheme.
 

@@ -128,8 +128,11 @@ Vector bucket names are generated from a template using:
 | `{name}` | CR name |
 | `{account_id}` | AWS account ID |
 | `{region}` | AWS region |
+| `{tag.<key>}` | Tag value |
 
 **Default template**: `{namespace}-{name}`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Cross-references
 

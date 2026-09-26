@@ -83,7 +83,7 @@ spec:
 
 ## Supported Resource Families
 
-Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 133 out of 227 resource definitions support the `{tag.fieldName}` syntax.
+Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 166 out of 227 resource definitions support the `{tag.fieldName}` syntax.
 
 Supported families include (but are not limited to):
 
