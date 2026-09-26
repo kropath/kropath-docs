@@ -352,7 +352,7 @@ spec:
   # Queue name = "production-notifications-order-events"
 ```
 
-For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md).
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 **FIFO suffix:** FIFO queues automatically get `.fifo` appended:
 - Standard: `payments-prod-order-events`

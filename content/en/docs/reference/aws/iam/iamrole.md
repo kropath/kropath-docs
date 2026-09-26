@@ -244,7 +244,7 @@ Look for:
 - `status.predictedArn` — The AWS ARN for the role (e.g., `arn:aws:iam::123456789012:role/my-role`)
 - `status.namingStatus` — Validation status (`valid` or `invalid-unresolved-tokens`)
 
-For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md).
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Monitoring
 

@@ -180,7 +180,7 @@ spec:
   # effectiveName = "production-data-etl-my-job"
 ```
 
-For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates-fields-in-naming-templates.md).
+For detailed information on dynamic tag field syntax, tag resolution order, provider constraints, and best practices, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ### Status Fields
 
