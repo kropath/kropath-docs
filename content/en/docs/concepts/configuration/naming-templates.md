@@ -83,16 +83,27 @@ spec:
 
 ## Supported Resource Families
 
-Dynamic tag fields in naming templates are supported for the following AWS resource families:
+Dynamic tag fields in naming templates are supported for all AWS resource families in kropath. This includes, but is not limited to:
 
-| Resource Family | Resource Kinds |
-|---|---|
-| S3 | `S3Bucket` |
-| IAM | `IAMRole`, `IAMUser`, `IAMGroup`, `IAMPolicy` |
-| KMS | `KMSKey` |
-| SQS | `SQSQueue` (and other SQS-family resources) |
+**Compute & Containers:** EC2, ECS, EKS, Lambda, AutoScaling, AppScaling
 
-Other resource families (e.g., EC2, RDS, Lambda) inherit support in their respective phases as they implement the naming template system.
+**Storage:** S3, S3 Advanced, EBS, EFS, Backup
+
+**Database & Cache:** RDS, DynamoDB, ElastiCache, DocumentDB, MemoryDB, Keyspaces
+
+**Messaging & Events:** SQS, SNS, EventBridge, MQ, Kinesis
+
+**Security & IAM:** IAM, KMS, WAF, Secrets Manager, ACM
+
+**Analytics & Data:** Athena, Glue, EMR, Redshift, QuickSight, OpenSearch
+
+**Networking:** Route53, API Gateway, VPC, Network Firewall, CloudFront
+
+**Management & Monitoring:** CloudWatch, CloudTrail, EventBridge, SSM, Pipes
+
+**ML & AI:** SageMaker, Bedrock
+
+...and all other AWS services with active kropath reconciler support. See the kropath-controller [README](https://github.com/kropath/kropath-controller/blob/main/README.md) for the complete list of all 57 reconcilers and their integration status.
 
 ## Provider Constraints
 
