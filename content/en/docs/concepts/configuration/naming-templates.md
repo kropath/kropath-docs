@@ -83,27 +83,29 @@ spec:
 
 ## Supported Resource Families
 
-Dynamic tag fields in naming templates are supported for all AWS resource families in kropath. This includes, but is not limited to:
+Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 133 out of 227 resource definitions support the `{tag.fieldName}` syntax.
 
-**Compute & Containers:** EC2, ECS, EKS, Lambda, AutoScaling, AppScaling
+Supported families include (but are not limited to):
 
-**Storage:** S3, S3 Advanced, EBS, EFS, Backup
+**Compute & Containers:** EC2 (many kinds), ECS, EKS, Lambda, AutoScaling
 
-**Database & Cache:** RDS, DynamoDB, ElastiCache, DocumentDB, MemoryDB, Keyspaces
+**Storage:** S3, S3 Advanced, EFS, Backup
+
+**Database & Cache:** RDS, DynamoDB, ElastiCache, MemoryDB, Keyspaces
 
 **Messaging & Events:** SQS, SNS, EventBridge, MQ, Kinesis
 
-**Security & IAM:** IAM, KMS, WAF, Secrets Manager, ACM
+**Security & IAM:** IAM, KMS, WAF, Secrets Manager
 
-**Analytics & Data:** Athena, Glue, EMR, Redshift, QuickSight, OpenSearch
+**Analytics & Data:** Athena, Glue, EMR, QuickSight, OpenSearch
 
-**Networking:** Route53, API Gateway, VPC, Network Firewall, CloudFront
+**Networking:** Route53, VPC, Network Firewall
 
-**Management & Monitoring:** CloudWatch, CloudTrail, EventBridge, SSM, Pipes
+**Management & Monitoring:** CloudWatch, SSM
 
 **ML & AI:** SageMaker, Bedrock
 
-...and all other AWS services with active kropath reconciler support. See the kropath-controller [README](https://github.com/kropath/kropath-controller/blob/main/README.md) for the complete list of all 57 reconcilers and their integration status.
+Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift). Support for these will be added in future releases as the naming template feature is extended across all resource definitions.
 
 ## Provider Constraints
 
