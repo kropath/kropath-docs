@@ -37,6 +37,13 @@ refLinksErrorLevel = "ERROR"
 [params.ui.feedback]
   enable = false
 
+# Pinned exact version (Docsy's mermaid script partial warns on anything
+# else) — kept in sync with versions.env MERMAID_VERSION. Docsy's built-in
+# render hook (render-codeblock-mermaid.html) turns a ```mermaid fenced code
+# block into this script, loaded from jsdelivr only on pages that use one.
+[params.mermaid]
+  version = "12.0.0"
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
