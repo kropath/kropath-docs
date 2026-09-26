@@ -105,7 +105,7 @@ Supported families include (but are not limited to):
 
 **ML & AI:** SageMaker, Bedrock
 
-Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift). Support for these will be added in future releases as the naming template feature is extended across all resource definitions.
+Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift).
 
 ## Provider Constraints
 
