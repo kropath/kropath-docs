@@ -51,15 +51,23 @@ When a naming template is evaluated, the system resolves tags from the `mergedTa
 
 If a tag key exists at multiple levels (e.g., both mandatory and instance level), the mandatory value takes precedence. If a tag key does not exist at any level, the placeholder resolves to an empty string and the template validity check reports an error (see [Troubleshooting](#troubleshooting) below).
 
-**Important:** For naming template resolution, only `spec.tags` are included in `mergedTags`. Kubernetes-level metadata like `spec.syncedLabels` and `spec.syncedAnnotations` are NOT included in the tag resolution for naming templates — they are separate cloud metadata fields. A naming template that references a tag not in `spec.tags`, governance mandatory tags, or governance defaults tags will fail validation.
+**Important:** For naming template resolution, `{tag.fieldName}` placeholders can resolve from three sources at each governance level: `tags`, `syncedLabels`, and `syncedAnnotations`. The resolution follows this priority order at each level (mandatory, then defaults):
+
+- Mandatory tags → mandatory syncedLabels → mandatory syncedAnnotations
+- Spec tags → spec syncedLabels → spec syncedAnnotations  
+- Default tags → default syncedLabels → default syncedAnnotations
+
+A naming template that references a key not found in any of these sources will fail validation.
 
 ### Tag Sources
 
-Tag values available for naming templates come from a single source: `spec.tags` combined with mandatory and default tags from the governance config:
+Tag values available for naming templates come from three types of metadata at each governance level:
 
-- **`spec.tags`** — Custom AWS/provider tags applied directly to the resource
-- **Governance mandatory tags** — Tags enforced at the organization or profile level
-- **Governance default tags** — Tags applied when not explicitly overridden
+- **`tags`** — Custom AWS/provider tags from `spec.tags`, governance mandatory tags, or governance default tags
+- **`syncedLabels`** — Kubernetes labels to be synced, from governance mandatory or default configuration
+- **`syncedAnnotations`** — Kubernetes annotations to be synced, from governance mandatory or default configuration
+
+All three can be referenced using the `{tag.KEY}` syntax. The system resolves keys across all three types following the priority order described above.
 
 Example:
 
@@ -77,8 +85,9 @@ spec:
   # - defaults.namingTemplate: "{tag.environment}-{tag.cost-center}-{namespace}-{name}"
   # Then effectiveName = "production-engineering-data-prod-my-bucket"
   # 
-  # NOTE: spec.syncedLabels and spec.syncedAnnotations are NOT used for naming
-  # template tag resolution — only spec.tags are used.
+  # The {tag.environment} and {tag.cost-center} can resolve from spec.tags, mandatory tags,
+  # mandatory syncedLabels, mandatory syncedAnnotations, or default equivalents,
+  # following the priority order at each level.
 ```
 
 ## Supported Resource Families
