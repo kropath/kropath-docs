@@ -43,6 +43,24 @@ After reconciliation, the schedule's status contains:
 | `monitoringScheduleStatus` | string | `"Pending"`, `"Scheduled"`, `"Stopped"`, etc. |
 | `conditions` | array | Status conditions (ready, error, etc.) |
 
+
+## Naming Convention
+
+Resource names are generated from a template using:
+
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
+
+- **Default template:** `{namespace}-{name}`
+- **Cloud resource name:** 1–63 characters, alphanumeric and hyphens only
+- **Predicted ARN:** computed from the resource name
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
+
+
 ## Complete Example
 
 ```yaml

@@ -59,6 +59,7 @@ Models are named using a configurable template. The default template is `{namesp
 - `{name}` — The resource's Kubernetes name
 - `{namespace}` — The resource's Kubernetes namespace
 - `{configRef}` — The selected governance profile name
+- `{tag.<key>}` — Tag value from merged tags
 
 **AWS constraints:**
 - Max 63 characters

@@ -83,7 +83,7 @@ spec:
 
 ## Supported Resource Families
 
-Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 133 out of 227 resource definitions support the `{tag.fieldName}` syntax.
+Dynamic tag fields in naming templates are supported for most AWS resource families in kropath, with support actively expanding as more RGDs are added. Currently, 166 out of 227 resource definitions support the `{tag.fieldName}` syntax.
 
 Supported families include (but are not limited to):
 
@@ -106,6 +106,8 @@ Supported families include (but are not limited to):
 **ML & AI:** SageMaker, Bedrock
 
 Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift).
+
+**Naming Exemptions:** 61 additional resource types have no configurable naming template support at all — these resources either have no user-assignable name field or rely on service-assigned identifiers (ARNs, UUIDs) instead of user-controlled names (e.g., Route53 Health Check, IAM Identity Provider, KMS Alias, CloudFront Distribution). For these resource types, naming templates are not applicable.
 
 ## Provider Constraints
 

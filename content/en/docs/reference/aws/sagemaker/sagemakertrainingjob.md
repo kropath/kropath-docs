@@ -66,12 +66,19 @@ After reconciliation, the job's status contains:
 
 ## Naming Convention
 
-Training jobs are named using a configurable template. The default template is `{namespace}-{name}`.
+Training job names are generated from a template using:
 
-**AWS constraints:**
-- Max 63 characters
-- Alphanumeric and hyphens only
-- No leading/trailing hyphens
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
+
+- **Default template:** `{namespace}-{name}`
+- **Cloud resource name:** 1–63 characters, alphanumeric and hyphens only
+- **Predicted ARN:** `arn:aws:sagemaker:<region>:<account>:training-job/<name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Complete Example
 
