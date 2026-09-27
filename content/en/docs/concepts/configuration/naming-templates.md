@@ -107,6 +107,8 @@ Supported families include (but are not limited to):
 
 Some resource families do not yet support dynamic tag fields (e.g., ACM, API Gateway, Backup Plan, Redshift).
 
+**Naming Exemptions:** 61 additional resource types have no configurable naming template support at all — these resources either have no user-assignable name field or rely on service-assigned identifiers (ARNs, UUIDs) instead of user-controlled names (e.g., Route53 Health Check, IAM Identity Provider, KMS Alias, CloudFront Distribution). For these resource types, naming templates are not applicable.
+
 ## Provider Constraints
 
 Each cloud provider imposes length and character constraints on resource names. When using dynamic tag fields, ensure that the combined result of all placeholders and static text fits within the provider's limits.
