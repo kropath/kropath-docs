@@ -44,12 +44,19 @@ After reconciliation, the user profile's status contains:
 
 ## Naming Convention
 
-User profiles are identified by their username within the domain. The `userName` field directly maps to the AWS user profile name (no template).
+User profile names are generated from a template using:
 
-**AWS constraints:**
-- Max 63 characters
-- Alphanumeric, hyphens, and underscores
-- Unique within the domain
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
+
+- **Default template:** `{namespace}-{name}`
+- **Cloud resource name:** 1–63 characters, alphanumeric, hyphens, and underscores
+- **Predicted ARN:** `arn:aws:sagemaker:<region>:<account>:user-profile/<domain-id>/<user-profile-name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Complete Example
 

@@ -90,11 +90,19 @@ Common transforms:
 
 ### Naming
 
-Cloud table names are derived from `{namespace}_{name}` by default (note: underscores instead of hyphens, as S3 Tables requires `^[0-9a-z_]*$`).
+Table names are generated from a template using:
 
-**Default template**: `{namespace}_{name}` with automatic hyphen-to-underscore replacement
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
 
-**Example**: CR in namespace `analytics-prod` named `user-events` produces table name `analytics_prod_user_events`.
+- **Default template:** `{namespace}_{name}` (note: underscores instead of hyphens, as S3 Tables requires `^[0-9a-z_-]*$`)
+- **Cloud resource name:** 1–128 characters, alphanumeric, hyphens, and underscores only
+- **Predicted ARN:** `arn:aws:s3tables:<region>:<account>:namespacebucket/<bucket-name>/namespace/<namespace-name>/table/<table-name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ### Encryption
 

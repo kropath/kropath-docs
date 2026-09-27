@@ -55,11 +55,19 @@ Use `tableBucketRef` for co-managed resources in the same cluster; use `tableBuc
 
 ### Naming
 
-Namespaces are identified by their ARN, which is system-generated after creation. The namespace name within S3 Tables is derived from the `{namespace}-{name}` template by default.
+Namespace names are generated from a template using:
 
-**Default template**: `{namespace}-{name}`
+| Token | Value |
+|---|---|
+| `{namespace}` | Kubernetes namespace |
+| `{name}` | CR name |
+| `{tag.<key>}` | Tag value |
 
-**Example**: CR in namespace `analytics-prod` named `events` produces namespace name `analytics-prod-events` within the table bucket.
+- **Default template:** `{namespace}-{name}`
+- **Cloud resource name:** 1–128 characters, alphanumeric, hyphens, and underscores only (S3 Tables requires `^[0-9a-z_-]*$`)
+- **Predicted ARN:** `arn:aws:s3tables:<region>:<account>:namespacebucket/<bucket-name>/namespace/<namespace-name>`
+
+Naming templates support dynamic tag field substitution — use `{tag.fieldName}` to embed tag values directly into resource names. For details on tag resolution, provider constraints, and examples, see [Dynamic Tag Fields in Naming Templates](../../../concepts/configuration/naming-templates.md).
 
 ## Complete example
 
