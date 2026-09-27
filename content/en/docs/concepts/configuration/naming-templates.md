@@ -88,7 +88,6 @@ spec:
   # The {tag.environment} and {tag.cost-center} can resolve from spec.tags, mandatory tags,
   # mandatory syncedLabels, mandatory syncedAnnotations, or default equivalents,
   # following the priority order at each level.
-  # template tag resolution — only spec.tags are used.
 ```
 
 ## Supported Resource Families
