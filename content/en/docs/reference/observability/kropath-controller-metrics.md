@@ -4,6 +4,7 @@ linkTitle: Controller metrics
 description: >
   Reference of all Prometheus metrics and alerting rules exposed by kropath-controller.
 weight: 10
+doc_type: reference
 ---
 
 This page documents every metric and alert exposed by kropath-controller on its `/metrics` endpoint
@@ -36,6 +37,7 @@ correct for them.
 
 **`kropath_placement_resolutions_total`** increments when a namespace's account and region
 annotations are processed. Reasons include:
+
 - `PlacementResolved` — annotations were valid
 - `MissingAccountAnnotation`, `InvalidAccountAnnotation` — annotation issues
 - `MissingRegionAnnotation` — region annotation missing
@@ -43,6 +45,7 @@ annotations are processed. Reasons include:
 
 **`kropath_config_profile_resolutions_total`** increments when a configuration profile is resolved
 for a service. `reason` values:
+
 - `ProfileFound` — matching profile found in `KropathConfig`
 - `ProfileFallthrough` — no profile matched; defaults used
 - `ProfileUnresolved` — resolution failed
@@ -57,6 +60,7 @@ for a service. `reason` values:
 | `kropath_policydocument_sid_conflicts_total` | counter | — | Dashboard only |
 
 **`kropath_policydocument_documents`** — Count of policy documents by their current status:
+
 - `DocumentResolved` — document ready
 - `InvalidDocumentJSON` — JSON parsing failed
 - `SidConflict` — statement IDs are duplicated
@@ -68,11 +72,13 @@ for a service. `reason` values:
 **`kropath_policydocument_unresolved_refs`** — Count of resource references that could not be
 resolved to an ARN. `kind` includes common AWS resource types (e.g. `AWSS3Bucket`, `AWSIAMRole`)
 plus `other` for unknown kinds. `field` indicates where the ARN came from:
+
 - `predictedArn` — derived from resource name before creation
 - `arn` — read from resource status after creation
 - `unsupported` — ARN prediction not supported for this kind
 
 **`kropath_policydocument_ref_resolutions_total`** — Counter of ARN resolution attempts. `outcome`:
+
 - `resolved` — ARN found
 - `pending` — resource exists but doesn't yet have an ARN
 - `crd_absent` — resource kind is not installed
@@ -109,11 +115,13 @@ injection is not running for that group. The alert fires if this is absent or ze
 
 **`kropath_labeloperator_group_discovery_total`** — Counter of group discovery attempts per
 provider group. `outcome`:
+
 - `discovered` — kinds found and controllers started
 - `empty` — group exists but no kinds matched
 - `error` — discovery failed
 
 **`kropath_labeloperator_patches_total`** — Counter of label patching attempts. `outcome`:
+
 - `patched` — successfully added or updated labels
 - `not_found` — resource was deleted during patching
 - `error` — patch failed
@@ -126,6 +134,7 @@ provider group. `outcome`:
 | `kropath_kropathconfigstatus_family_kinds_unavailable` | gauge | — | `KropathConfigFamilyKindsUnavailable` |
 
 **`kropath_kropathconfigstatus_configs`** — Count of `KropathConfig` CRs by their classification:
+
 - `GlobalTier` — config is used as org-wide settings
 - `LocalTier` — config is used as namespace-local overrides
 - `GlobalAndLocalTier` — config serves both roles
@@ -147,6 +156,7 @@ truly unreferenced).
 | `kropath_namespaceplacement_transitions_total` | counter | `to` | Dashboard only |
 
 **`kropath_namespaceplacement_namespaces`** — Count of namespaces by their placement status:
+
 - `ok` — all required annotations are present and valid
 - `MissingAccountAnnotation`, `InvalidAccountAnnotation` — account annotation issues
 - `MissingRegionAnnotation` — region annotation missing
@@ -172,6 +182,7 @@ The alert fires when a reconciler has been pending for over an hour.
 
 **`kropath_registry_crd_watch_events_total`** — Counter of CRD watch events that add or modify
 reconcilers. `outcome`:
+
 - `activated` — CRD became available and reconciler started
 - `not_servable` — CRD is installed but not served
 - `store_miss` — CRD data not found in cache
@@ -207,6 +218,7 @@ this counter instead, so you know data is missing.
 All alerts carry `component: kropath-controller` so you can route them as a group.
 
 Severity levels:
+
 - **Critical** — Tenant workloads are broken or will break immediately.
 - **Warning** — Degraded or missing visibility, transient issues, or future problems.
 
@@ -226,6 +238,7 @@ routes:
 ### High `kropath_cascade_effective_config_withheld`
 
 Effective configurations are not being written. Check:
+
 - Are namespace annotations present and valid? (Review `kropath_placement_resolutions_total`)
 - Are service config CRDs installed? (Check `kropath_kopathconfigstatus_family_kinds_unavailable`)
 - Is there a `KropathConfigUnreferenced` alert firing?
@@ -233,6 +246,7 @@ Effective configurations are not being written. Check:
 ### High `kropath_policydocument_unresolved_refs`
 
 Policy documents cannot resolve resource ARNs. Check:
+
 - Are the referenced resources created? (Check resource status in your cloud provider)
 - Are their CRDs installed? (Check `KropathPolicyRefCRDAbsent` alert)
 - Is label injection working? (Check `kropath_labeloperator_watched_kinds`)
@@ -240,6 +254,7 @@ Policy documents cannot resolve resource ARNs. Check:
 ### Zero `kropath_labeloperator_watched_kinds`
 
 Label injection is not running. Check:
+
 - Is the operator pod running? (`kubectl get pods`)
 - Are the provider group CRDs present? (`kubectl get crd | grep kropath.run`)
 - Is `KropathLabelInjectionOff` alert firing?
