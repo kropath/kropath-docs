@@ -33,7 +33,7 @@ Alerts fire when:
 
 ## Common failure modes detected
 
-### Configuration cascade failure (KRO-1104)
+### Configuration cascade failure — unreferenced config
 
 The most common platform-breaking failure: a `KropathConfig` is in place and correct, but no
 `<Service>Config` CR reads it, so `status.effectiveConfig` is never written. This leaves RGDs

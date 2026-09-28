@@ -140,8 +140,9 @@ provider group. `outcome`:
 - `GlobalAndLocalTier` — config serves both roles
 - `Unreferenced` — no service config reads this `KropathConfig`
 
-Unreferenced configs represent the KRO-1104 failure: valid configurations that aren't connected
-to any service, so no `status.effectiveConfig` is ever written.
+Unreferenced configs represent a critical failure: valid configurations that aren't connected
+to any service, so no `status.effectiveConfig` is ever written. This is caught by the
+`KropathConfigUnreferenced` alert.
 
 **`kropath_kropathconfigstatus_family_kinds_unavailable`** — Count of service configuration kinds
 that are not installed. If this is non-zero, `KropathConfigUnreferenced` may be underreported
@@ -204,7 +205,7 @@ this counter instead, so you know data is missing.
 
 | Alert | Severity | Fires when |
 |---|---|---|
-| `KropathConfigUnreferenced` | critical | A `KropathConfig` is not being read by any service config (KRO-1104) |
+| `KropathConfigUnreferenced` | critical | A `KropathConfig` is not being read by any service config — the most common platform-breaking failure |
 | `KropathConfigFamilyKindsUnavailable` | warning | A service config CRD is not installed, masking true placement status |
 | `KropathEffectiveConfigWithheld` | critical | Placement failed, so `status.effectiveConfig` was not written; RGD CEL will fail |
 | `KropathPlacementResolutionFailing` | warning | Namespace placement is rejecting at a sustained rate |
