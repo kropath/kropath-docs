@@ -106,12 +106,12 @@ After you create an `ECRPublicConfig`, the `status` block contains:
 
 | Field | Type | Purpose |
 |---|---|---|
-| `observedGeneration` | integer | Generation of the spec most recently reconciled by kropath-controller |
+| `observedGeneration` | integer | Generation of the spec most recently reconciled by kropath-aws-controller |
 | `syncedTimestamp` | string | RFC3339 timestamp of the last successful reconcile |
 | `conditions` | array | Standard Kubernetes conditions (e.g., `Ready`, `Available`) |
 | `effectiveConfig` | object | Pre-merged governance config; RGDs read exclusively from this field |
 
-The `effectiveConfig` is written by `kropath-controller` and represents the final merged configuration from both `KropathConfig` (organization-wide) and `ECRPublicConfig` (profile-specific) tiers. RGDs never read `spec` directly — they read only `status.effectiveConfig` to ensure consistent behavior across all resources using the profile.
+The `effectiveConfig` is written by `kropath-aws-controller` and represents the final merged configuration from both `KropathConfig` (organization-wide) and `ECRPublicConfig` (profile-specific) tiers. RGDs never read `spec` directly — they read only `status.effectiveConfig` to ensure consistent behavior across all resources using the profile.
 
 ## Example: Default Profile
 

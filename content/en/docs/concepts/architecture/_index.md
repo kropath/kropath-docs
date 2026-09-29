@@ -9,14 +9,14 @@ doc_type: concept
 # kropath Architecture
 
 kropath's control plane is built in layers. A platform team declares governance policy, the
-kropath-controller merges it with application specs, and kro ResourceGraphDefinitions project
+kropath-aws-controller merges it with application specs, and kro ResourceGraphDefinitions project
 the result onto Kubernetes-native provider operators that provision cloud resources.
 
 ## The Data Flow
 
 ```mermaid
 graph LR
-    A["KropathConfig<br/>(org/namespace)"] -->|governance<br/>policy| C["kropath-controller<br/>(config cascade)"]
+    A["KropathConfig<br/>(org/namespace)"] -->|governance<br/>policy| C["kropath-aws-controller<br/>(config cascade)"]
     B["&lt;Service&gt;Config<br/>(per-service)"] -->|governance<br/>policy| C
     D["&lt;Resource&gt; CR<br/>(user spec)"] -->|instance<br/>config| C
     
@@ -55,9 +55,9 @@ graph LR
 - Service-specific naming templates
 - Tagging and label rules
 
-### kropath-controller
+### kropath-aws-controller
 
-The kropath-controller runs the **config cascade reconciler** for each service. It:
+The kropath-aws-controller runs the **config cascade reconciler** for each service. It:
 
 1. Watches all governance CRs (`KropathConfig` and `<ResourceFamily>Config`)
 2. Watches the user's resource CR (e.g., a single `S3Bucket` instance)

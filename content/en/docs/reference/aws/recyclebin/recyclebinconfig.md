@@ -255,4 +255,4 @@ kubectl get recyclebinconfig general-policy -n kro-system --show-labels
 - **Family Design:** See `kropath-core/docs/families/aws/ebsrecyclebin.md`
 - **Resource Spec:** See `kropath-core/docs/specs/aws/aws-ebsrb-01-recyclebinconfig.md`
 - **ADR Reference:** ADR-015 §4 covers governance CRD design and the mandatory/defaults tier pattern
-- **Controller Behavior:** The `kropath-controller` writes `status.effectiveConfig` after merging all sources
+- **Controller Behavior:** The `kropath-aws-controller` writes `status.effectiveConfig` after merging all sources

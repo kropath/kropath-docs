@@ -391,7 +391,7 @@ If `certificateOutputSecret` is set but the Secret doesn't contain the certifica
    ```
 2. Check the controller logs:
    ```bash
-   kubectl logs -n kro-system -l app=kropath-controller | grep ACMPrivateCertificate
+   kubectl logs -n kro-system -l app=kropath-aws-controller | grep ACMPrivateCertificate
    ```
 3. Verify AWS IAM permissions for writing to Secrets
 

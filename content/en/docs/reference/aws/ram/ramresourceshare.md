@@ -24,7 +24,7 @@ Resource shares are the primary consumer-facing construct in the RAM family — 
 ## Prerequisites
 
 - A Kubernetes cluster running kropath-aws
-- `kropath-controller` deployed in the cluster
+- `kropath-aws-controller` deployed in the cluster
 - At least one `RAMConfig` profile deployed (defaults to `general-policy`)
 - AWS resources that can be shared (subnets, Transit Gateways, etc.) in the target account
 - Principal identifiers (AWS account IDs, ARNs) that will receive access

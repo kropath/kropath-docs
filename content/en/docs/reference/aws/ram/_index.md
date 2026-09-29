@@ -247,4 +247,4 @@ spec:
 - [AWS RAM Documentation](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)
 - [AWS RAM Permissions Reference](https://docs.aws.amazon.com/ram/latest/userguide/permissions.html)
 - [Kropath ADR-015: Consolidated Platform Decisions](https://github.com/kropath/kropath-core/blob/main/docs/adrs/015-consolidated-platform-decisions.md)
-- [Kropath ADR-010: Effective Config Cascade](https://github.com/kropath/kropath-core/blob/main/docs/adrs/010-kropath-controller-effective-config.md)
+- [Kropath ADR-010: Effective Config Cascade](https://github.com/kropath/kropath-core/blob/main/docs/adrs/010-kropath-aws-controller-effective-config.md)

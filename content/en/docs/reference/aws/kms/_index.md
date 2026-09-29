@@ -81,7 +81,7 @@ Grants differ from key policies in that they:
 
 Kropath employs a nine-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for KMS keys. This ensures organizational-level policies take precedence while providing flexibility for specific use cases.
 
-The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `KMSConfig` CR. `KMSKey` and `KMSGrant` RGDs read this configuration to determine the final, resolved settings.
+The `kropath-aws-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `KMSConfig` CR. `KMSKey` and `KMSGrant` RGDs read this configuration to determine the final, resolved settings.
 
 **When to use `KropathConfig.kms` vs. `KMSConfig`:**
 - **`KropathConfig.kms`:** Org-wide governance (e.g., force all keys to have rotation enabled)

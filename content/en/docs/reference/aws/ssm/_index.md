@@ -101,7 +101,7 @@ An `SSMResourceDataSync` resource synchronizes SSM Inventory data to S3 buckets 
 
 ### Governance Cascade
 
-Kropath employs a governance cascade (ADR-010, ADR-015) to resolve effective configuration. The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `SSMConfig` CR. Instances read this configuration to determine final settings.
+Kropath employs a governance cascade (ADR-010, ADR-015) to resolve effective configuration. The `kropath-aws-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `SSMConfig` CR. Instances read this configuration to determine final settings.
 
 **When to use `KropathConfig.ssm` vs. `SSMConfig`:**
 - **`KropathConfig.ssm`:** Org-wide governance (e.g., force all parameters to SecureString)

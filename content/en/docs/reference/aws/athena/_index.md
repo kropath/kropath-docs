@@ -40,7 +40,7 @@ Kropath's Athena configuration is managed through governance profiles (`AthenaCo
 *   `analytics`: A profile for analytics workloads (mandatory: CloudWatch metrics enabled, default scan limit of 10 GB, engine version 3).
 *   `restricted`: A compliance profile (mandatory: minimum encryption required, workgroup configuration enforced, SSE-KMS result encryption, centralized result location).
 
-The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `AthenaConfig`) into `status.effectiveConfig` on the namespaced `AthenaConfig` CR. Athena resource RGDs read this `status.effectiveConfig` to determine final settings.
+The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `AthenaConfig`) into `status.effectiveConfig` on the namespaced `AthenaConfig` CR. Athena resource RGDs read this `status.effectiveConfig` to determine final settings.
 
 **When to use `KropathConfig.athena` vs. `AthenaConfig`:**
 

@@ -226,7 +226,7 @@ Kropath employs an eight-tier governance cascade (ADR-010, ADR-015 §5.3) to res
 
 Tiers 1–5 are **mandatory-or-override** tiers (they enforce or override values). Tiers 6–8 are **defaults-only** tiers (they apply only when no mandatory or override value is present). Within each tier group, more specific scopes (MSK-specific, then profile-level, then org-wide) take precedence over general scopes.
 
-The `kropath-controller` pre-merges all governance sources and writes `status.effectiveConfig` onto the namespaced `MSKConfig` CR. Resource instances (clusters, configurations, etc.) read this single, pre-merged configuration and do not directly access the cascade — this ensures a consistent view of governance.
+The `kropath-aws-controller` pre-merges all governance sources and writes `status.effectiveConfig` onto the namespaced `MSKConfig` CR. Resource instances (clusters, configurations, etc.) read this single, pre-merged configuration and do not directly access the cascade — this ensures a consistent view of governance.
 
 **Mutation rule:** Mandatory fields cannot be overridden by lower-priority tiers. If a field is set in any `mandatory` tier (levels 1–3), that value is fixed regardless of instance-level or defaults-tier settings.
 

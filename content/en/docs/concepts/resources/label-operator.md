@@ -50,7 +50,7 @@ When a new provider is added in the future (e.g., a new `oracle.kropath.run` API
 
 - The operator **must be explicitly extended** to watch the new provider's API group.
 - This requires two changes:
-  1. **Controller configuration:** Add a new informer in `kropath-controller` startup to watch the new `<provider>.kropath.run` API group.
+  1. **Controller configuration:** Add a new informer in `kropath-aws-controller` startup to watch the new `<provider>.kropath.run` API group.
   2. **RBAC update:** Update the Helm chart ClusterRole to grant permissions on the new API group (`get`, `list`, `watch`, `patch`).
 - These are configuration and deployment changes, not code changes. Once updated, the operator covers all resources in the new API group automatically.
 
@@ -143,7 +143,7 @@ This ensures clean separation of concerns: the operator handles discoverability 
 
 If you notice a resource lacks the `<provider>.kropath.run/resource-name` label:
 
-1. **Verify the operator is running.** Check that the kropath-controller pod is healthy and not in a crash loop.
+1. **Verify the operator is running.** Check that the kropath-aws-controller pod is healthy and not in a crash loop.
 2. **Check the API group.** Ensure the resource's API group matches a provider group (e.g., `aws.kropath.run`, `gcp.kropath.run`, `azure.kropath.run`). Resources in other API groups (like `kropath.run`) are not covered.
 3. **Wait for reconciliation.** The operator may take a few seconds to reconcile the resource after creation. If the label is still missing after a minute, check the controller logs.
 

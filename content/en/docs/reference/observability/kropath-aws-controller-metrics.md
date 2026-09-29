@@ -1,13 +1,13 @@
 ---
-title: kropath-controller metrics and alerts
+title: kropath-aws-controller metrics and alerts
 linkTitle: Controller metrics
 description: >
-  Reference of all Prometheus metrics and alerting rules exposed by kropath-controller.
+  Reference of all Prometheus metrics and alerting rules exposed by kropath-aws-controller.
 weight: 10
 doc_type: reference
 ---
 
-This page documents every metric and alert exposed by kropath-controller on its `/metrics` endpoint
+This page documents every metric and alert exposed by kropath-aws-controller on its `/metrics` endpoint
 (port `8080` by default). Use this as a reference when setting up Prometheus scraping, configuring
 alert routing, or interpreting metric values.
 
@@ -21,7 +21,7 @@ Metrics follow Prometheus conventions:
 
 ## Cardinality and aggregation
 
-kropath-controller runs on every replica in a cluster with leader election. Gauge metrics report
+kropath-aws-controller runs on every replica in a cluster with leader election. Gauge metrics report
 the same cluster-wide value on every replica — use `max by (label)` in alert expressions and
 dashboards, never `sum by (label)`, to avoid reading N times too high across N replicas.
 
@@ -216,7 +216,7 @@ this counter instead, so you know data is missing.
 | `KropathReconcilerPendingTooLong` | warning | A reconciler's CRD is missing for over an hour |
 | `KropathMetricsCollectorFailing` | warning | A metrics collector hit an error; its series are missing |
 
-All alerts carry `component: kropath-controller` so you can route them as a group.
+All alerts carry `component: kropath-aws-controller` so you can route them as a group.
 
 Severity levels:
 
@@ -225,12 +225,12 @@ Severity levels:
 
 ## Alert routing
 
-Route all kropath-controller alerts to a single receiver:
+Route all kropath-aws-controller alerts to a single receiver:
 
 ```yaml
 routes:
 - match:
-    component: kropath-controller
+    component: kropath-aws-controller
   receiver: platform-team
 ```
 
@@ -262,4 +262,4 @@ Label injection is not running. Check:
 
 ## See also
 
-- [Monitor kropath-controller](../../tasks/operations/monitor-kropath-controller.md) — Setup guide for Prometheus and Grafana
+- [Monitor kropath-aws-controller](../../tasks/operations/monitor-kropath-aws-controller.md) — Setup guide for Prometheus and Grafana

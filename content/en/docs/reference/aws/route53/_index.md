@@ -45,7 +45,7 @@ Kropath's Route53 configuration is managed through two resources: instances of R
 
 ### Governance Cascade
 
-Kropath employs a governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Route53 resources. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `Route53Config`) into `status.effectiveConfig` on the namespaced `Route53Config` CR. Route53 RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+Kropath employs a governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Route53 resources. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `Route53Config`) into `status.effectiveConfig` on the namespaced `Route53Config` CR. Route53 RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.route53` vs. `Route53Config`:**
 

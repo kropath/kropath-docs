@@ -207,7 +207,7 @@ spec:
 
 ## Status Fields
 
-`ManagedPrometheusConfig` has a `status.effectiveConfig` field (read-only, populated by the kropath-controller):
+`ManagedPrometheusConfig` has a `status.effectiveConfig` field (read-only, populated by the kropath-aws-controller):
 
 ```yaml
 status:

@@ -22,7 +22,7 @@ Application teams create `RAMPermission` CRs once, then attach them to multiple 
 ## Prerequisites
 
 - A Kubernetes cluster running kropath-aws
-- `kropath-controller` deployed in the cluster
+- `kropath-aws-controller` deployed in the cluster
 - At least one `RAMConfig` profile deployed (defaults to `general-policy`)
 - A namespace where permissions will be provisioned
 

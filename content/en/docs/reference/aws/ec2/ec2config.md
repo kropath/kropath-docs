@@ -62,7 +62,7 @@ When set in `KropathConfig`, these fields override the corresponding `EC2Config`
 
 ### Ten-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade to resolve effective configuration for EC2 resources. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `EC2Config`) into `status.effectiveConfig` on the namespaced `EC2Config` CR. EC2 resource RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+Kropath employs a ten-tier governance cascade to resolve effective configuration for EC2 resources. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `EC2Config`) into `status.effectiveConfig` on the namespaced `EC2Config` CR. EC2 resource RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.ec2` vs. `EC2Config`:**
 

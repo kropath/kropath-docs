@@ -1,13 +1,13 @@
 ---
-title: Monitor kropath-controller
-linkTitle: Monitor kropath-controller
+title: Monitor kropath-aws-controller
+linkTitle: Monitor kropath-aws-controller
 description: >
-  Set up Prometheus monitoring and alerting for the kropath-controller operator.
+  Set up Prometheus monitoring and alerting for the kropath-aws-controller operator.
 weight: 10
 doc_type: task
 ---
 
-kropath-controller exposes Prometheus metrics and alerting rules that help you detect common
+kropath-aws-controller exposes Prometheus metrics and alerting rules that help you detect common
 configuration and operational issues. This guide covers what observability is available and how to
 deploy it.
 
@@ -57,7 +57,7 @@ Monitoring is optional and kept separate from the main operator deployment. To e
      --namespace monitoring --create-namespace
    ```
 
-2. **Deploy kropath-controller's monitoring config**:
+2. **Deploy kropath-aws-controller's monitoring config**:
 
    ```bash
    make deploy-monitoring
@@ -71,7 +71,7 @@ Monitoring is optional and kept separate from the main operator deployment. To e
    The operator listens on `:8080` by default. Add a scrape config like:
 
    ```yaml
-   - job_name: 'kropath-controller'
+   - job_name: 'kropath-aws-controller'
      kubernetes_sd_configs:
      - role: pod
        namespaces:
@@ -105,19 +105,19 @@ The dashboard gives you at-a-glance visibility into:
 ## Metric reference
 
 For the detailed metric definitions, labels, and alert expressions, see
-[kropath-controller Metrics and Alerts](../../reference/observability/kropath-controller-metrics.md).
+[kropath-aws-controller Metrics and Alerts](../../reference/observability/kropath-aws-controller-metrics.md).
 
 ## Alerting best practices
 
 ### Route by component
 
-Every alert carries `component: kropath-controller`, so you can route all kropath-controller
+Every alert carries `component: kropath-aws-controller`, so you can route all kropath-aws-controller
 alerts to a single receiver without enumerating each alert name:
 
 ```yaml
 routes:
 - match:
-    component: kropath-controller
+    component: kropath-aws-controller
   receiver: platform-team
 ```
 

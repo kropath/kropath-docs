@@ -21,7 +21,7 @@ Application teams select a profile via `spec.configRef` on their `StepFunctionsS
 ## Prerequisites
 
 - A Kubernetes cluster running kropath-aws
-- `kropath-controller` deployed in the cluster (provides the governance cascade logic)
+- `kropath-aws-controller` deployed in the cluster (provides the governance cascade logic)
 - A namespace where resources will be provisioned
 
 ## Basic Structure
@@ -271,7 +271,7 @@ When you apply a `StepFunctionsStateMachine`, the effective configuration is res
 9. Global KropathConfig defaults
 10. RGD built-in default (e.g., `OFF` for logging)
 
-Higher levels override lower levels. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `StepFunctionsConfig` CR, and the RGD reads a single `effectiveConfig` value.
+Higher levels override lower levels. The `kropath-aws-controller` pre-merges these into `status.effectiveConfig` on each `StepFunctionsConfig` CR, and the RGD reads a single `effectiveConfig` value.
 
 ### Example Cascade Resolution
 

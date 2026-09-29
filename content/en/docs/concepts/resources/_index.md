@@ -266,7 +266,7 @@ spec:
     version: "2"
 ```
 
-The RGD and kropath-controller automatically recompute `status.effectiveConfig` and update the underlying cloud resource.
+The RGD and kropath-aws-controller automatically recompute `status.effectiveConfig` and update the underlying cloud resource.
 
 ### Delete
 

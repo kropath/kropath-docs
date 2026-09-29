@@ -513,7 +513,7 @@ kubectl delete stepfunctionsstatemachine greeting -n workflows-demo
 - Use `nameOverride` to set a custom name
 
 **"Changes to governance profile aren't being picked up"**
-- The `kropath-controller` watches `StepFunctionsConfig` changes
+- The `kropath-aws-controller` watches `StepFunctionsConfig` changes
 - Verify the controller is running: `kubectl get deployment -n kro-system`
 - Recreate the state machine resource to apply new policies
 

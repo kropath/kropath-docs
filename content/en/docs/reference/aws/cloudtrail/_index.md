@@ -513,7 +513,7 @@ The following features are not available in this phase and are tracked for futur
 
 ### Cluster Prerequisites
 
-*   Kubernetes cluster running kropath (with `kropath-controller` deployed).
+*   Kubernetes cluster running kropath (with `kropath-aws-controller` deployed).
 *   Appropriate AWS IAM permissions for the cluster's service account:
     *   CloudTrail trail and event data store create/read/update/delete.
     *   S3 bucket read (if using `S3Bucket` references).
