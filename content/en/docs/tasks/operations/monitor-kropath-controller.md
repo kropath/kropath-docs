@@ -1,13 +1,13 @@
 ---
-title: Monitor kropath-aws-controller
-linkTitle: Monitor kropath-aws-controller
+title: Monitor kropath-controller
+linkTitle: Monitor kropath-controller
 description: >
-  Set up Prometheus monitoring and alerting for the kropath-aws-controller operator.
+  Set up Prometheus monitoring and alerting for the kropath-controller operator.
 weight: 10
 doc_type: task
 ---
 
-kropath-aws-controller exposes Prometheus metrics and alerting rules that help you detect common
+kropath-controller exposes Prometheus metrics and alerting rules that help you detect common
 configuration and operational issues. This guide covers what observability is available and how to
 deploy it.
 
@@ -57,7 +57,7 @@ Monitoring is optional and kept separate from the main operator deployment. To e
      --namespace monitoring --create-namespace
    ```
 
-2. **Deploy kropath-aws-controller's monitoring config**:
+2. **Deploy kropath-controller's monitoring config**:
 
    ```bash
    make deploy-monitoring
@@ -71,7 +71,7 @@ Monitoring is optional and kept separate from the main operator deployment. To e
    The operator listens on `:8080` by default. Add a scrape config like:
 
    ```yaml
-   - job_name: 'kropath-aws-controller'
+   - job_name: 'kropath-controller'
      kubernetes_sd_configs:
      - role: pod
        namespaces:
@@ -111,13 +111,13 @@ For the detailed metric definitions, labels, and alert expressions, see
 
 ### Route by component
 
-Every alert carries `component: kropath-aws-controller`, so you can route all kropath-aws-controller
+Every alert carries `component: kropath-controller`, so you can route all kropath-controller
 alerts to a single receiver without enumerating each alert name:
 
 ```yaml
 routes:
 - match:
-    component: kropath-aws-controller
+    component: kropath-controller
   receiver: platform-team
 ```
 

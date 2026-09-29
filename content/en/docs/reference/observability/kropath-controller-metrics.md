@@ -1,13 +1,13 @@
 ---
-title: kropath-aws-controller metrics and alerts
+title: kropath-controller metrics and alerts
 linkTitle: Controller metrics
 description: >
-  Reference of all Prometheus metrics and alerting rules exposed by kropath-aws-controller.
+  Reference of all Prometheus metrics and alerting rules exposed by kropath-controller.
 weight: 10
 doc_type: reference
 ---
 
-This page documents every metric and alert exposed by kropath-aws-controller on its `/metrics` endpoint
+This page documents every metric and alert exposed by kropath-controller on its `/metrics` endpoint
 (port `8080` by default). Use this as a reference when setting up Prometheus scraping, configuring
 alert routing, or interpreting metric values.
 
@@ -21,7 +21,7 @@ Metrics follow Prometheus conventions:
 
 ## Cardinality and aggregation
 
-kropath-aws-controller runs on every replica in a cluster with leader election. Gauge metrics report
+kropath-controller runs on every replica in a cluster with leader election. Gauge metrics report
 the same cluster-wide value on every replica — use `max by (label)` in alert expressions and
 dashboards, never `sum by (label)`, to avoid reading N times too high across N replicas.
 
