@@ -105,7 +105,7 @@ The dashboard gives you at-a-glance visibility into:
 ## Metric reference
 
 For the detailed metric definitions, labels, and alert expressions, see
-[kropath-aws-controller Metrics and Alerts](../../reference/observability/kropath-aws-controller-metrics.md).
+[kropath-controller Metrics and Alerts](../../reference/observability/kropath-controller-metrics.md).
 
 ## Alerting best practices
 

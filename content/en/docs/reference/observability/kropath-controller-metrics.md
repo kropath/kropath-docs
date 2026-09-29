@@ -262,4 +262,4 @@ Label injection is not running. Check:
 
 ## See also
 
-- [Monitor kropath-aws-controller](../../tasks/operations/monitor-kropath-aws-controller.md) — Setup guide for Prometheus and Grafana
+- [Monitor kropath-controller](../../tasks/operations/monitor-kropath-controller.md) — Setup guide for Prometheus and Grafana
