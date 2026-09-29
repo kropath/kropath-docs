@@ -112,7 +112,7 @@ conflicting values across tiers.
 
 ## 5. Governance Config Hierarchy
 
-kropath-aws-controller pre-merges governance inputs from three layers and writes the result onto the
+kropath-controller pre-merges governance inputs from three layers and writes the result onto the
 namespaced `<ResourceFamily>Config` CR as `status.effectiveConfig`. RGDs read only this
 pre-merged value — they never merge layers themselves.
 
@@ -235,7 +235,7 @@ convention does not apply and explain why.
 **Rule:** kropath features are **always enabled**. There are no per-feature CLI flags (`--enable-*`).
 
 Feature availability is expressed by **which image version you deploy**, not by runtime flags. Every
-reconciler in kropath-aws-controller self-registers in the feature registry on startup. The full list of
+reconciler in kropath-controller self-registers in the feature registry on startup. The full list of
 active reconcilers is queryable at the `/features` HTTP endpoint.
 
 This design avoids the complexity of feature-flag permutations and makes it straightforward to
@@ -255,7 +255,7 @@ validation rules. Lives in `crds/` in provider repos.
 
 Only these kinds are hand-authored CRDs:
 - **Config CRs** (e.g. `S3Config`, `IAMConfig`): governance configuration per resource type; carry
-  `status.effectiveConfig` written by kropath-aws-controller. Always have `spec.mandatory` /
+  `status.effectiveConfig` written by kropath-controller. Always have `spec.mandatory` /
   `spec.defaults` with tier-symmetry.
 - **Standalone policy/document** (e.g. `PolicyDocument`): referenced by RGDs via `externalRef`; does
   not compose children.
