@@ -216,7 +216,7 @@ this counter instead, so you know data is missing.
 | `KropathReconcilerPendingTooLong` | warning | A reconciler's CRD is missing for over an hour |
 | `KropathMetricsCollectorFailing` | warning | A metrics collector hit an error; its series are missing |
 
-All alerts carry `component: kropath-aws-controller` so you can route them as a group.
+All alerts carry `component: kropath-controller` so you can route them as a group.
 
 Severity levels:
 
@@ -225,12 +225,12 @@ Severity levels:
 
 ## Alert routing
 
-Route all kropath-aws-controller alerts to a single receiver:
+Route all kropath-controller alerts to a single receiver:
 
 ```yaml
 routes:
 - match:
-    component: kropath-aws-controller
+    component: kropath-controller
   receiver: platform-team
 ```
 
