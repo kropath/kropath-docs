@@ -172,7 +172,7 @@ spec:
 
 Kropath employs a ten-tier governance cascade to resolve effective configuration for S3 buckets. This cascade ensures that organizational-level policies take precedence, followed by profile-specific settings, and finally instance-level overrides.
 
-The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `S3Config`) into `status.effectiveConfig` on the namespaced `S3Config` CR. `S3Bucket` resources read this `status.effectiveConfig` to determine the final, resolved settings.
+The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `S3Config`) into `status.effectiveConfig` on the namespaced `S3Config` CR. `S3Bucket` resources read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.s3` vs. `S3Config`:**
 

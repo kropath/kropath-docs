@@ -51,7 +51,7 @@ When set in `KropathConfig`, these fields override the corresponding `KinesisCon
 
 ### Ten-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade to resolve effective configuration for Kinesis streams. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `KinesisConfig`) into `status.effectiveConfig` on the namespaced `KinesisConfig` CR. Kinesis stream RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+Kropath employs a ten-tier governance cascade to resolve effective configuration for Kinesis streams. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `KinesisConfig`) into `status.effectiveConfig` on the namespaced `KinesisConfig` CR. Kinesis stream RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.kinesis` vs. `KinesisConfig`:**
 

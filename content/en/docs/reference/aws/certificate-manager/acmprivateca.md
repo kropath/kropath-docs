@@ -367,7 +367,7 @@ Use `retain` for production CAs; use `delete` only for temporary or test CAs.
 Wait 30 seconds for the CA to be created in AWS. If the CSR still doesn't appear, check the controller logs:
 
 ```bash
-kubectl logs -n kro-system -l app=kropath-controller | grep ACMPrivateCA
+kubectl logs -n kro-system -l app=kropath-aws-controller | grep ACMPrivateCA
 ```
 
 ### CA Stuck in CREATING

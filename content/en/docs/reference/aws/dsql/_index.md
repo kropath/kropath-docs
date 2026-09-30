@@ -77,7 +77,7 @@ When you inspect cluster status, you will find:
 
 Kropath employs a ten-tier governance cascade (ADR-015 §5.3, ADR-010) to resolve effective configuration for DSQL clusters. This ensures organizational-level policies take precedence while providing flexibility for specific use cases.
 
-The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `DSQLConfig` CR. `DSQLCluster` RGDs read this configuration to determine the final, resolved settings.
+The `kropath-aws-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `DSQLConfig` CR. `DSQLCluster` RGDs read this configuration to determine the final, resolved settings.
 
 **When to use `KropathConfig.dsql` vs. `DSQLConfig`:**
 - **`KropathConfig.dsql`:** Org-wide governance (e.g., force all DSQL clusters to have deletion protection)

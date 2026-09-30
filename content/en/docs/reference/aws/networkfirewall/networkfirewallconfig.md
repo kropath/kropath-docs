@@ -247,5 +247,5 @@ After creation, the config CR exposes status fields:
 | Field | Type | Meaning |
 |---|---|---|
 | `status.effectiveConfig` | object | The computed result of merging KropathConfig + NetworkFirewallConfig tiers; used by RGDs |
-| `status.effectiveConfig.aws.region` | string | AWS region (written by kropath-controller) |
-| `status.effectiveConfig.aws.accountId` | string | AWS account ID (written by kropath-controller) |
+| `status.effectiveConfig.aws.region` | string | AWS region (written by kropath-aws-controller) |
+| `status.effectiveConfig.aws.accountId` | string | AWS account ID (written by kropath-aws-controller) |

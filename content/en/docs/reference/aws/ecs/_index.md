@@ -58,7 +58,7 @@ Kropath's ECS configuration is managed through governance and resource instances
 
 #### Ten-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective ECS configuration. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `ECSConfig`) into `status.effectiveConfig` on the namespaced `ECSConfig` CR. ECS RGDs read this `status.effectiveConfig` to determine final settings.
+Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective ECS configuration. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `ECSConfig`) into `status.effectiveConfig` on the namespaced `ECSConfig` CR. ECS RGDs read this `status.effectiveConfig` to determine final settings.
 
 **When to use `KropathConfig.ecs` vs. `ECSConfig`:**
 

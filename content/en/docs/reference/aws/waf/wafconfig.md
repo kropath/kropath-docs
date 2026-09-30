@@ -205,7 +205,7 @@ spec:
 
 ## Accessing Effective Configuration
 
-When the kropath-controller reconciles a WAFConfig CR, it writes the merged governance result to `status.effectiveConfig`, combining the resource's `spec.mandatory` and `spec.defaults` tiers with organization-wide `KropathConfig` settings:
+When the kropath-aws-controller reconciles a WAFConfig CR, it writes the merged governance result to `status.effectiveConfig`, combining the resource's `spec.mandatory` and `spec.defaults` tiers with organization-wide `KropathConfig` settings:
 
 ```yaml
 status:

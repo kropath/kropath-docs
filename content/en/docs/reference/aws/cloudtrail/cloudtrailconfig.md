@@ -63,7 +63,7 @@ These fields apply to both CloudTrailTrail and CloudTrailEventDataStore:
 
 kropath employs a ten-tier governance cascade (see ADR-010) to resolve effective configuration for CloudTrail resources. This cascade ensures that organizational-level policies take precedence, followed by profile-specific settings, and finally instance-level overrides.
 
-The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `CloudTrailConfig`) into `status.effectiveConfig` on the namespaced `CloudTrailConfig` CR. Both `CloudTrailTrail` and `CloudTrailEventDataStore` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `CloudTrailConfig`) into `status.effectiveConfig` on the namespaced `CloudTrailConfig` CR. Both `CloudTrailTrail` and `CloudTrailEventDataStore` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.cloudtrail` vs. `CloudTrailConfig`:**
 

@@ -210,7 +210,7 @@ EOF
 
 ## Effective Configuration
 
-When a secret is created, kropath-controller reads the selected `SecretsManagerConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
+When a secret is created, kropath-aws-controller reads the selected `SecretsManagerConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
 
 Developers and platform teams can inspect the effective configuration:
 

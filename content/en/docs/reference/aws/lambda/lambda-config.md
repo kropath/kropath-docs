@@ -284,4 +284,4 @@ The `spec.nameOverride` field in a Lambda function is the **only** escape hatch 
 
 - **Design:** See `kropath-core/docs/families/aws/lambda.md` for the complete Lambda family governance design
 - **ADR reference:** ADR-015 §4 covers governance CRD design and the mandatory/defaults tier pattern
-- **Controller behavior:** The `kropath-controller` writes `status.effectiveConfig` after merging all sources
+- **Controller behavior:** The `kropath-aws-controller` writes `status.effectiveConfig` after merging all sources

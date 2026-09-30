@@ -37,7 +37,7 @@ Kropath's DocumentDB configuration is managed through three primary resource kin
 
 Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for DocumentDB resources. This cascade ensures that organizational-level policies take precedence, followed by profile-specific settings, and finally instance-level overrides.
 
-The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `DocumentDBConfig`) into `status.effectiveConfig` on the namespaced `DocumentDBConfig` CR. DocumentDB RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `DocumentDBConfig`) into `status.effectiveConfig` on the namespaced `DocumentDBConfig` CR. DocumentDB RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.documentdb` vs. `DocumentDBConfig`:**
 

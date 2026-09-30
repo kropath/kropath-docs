@@ -15,7 +15,7 @@ Organizations governance spans multiple tiers:
 2. **OrganizationsConfig** (named profiles) — per-resource-type governance for specific policy families
 3. **Resource instance** (`spec` fields) — developer-specified overrides
 
-The `kropath-controller` watches both `KropathConfig` and `OrganizationsConfig` CRs and writes the merged result to `status.effectiveConfig` on the `OrganizationsConfig` CR. The `OrganizationsAccount` and `OrganizationsOU` RGDs read this merged config via a `configRef` label selector.
+The `kropath-aws-controller` watches both `KropathConfig` and `OrganizationsConfig` CRs and writes the merged result to `status.effectiveConfig` on the `OrganizationsConfig` CR. The `OrganizationsAccount` and `OrganizationsOU` RGDs read this merged config via a `configRef` label selector.
 
 ## Governance Tiers
 
@@ -204,7 +204,7 @@ kubectl apply -f organizationsconfig.yaml -n kro-system
 kubectl apply -f krothconfig.yaml -n kro-system
 ```
 
-3. The `kropath-controller` automatically writes `status.effectiveConfig` with the merged configuration.
+3. The `kropath-aws-controller` automatically writes `status.effectiveConfig` with the merged configuration.
 
 4. Instances in workload namespaces reference the profile via `spec.configRef`:
 

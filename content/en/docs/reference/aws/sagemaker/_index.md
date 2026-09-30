@@ -47,7 +47,7 @@ SageMaker resources are governed by `SageMakerConfig` for the following fields:
 
 ### Ten-tier Governance Cascade
 
-The kropath-controller pre-merges all governance sources (from `KropathConfig` and `SageMakerConfig`) into `status.effectiveConfig` on the namespaced `SageMakerConfig` CR. Resource instances read this `status.effectiveConfig` to determine the final, resolved settings.
+The kropath-aws-controller pre-merges all governance sources (from `KropathConfig` and `SageMakerConfig`) into `status.effectiveConfig` on the namespaced `SageMakerConfig` CR. Resource instances read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **When to use `KropathConfig.sagemaker` vs. `SageMakerConfig`:**
 

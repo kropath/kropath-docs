@@ -108,7 +108,7 @@ spec:
 
 #### Ten-Tier Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective EKS configuration. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `EKSConfig`) into `status.effectiveConfig` on the namespaced `EKSConfig` CR. EKS RGDs read this `status.effectiveConfig` to determine final settings.
+Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective EKS configuration. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `EKSConfig`) into `status.effectiveConfig` on the namespaced `EKSConfig` CR. EKS RGDs read this `status.effectiveConfig` to determine final settings.
 
 **Governance cascade precedence (highest to lowest):**
 

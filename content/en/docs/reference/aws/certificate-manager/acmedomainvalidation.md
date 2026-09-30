@@ -298,7 +298,7 @@ Validation should complete within 30 seconds. If still `PENDING` after 2 minutes
    ```
 3. Check the controller logs:
    ```bash
-   kubectl logs -n kro-system -l app=kropath-controller | grep ACMEDomainValidation
+   kubectl logs -n kro-system -l app=kropath-aws-controller | grep ACMEDomainValidation
    ```
 
 ### Validation Failed

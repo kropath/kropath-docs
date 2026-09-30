@@ -376,7 +376,7 @@ The repository was not successfully created in AWS. Common causes:
 **Fix:**
 1. Verify `status.namingStatus` is `valid`
 2. Run `kubectl describe ecrpublicrepository <name>` for detailed error messages
-3. Check controller logs: `kubectl logs deployment/kropath-controller -n kro-system`
+3. Check controller logs: `kubectl logs deployment/kropath-aws-controller -n kro-system`
 
 ### Cannot override mandatory tags
 

@@ -84,7 +84,7 @@ spec:
 
 ### Ten-Tier Governance Cascade
 
-The `kropath-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `BedrockConfig` CR. Individual resource RGDs resolve effective configuration as:
+The `kropath-aws-controller` pre-merges all governance sources into `status.effectiveConfig` on the namespaced `BedrockConfig` CR. Individual resource RGDs resolve effective configuration as:
 
 ```
 mandatory.field (KropathConfig global)

@@ -22,7 +22,7 @@ Application teams select a profile via `spec.configRef` on their `RAMPermission`
 ## Prerequisites
 
 - A Kubernetes cluster running kropath-aws
-- `kropath-controller` deployed in the cluster (provides the governance cascade logic)
+- `kropath-aws-controller` deployed in the cluster (provides the governance cascade logic)
 - AWS IAM permissions to create and manage RAM resources in the target account
 - A namespace where resources will be provisioned
 
@@ -292,7 +292,7 @@ When you apply a `RAMResourceShare` or `RAMPermission`, the effective configurat
 9. Global KropathConfig defaults
 10. RGD built-in default (e.g., `false` for `allowExternalPrincipals`, `retain` for deletion policy)
 
-Priority runs top to bottom — level 1 (Global KropathConfig mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-controller` pre-merges these into `status.effectiveConfig` on each `RAMConfig` CR, and resource RGDs read a single `effectiveConfig` value.
+Priority runs top to bottom — level 1 (Global KropathConfig mandatory) always wins; each subsequent level applies only when the levels above it are unset. The `kropath-aws-controller` pre-merges these into `status.effectiveConfig` on each `RAMConfig` CR, and resource RGDs read a single `effectiveConfig` value.
 
 ### Example Cascade Resolution
 
@@ -443,4 +443,4 @@ spec:
 - [RAM Resource Family Overview](./_index.md)
 - [AWS RAM Documentation](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)
 - [ADR-015: Consolidated Platform Decisions](https://github.com/kropath/kropath-core/blob/main/docs/adrs/015-consolidated-platform-decisions.md)
-- [ADR-010: Kropath Controller Effective Config](https://github.com/kropath/kropath-core/blob/main/docs/adrs/010-kropath-controller-effective-config.md)
+- [ADR-010: Kropath Controller Effective Config](https://github.com/kropath/kropath-core/blob/main/docs/adrs/010-kropath-aws-controller-effective-config.md)

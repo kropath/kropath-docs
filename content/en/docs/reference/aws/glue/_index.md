@@ -142,7 +142,7 @@ To enforce an explicit zero value at the mandatory tier (e.g., disable retries),
 
 ### Glue Governance Cascade
 
-Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Glue jobs. The following six tiers are applicable to Glue resources. The `kropath-controller` pre-merges all governance sources (from `KropathConfig` and `GlueConfig`) into `status.effectiveConfig` on the namespaced `GlueConfig` CR. `GlueJob` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
+Kropath employs a ten-tier governance cascade (ADR-010, ADR-015 §5.3) to resolve effective configuration for Glue jobs. The following six tiers are applicable to Glue resources. The `kropath-aws-controller` pre-merges all governance sources (from `KropathConfig` and `GlueConfig`) into `status.effectiveConfig` on the namespaced `GlueConfig` CR. `GlueJob` RGDs read this `status.effectiveConfig` to determine the final, resolved settings.
 
 **Cascade order (highest to lowest priority):**
 1. `KropathConfig.spec.mandatory.glue.*` (organization-wide enforcement)

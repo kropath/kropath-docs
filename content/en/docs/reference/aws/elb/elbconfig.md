@@ -270,7 +270,7 @@ EOF
 
 ## Effective Configuration
 
-When a load balancer is created, kropath-controller reads the selected `ELBConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
+When a load balancer is created, kropath-aws-controller reads the selected `ELBConfig` and merges mandatory and defaults tiers along with org-wide settings from `KropathConfig`. The final merged configuration is written to `status.effectiveConfig` on the config CR.
 
 Developers and platform teams can inspect the effective configuration:
 
